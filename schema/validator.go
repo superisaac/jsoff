@@ -17,7 +17,7 @@ func (self ErrorPos) Error() string {
 	return fmt.Sprintf("Validation Error: %s %s", self.Path(), self.hint)
 }
 
-func (self ErrorPos) ToMessage(reqmsg jsonrpc.IMessage) *jsonrpc.ErrorMessage {
+func (self ErrorPos) ToMessage(reqmsg *jsonrpc.RequestMessage) *jsonrpc.ErrorMessage {
 	err := &jsonrpc.RPCError{10901, self.Error(), false}
 	return err.ToMessage(reqmsg)
 }

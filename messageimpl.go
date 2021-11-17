@@ -7,18 +7,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// WithData create clone this RPCError object with data attached
 func (self *RPCError) WithData(data interface{}) *RPCError {
 	return &RPCError{self.Code, self.Message, data}
 }
 
+// String Representation of RPCError object
 func (self *RPCError) Error() string {
 	return fmt.Sprintf("code=%d, message=%s, data=%s", self.Code, self.Message, self.Data)
 }
 
-func (self RPCError) ToMessage(reqmsg IMessage) *ErrorMessage {
+// Convert RPCError to ErrorMessage
+// reqmsg is the original RequestMessage instance, the ErrorMessage
+// will copy reqmsg's id property
+func (self RPCError) ToMessage(reqmsg *RequestMessage) *ErrorMessage {
 	return RPCErrorMessage(reqmsg, self.Code, self.Message, self.Data)
 }
 
+// Generate json represent of ErrorMessage.body
+// refer to https://www.jsonrpc.org/specification#error_object
 func (self RPCError) ToJson() *simplejson.Json {
 	json := simplejson.New()
 	json.Set("code", self.Code)
@@ -29,37 +36,47 @@ func (self RPCError) ToJson() *simplejson.Json {
 	return json
 }
 
-func (self RPCError) CodeString() string {
-	return fmt.Sprintf("%d", self.Code)
-}
-
+// Create a new instance of ErrMessageType
+// additional is the information to help identify error details
 func NewErrMsgType(additional string) *RPCError {
 	r := fmt.Sprintf("wrong message type %s", additional)
 	return &RPCError{ErrMessageType.Code, r, false}
 }
 
+// Set raw Json object to skip generating the same raw
+// a little tip
 func (self *BaseMessage) SetRaw(raw *simplejson.Json) {
 	self.raw = raw
 }
 
+// IsRequest() returns if the message is a RequestMessage
 func (self BaseMessage) IsRequest() bool {
 	return self.messageType == MTRequest
 }
 
+// IsNotify() returns if the message is a NotifyMessage
 func (self BaseMessage) IsNotify() bool {
 	return self.messageType == MTNotify
 }
 
+// IsRequestOrNotify() returns if the message is a RequestMessage or
+// NotifyMessage
 func (self BaseMessage) IsRequestOrNotify() bool {
 	return self.IsRequest() || self.IsNotify()
 }
 
+// IsResult() returns if the message is a ResultMessage
 func (self BaseMessage) IsResult() bool {
 	return self.messageType == MTResult
 }
+
+// IsError() returns if the message is a ErrorMessage
 func (self BaseMessage) IsError() bool {
 	return self.messageType == MTError
 }
+
+// IsResultOrError() returns if the message is a ResultMessage or
+// ErrorMessage
 func (self BaseMessage) IsResultOrError() bool {
 	return self.IsResult() || self.IsError()
 }
@@ -73,6 +90,7 @@ func EncodePretty(msg IMessage) (string, error) {
 	return string(bytes), nil
 }
 
+// A Message object to Json object for further trans
 func MessageJson(msg IMessage) *simplejson.Json {
 	jsonObj := msg.GetJson()
 	if traceId := msg.TraceId(); traceId != "" {
