@@ -21,6 +21,9 @@ func TestValidators(t *testing.T) {
 
 	assert.True(IsMethod(".abc+def"))
 	assert.False(IsPublicMethod(".abc+def"))
+	assert.True(IsPublicMethod("textDocument/didOpen"))
+	assert.True(IsPublicMethod("namespace::show"))
+	assert.True(IsPublicMethod("namespace#show"))
 }
 
 func TestParseParams(t *testing.T) {

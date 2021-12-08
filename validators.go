@@ -86,6 +86,6 @@ func IsMethod(name string) bool {
 }
 
 func IsPublicMethod(name string) bool {
-	matched, _ := regexp.MatchString(`^[0-9a-zA-Z][0-9a-zA-Z\-\_\:\+\.]*$`, name)
+	matched, _ := regexp.MatchString(`^[0-9a-zA-Z][0-9a-zA-Z\-\_\:\+\.\/\\\&\#]*$`, name)
 	return matched
 }
