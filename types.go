@@ -5,15 +5,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//type CID uint64
-//type UID uint64
 type UID string
 
 type RPCError struct {
 	Code    int
 	Message string
 	Data    interface{}
-	//Retryable bool
 }
 
 const (

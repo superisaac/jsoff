@@ -232,7 +232,7 @@ func (self ErrorMessage) MustError() *RPCError {
 func (self *RequestMessage) GetJson() *simplejson.Json {
 	if self.raw == nil {
 		self.raw = simplejson.New()
-		self.raw.Set("version", "2.0")
+		self.raw.Set("jsonrpc", "2.0")
 		self.raw.Set("id", self.Id)
 		self.raw.Set("method", self.Method)
 		if self.paramsAreList || len(self.Params) == 0 {
@@ -247,7 +247,7 @@ func (self *RequestMessage) GetJson() *simplejson.Json {
 func (self *NotifyMessage) GetJson() *simplejson.Json {
 	if self.raw == nil {
 		self.raw = simplejson.New()
-		self.raw.Set("version", "2.0")
+		self.raw.Set("jsonrpc", "2.0")
 		self.raw.Set("method", self.Method)
 		if self.paramsAreList || len(self.Params) == 0 {
 			self.raw.Set("params", self.Params)
@@ -261,7 +261,7 @@ func (self *NotifyMessage) GetJson() *simplejson.Json {
 func (self *ResultMessage) GetJson() *simplejson.Json {
 	if self.raw == nil {
 		self.raw = simplejson.New()
-		self.raw.Set("version", "2.0")
+		self.raw.Set("jsonrpc", "2.0")
 		self.raw.Set("id", self.Id)
 		self.raw.Set("result", self.Result)
 	}
@@ -271,7 +271,7 @@ func (self *ResultMessage) GetJson() *simplejson.Json {
 func (self *ErrorMessage) GetJson() *simplejson.Json {
 	if self.raw == nil {
 		self.raw = simplejson.New()
-		self.raw.Set("version", "2.0")
+		self.raw.Set("jsonrpc", "2.0")
 		self.raw.Set("id", self.Id)
 		self.raw.Set("error", self.Error.ToJson())
 	}
