@@ -3,30 +3,52 @@ package jsonrpchttp
 import (
 	"bytes"
 	"context"
-	"fmt"
+	//"fmt"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonrpc"
 	"net/http"
 )
 
-type MethodHandler func(ctx context.Context, msg jsonrpc.IMessage) (interface{}, error)
+// rpc context
+type RPCRequest struct {
+	context context.Context
+	msg     jsonrpc.IMessage
+}
+
+func (self RPCRequest) Context() context.Context {
+	return self.context
+}
+func (self RPCRequest) Msg() jsonrpc.IMessage {
+	return self.msg
+}
+
+// handler func
+type HandlerFunc func(req *RPCRequest, params []interface{}) (interface{}, error)
 
 type Server struct {
-	methodHandlers map[string]MethodHandler
+	methodHandlers map[string]HandlerFunc
 }
 
 func NewServer() *Server {
 	return &Server{
-		methodHandlers: make(map[string]MethodHandler),
+		methodHandlers: make(map[string]HandlerFunc),
 	}
 }
 
-func (self *Server) On(method string, handler MethodHandler) error {
+func (self *Server) On(method string, handler HandlerFunc) error {
 	if _, exist := self.methodHandlers[method]; exist {
-		return errors.New(fmt.Sprintf("handler for method %s already exist!", method))
+		return errors.New("handler already exist")
 	}
 	self.methodHandlers[method] = handler
 	return nil
+}
+
+func (self *Server) OnTyped(method string, typedHandler interface{}) error {
+	handler, err := wrapTyped(typedHandler)
+	if err != nil {
+		return err
+	}
+	return self.On(method, handler)
 }
 
 func (self Server) HasHandler(method string) bool {
@@ -34,7 +56,7 @@ func (self Server) HasHandler(method string) bool {
 	return exist
 }
 
-func (self *Server) getHandler(method string) (MethodHandler, bool) {
+func (self *Server) getHandler(method string) (HandlerFunc, bool) {
 	if h, ok := self.methodHandlers[method]; ok {
 		return h, true
 	} else if h, ok := self.methodHandlers["*"]; ok {
@@ -80,7 +102,9 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if handler, found := self.getHandler(msg.MustMethod()); found {
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
-		res, err := handler(ctx, msg)
+		req := &RPCRequest{context: ctx, msg: msg}
+		params := msg.MustParams()
+		res, err := handler(req, params)
 		if err != nil {
 			if msg.IsRequest() {
 				if rpcErr, ok := err.(*jsonrpc.RPCError); ok {
