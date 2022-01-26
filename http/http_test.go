@@ -48,7 +48,7 @@ func TestServerClient(t *testing.T) {
 
 	// method not found
 	params1 := [](interface{}){"hello999"}
-	reqmsg1 := jsonrpc.NewRequestMessage(2, "echoxxx", params1)
+	reqmsg1 := jsonrpc.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(context.Background(), reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
