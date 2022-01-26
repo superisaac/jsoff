@@ -22,14 +22,15 @@ func TestMain(m *testing.M) {
 func TestServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewServer()
-	server.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	disp := NewDispatcher()
+	disp.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
 			return nil, jsonrpc.ParamsError("no argument given")
 		}
 	})
+	server := NewServer(disp)
 	go http.ListenAndServe("127.0.0.1:28000", server)
 	time.Sleep(100 * time.Millisecond)
 
@@ -58,16 +59,18 @@ func TestServerClient(t *testing.T) {
 func TestTypedServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewServer()
-	err := server.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	disp := NewDispatcher()
+	err := disp.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = disp.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
+
+	server := NewServer(disp)
 
 	go http.ListenAndServe("127.0.0.1:28001", server)
 	time.Sleep(100 * time.Millisecond)
