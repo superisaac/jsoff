@@ -64,15 +64,11 @@ func (self *Client) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage
 	if err != nil {
 		return nil, errors.Wrap(err, "http.NewRequestWithContext")
 	}
-	req.Header.Add("X-Trace-Id", traceId)
+	if traceId != "" {
+		req.Header.Add("X-Trace-Id", traceId)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-
-	// if self.Headers != nil {
-	//         for k, v := range self.Headers {
-	//                 req.Header.Set(k, v)
-	//         }
-	// }
 
 	resp, err := self.httpClient.Do(req)
 	if err != nil {
