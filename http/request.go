@@ -62,3 +62,45 @@ func (self *Dispatcher) getHandler(method string) (HandlerFunc, bool) {
 		return nil, false
 	}
 }
+
+func (self *Dispatcher) handleMessage(rootCtx context.Context, msg jsonrpc.IMessage) (jsonrpc.IMessage, error) {
+	if !msg.IsRequestOrNotify() {
+		msg.Log().Warnf("handler only accept request and notify")
+		return nil, errors.New("bad msg type")
+	}
+
+	var reqmsg *jsonrpc.RequestMessage
+
+	if msg.IsRequest() {
+		reqmsg, _ = msg.(*jsonrpc.RequestMessage)
+	}
+
+	if handler, found := self.getHandler(msg.MustMethod()); found {
+		//ctx, cancel := context.WithCancel(rootCtx)
+		//defer cancel()
+		req := &RPCRequest{context: rootCtx, msg: msg}
+		params := msg.MustParams()
+		res, err := handler(req, params)
+		if err != nil {
+			if msg.IsRequest() {
+				if rpcErr, ok := err.(*jsonrpc.RPCError); ok {
+					return rpcErr.ToMessage(reqmsg), nil
+				} else {
+					return jsonrpc.ErrInternalError.ToMessage(reqmsg), nil
+				}
+			} else {
+				msg.Log().Warnf("error %s", err)
+			}
+		} else if resmsg1, ok := res.(jsonrpc.IMessage); ok {
+			// normal response
+			return resmsg1, nil
+		} else if reqmsg != nil {
+			return jsonrpc.NewResultMessage(reqmsg, res), nil
+		}
+	} else {
+		if msg.IsRequest() {
+			return jsonrpc.ErrMethodNotFound.ToMessage(reqmsg), nil
+		}
+	}
+	return nil, nil
+}

@@ -2,8 +2,7 @@ package jsonrpchttp
 
 import (
 	"bytes"
-	"context"
-	//"fmt"
+	//"context"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonrpc"
 	"net/http"
@@ -14,6 +13,9 @@ type Server struct {
 }
 
 func NewServer(dispatcher *Dispatcher) *Server {
+	if dispatcher == nil {
+		dispatcher = NewDispatcher()
+	}
 	return &Server{
 		dispatcher: dispatcher,
 	}
@@ -45,44 +47,13 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resmsg jsonrpc.IMessage
-	var reqmsg *jsonrpc.RequestMessage
-
-	if msg.IsRequest() {
-		reqmsg, _ = msg.(*jsonrpc.RequestMessage)
+	resmsg, err := self.dispatcher.handleMessage(r.Context(), msg)
+	if err != nil {
+		msg.Log().Warnf("err.handleMessage %s", err)
+		w.WriteHeader(500)
+		w.Write([]byte("internal server error"))
+		return
 	}
-
-	if handler, found := self.dispatcher.getHandler(msg.MustMethod()); found {
-		ctx, cancel := context.WithCancel(r.Context())
-		defer cancel()
-		req := &RPCRequest{context: ctx, msg: msg}
-		params := msg.MustParams()
-		res, err := handler(req, params)
-		if err != nil {
-			if msg.IsRequest() {
-				if rpcErr, ok := err.(*jsonrpc.RPCError); ok {
-					resmsg = rpcErr.ToMessage(reqmsg)
-				} else {
-					resmsg = jsonrpc.ErrInternalError.ToMessage(reqmsg)
-				}
-			} else {
-				msg.Log().Warnf("error %s", err)
-			}
-		} else if resmsg1, ok := res.(jsonrpc.IMessage); ok {
-			// normal response
-			resmsg = resmsg1
-		} else {
-			resmsg = jsonrpc.NewResultMessage(reqmsg, res)
-		}
-	} else {
-		if msg.IsRequest() {
-			resmsg = jsonrpc.ErrMethodNotFound.ToMessage(reqmsg)
-		} else {
-			resmsg = nil
-		}
-
-	}
-
 	if msg.IsRequest() {
 		if resmsg == nil {
 			msg.Log().Panicf("resmsg is nil")
@@ -93,7 +64,7 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		data, err1 := jsonrpc.MessageBytes(resmsg)
 		if err1 != nil {
 			resmsg.Log().Warnf("error marshaling msg %s", err1)
-			errmsg := jsonrpc.ErrInternalError.ToMessage(reqmsg)
+			errmsg := jsonrpc.ErrInternalError.ToMessageFromId(msg.MustId(), msg.TraceId())
 			data, _ = jsonrpc.MessageBytes(errmsg)
 		}
 		w.WriteHeader(200)

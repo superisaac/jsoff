@@ -24,6 +24,13 @@ func (self RPCError) ToMessage(reqmsg *RequestMessage) *ErrorMessage {
 	return RPCErrorMessage(reqmsg, self.Code, self.Message, self.Data)
 }
 
+// Convert RPCError to ErrorMessage
+// reqmsg is the original RequestMessage instance, the ErrorMessage
+// will copy reqmsg's id property
+func (self RPCError) ToMessageFromId(reqId interface{}, traceId string) *ErrorMessage {
+	return RPCErrorMessageFromId(reqId, traceId, self.Code, self.Message, self.Data)
+}
+
 // Generate json represent of ErrorMessage.body
 // refer to https://www.jsonrpc.org/specification#error_object
 func (self RPCError) ToJson() *simplejson.Json {
@@ -342,6 +349,12 @@ func NewErrorMessage(reqmsg IMessage, errbody *RPCError) *ErrorMessage {
 	return errmsg
 }
 
+func NewErrorMessageFromId(reqId interface{}, traceId string, errbody *RPCError) *ErrorMessage {
+	errmsg := rawErrorMessage(reqId, errbody)
+	errmsg.SetTraceId(traceId)
+	return errmsg
+}
+
 func rawErrorMessage(id interface{}, errbody *RPCError) *ErrorMessage {
 	msg := &ErrorMessage{}
 	msg.messageType = MTError
@@ -353,4 +366,9 @@ func rawErrorMessage(id interface{}, errbody *RPCError) *ErrorMessage {
 func RPCErrorMessage(reqmsg IMessage, code int, message string, data interface{}) *ErrorMessage {
 	errbody := &RPCError{code, message, data}
 	return NewErrorMessage(reqmsg, errbody)
+}
+
+func RPCErrorMessageFromId(reqId interface{}, traceId string, code int, message string, data interface{}) *ErrorMessage {
+	errbody := &RPCError{code, message, data}
+	return NewErrorMessageFromId(reqId, traceId, errbody)
 }
