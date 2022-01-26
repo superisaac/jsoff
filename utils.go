@@ -1,12 +1,9 @@
 package jsonrpc
 
 import (
-	//json "encoding/json"
-	//"fmt"
-	//"reflect"
-	//"errors"
-	//log "github.com/sirupsen/logrus"
 	simplejson "github.com/bitly/go-simplejson"
+	log "github.com/sirupsen/logrus"
+	"net/http"
 	"strconv"
 )
 
@@ -96,4 +93,10 @@ func ConvertInt(v interface{}) int {
 		return intv
 	}
 	panic("cannot convert to int")
+}
+
+func ErrorResponse(w http.ResponseWriter, r *http.Request, err error, status int, message string) {
+	log.Warnf("HTTP error: %s %d", err.Error(), status)
+	w.WriteHeader(status)
+	w.Write([]byte(message))
 }
