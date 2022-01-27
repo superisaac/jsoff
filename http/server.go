@@ -44,6 +44,12 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resmsg, err := self.Router.handleMessage(r.Context(), msg, r)
 	if err != nil {
+		var bearErr *BearHttpResponse
+		if errors.As(err, &bearErr) {
+			w.WriteHeader(bearErr.Code)
+			w.Write(bearErr.Body)
+			return
+		}
 		msg.Log().Warnf("err.handleMessage %s", err)
 		w.WriteHeader(500)
 		w.Write([]byte("internal server error"))
