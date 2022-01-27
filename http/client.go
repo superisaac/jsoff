@@ -93,3 +93,43 @@ func (self *Client) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage
 	respmsg.SetTraceId(traceId)
 	return respmsg, nil
 }
+
+func (self *Client) Send(rootCtx context.Context, msg jsonrpc.IMessage) error {
+	self.connect()
+
+	traceId := msg.TraceId()
+	msg.SetTraceId("")
+
+	marshaled, err := jsonrpc.MessageBytes(msg)
+	if err != nil {
+		return err
+	}
+	reader := bytes.NewReader(marshaled)
+
+	ctx, cancel := context.WithCancel(rootCtx)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl, reader)
+	if err != nil {
+		return errors.Wrap(err, "http.NewRequestWithContext")
+	}
+	if traceId != "" {
+		req.Header.Add("X-Trace-Id", traceId)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := self.httpClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "http Do")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		abnResp := &AbnormalResponse{
+			Response: resp,
+		}
+		return errors.Wrap(abnResp, "abnormal response")
+	}
+	return nil
+}

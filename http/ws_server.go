@@ -16,15 +16,15 @@ var upgrader = websocket.Upgrader{
 
 type WSServer struct {
 	SpawnGoroutine bool
-	dispatcher     *Dispatcher
+	Router         *Router
 }
 
-func NewWSServer(dispatcher *Dispatcher) *WSServer {
-	if dispatcher == nil {
-		dispatcher = NewDispatcher()
+func NewWSServer(router *Router) *WSServer {
+	if router == nil {
+		router = NewRouter()
 	}
 	return &WSServer{
-		dispatcher: dispatcher,
+		Router: router,
 	}
 }
 
@@ -42,7 +42,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	done := make(chan error, 10)
-	go self.recvLoop(r.Context(), ws, done)
+	go self.recvLoop(r.Context(), ws, r, done)
 
 	for {
 		select {
@@ -57,7 +57,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (self *WSServer) recvLoop(rootCtx context.Context, ws *websocket.Conn, done chan error) {
+func (self *WSServer) recvLoop(rootCtx context.Context, ws *websocket.Conn, r *http.Request, done chan error) {
 	for {
 		messageType, msgBytes, err := ws.ReadMessage()
 		if err != nil {
@@ -70,14 +70,14 @@ func (self *WSServer) recvLoop(rootCtx context.Context, ws *websocket.Conn, done
 		}
 
 		if self.SpawnGoroutine {
-			go self.handleWSBytes(rootCtx, msgBytes, ws, done)
+			go self.handleWSBytes(rootCtx, msgBytes, ws, r, done)
 		} else {
-			self.handleWSBytes(rootCtx, msgBytes, ws, done)
+			self.handleWSBytes(rootCtx, msgBytes, ws, r, done)
 		}
 	}
 }
 
-func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws *websocket.Conn, done chan error) {
+func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws *websocket.Conn, r *http.Request, done chan error) {
 	msg, err := jsonrpc.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
@@ -85,18 +85,12 @@ func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws
 		return
 	}
 
-	resmsg, err := self.dispatcher.handleMessage(rootCtx, msg)
+	resmsg, err := self.Router.handleMessage(rootCtx, msg, r)
 	if err != nil {
-		done <- errors.Wrap(err, "dispatcher.handleMessage")
+		done <- errors.Wrap(err, "router.handleMessage")
 		return
 	}
-	if msg.IsRequest() {
-		if resmsg == nil {
-			msg.Log().Panicf("result message should not be nil")
-			done <- errors.New("result msg should be nil")
-			return
-		}
-
+	if resmsg != nil {
 		resMsgBytes, err := jsonrpc.MessageBytes(resmsg)
 		if err != nil {
 			done <- errors.Wrap(err, "MessageBytes")
@@ -105,6 +99,7 @@ func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws
 		err = ws.WriteMessage(websocket.TextMessage, resMsgBytes)
 		if err != nil {
 			done <- errors.Wrap(err, "webocket.WriteMessage")
+			return
 		}
 	}
 }

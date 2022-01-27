@@ -154,3 +154,21 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessa
 	}
 	return resmsg, nil
 }
+
+func (self *WSClient) Send(rootCtx context.Context, msg jsonrpc.IMessage) error {
+	err := self.connect()
+	if err != nil {
+		return err
+	}
+
+	marshaled, err := jsonrpc.MessageBytes(msg)
+	if err != nil {
+		return err
+	}
+
+	err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
+	if err != nil {
+		return errors.Wrap(err, "websocket.WriteMessage")
+	}
+	return nil
+}

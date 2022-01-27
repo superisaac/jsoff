@@ -9,15 +9,15 @@ import (
 )
 
 type Server struct {
-	dispatcher *Dispatcher
+	Router *Router
 }
 
-func NewServer(dispatcher *Dispatcher) *Server {
-	if dispatcher == nil {
-		dispatcher = NewDispatcher()
+func NewServer(router *Router) *Server {
+	if router == nil {
+		router = NewRouter()
 	}
 	return &Server{
-		dispatcher: dispatcher,
+		Router: router,
 	}
 }
 
@@ -42,22 +42,15 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !msg.IsRequestOrNotify() {
-		jsonrpc.ErrorResponse(w, r, err, 400, "Bad request, must be request or notify")
-		return
-	}
-
-	resmsg, err := self.dispatcher.handleMessage(r.Context(), msg)
+	resmsg, err := self.Router.handleMessage(r.Context(), msg, r)
 	if err != nil {
 		msg.Log().Warnf("err.handleMessage %s", err)
 		w.WriteHeader(500)
 		w.Write([]byte("internal server error"))
 		return
 	}
-	if msg.IsRequest() {
-		if resmsg == nil {
-			msg.Log().Panicf("resmsg is nil")
-		}
+	//if msg.IsRequest() {
+	if resmsg != nil {
 		traceId := resmsg.TraceId()
 		resmsg.SetTraceId("")
 

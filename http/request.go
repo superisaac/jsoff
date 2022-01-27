@@ -1,41 +1,47 @@
 package jsonrpchttp
 
 import (
-	//"fmt"
 	"context"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonrpc"
+	"net/http"
 )
 
 // rpc context
 type RPCRequest struct {
 	context context.Context
 	msg     jsonrpc.IMessage
+	r       *http.Request
 }
 
 func (self RPCRequest) Context() context.Context {
 	return self.context
 }
+
 func (self RPCRequest) Msg() jsonrpc.IMessage {
 	return self.msg
+}
+
+func (self RPCRequest) HttpRequest() *http.Request {
+	return self.r
 }
 
 // handler func
 type HandlerFunc func(req *RPCRequest, params []interface{}) (interface{}, error)
 type MissingHandlerFunc func(req *RPCRequest) (interface{}, error)
 
-type Dispatcher struct {
+type Router struct {
 	methodHandlers map[string]HandlerFunc
 	missingHandler MissingHandlerFunc
 }
 
-func NewDispatcher() *Dispatcher {
-	return &Dispatcher{
+func NewRouter() *Router {
+	return &Router{
 		methodHandlers: make(map[string]HandlerFunc),
 	}
 }
 
-func (self *Dispatcher) On(method string, handler HandlerFunc) error {
+func (self *Router) On(method string, handler HandlerFunc) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
 	}
@@ -43,7 +49,7 @@ func (self *Dispatcher) On(method string, handler HandlerFunc) error {
 	return nil
 }
 
-func (self *Dispatcher) OnTyped(method string, typedHandler interface{}) error {
+func (self *Router) OnTyped(method string, typedHandler interface{}) error {
 	handler, err := wrapTyped(typedHandler)
 	if err != nil {
 		return err
@@ -51,7 +57,7 @@ func (self *Dispatcher) OnTyped(method string, typedHandler interface{}) error {
 	return self.On(method, handler)
 }
 
-func (self *Dispatcher) OnMissing(handler MissingHandlerFunc) error {
+func (self *Router) OnMissing(handler MissingHandlerFunc) error {
 	if self.missingHandler != nil {
 		return errors.New("missing handler already exist!")
 	}
@@ -59,12 +65,12 @@ func (self *Dispatcher) OnMissing(handler MissingHandlerFunc) error {
 	return nil
 }
 
-func (self Dispatcher) HasHandler(method string) bool {
+func (self Router) HasHandler(method string) bool {
 	_, exist := self.methodHandlers[method]
 	return exist
 }
 
-func (self *Dispatcher) getHandler(method string) (HandlerFunc, bool) {
+func (self *Router) getHandler(method string) (HandlerFunc, bool) {
 	if h, ok := self.methodHandlers[method]; ok {
 		return h, true
 	} else {
@@ -72,24 +78,25 @@ func (self *Dispatcher) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Dispatcher) handleMessage(rootCtx context.Context, msg jsonrpc.IMessage) (jsonrpc.IMessage, error) {
+func (self *Router) handleMessage(rootCtx context.Context, msg jsonrpc.IMessage, r *http.Request) (jsonrpc.IMessage, error) {
+	req := &RPCRequest{context: rootCtx, msg: msg, r: r}
 	if !msg.IsRequestOrNotify() {
-		msg.Log().Warnf("handler only accept request and notify")
-		return nil, errors.New("bad msg type")
+		if self.missingHandler != nil {
+			res, err := self.missingHandler(req)
+			return self.wrapResult(res, err, msg)
+		} else {
+			msg.Log().Info("no handler to handle this message")
+			return nil, nil
+		}
 	}
 
 	// TODO: recover from panic
-
 	if handler, found := self.getHandler(msg.MustMethod()); found {
-		//ctx, cancel := context.WithCancel(rootCtx)
-		//defer cancel()
-		req := &RPCRequest{context: rootCtx, msg: msg}
 		params := msg.MustParams()
 		res, err := handler(req, params)
 		resmsg, err := self.wrapResult(res, err, msg)
 		return resmsg, err
 	} else if self.missingHandler != nil {
-		req := &RPCRequest{context: rootCtx, msg: msg}
 		res, err := self.missingHandler(req)
 		resmsg, err := self.wrapResult(res, err, msg)
 		return resmsg, err
@@ -101,27 +108,31 @@ func (self *Dispatcher) handleMessage(rootCtx context.Context, msg jsonrpc.IMess
 	return nil, nil
 }
 
-func (self Dispatcher) wrapResult(res interface{}, err error, msg jsonrpc.IMessage) (jsonrpc.IMessage, error) {
-	var reqmsg *jsonrpc.RequestMessage
-	if msg.IsRequest() {
-		reqmsg, _ = msg.(*jsonrpc.RequestMessage)
-	}
-	if err != nil {
-
-		if msg.IsRequest() {
-			var rpcErr *jsonrpc.RPCError
-			if errors.As(err, &rpcErr) {
-				return rpcErr.ToMessage(reqmsg), nil
-			} else {
-				return jsonrpc.ErrInternalError.ToMessage(reqmsg), nil
-			}
-		} else {
+func (self Router) wrapResult(res interface{}, err error, msg jsonrpc.IMessage) (jsonrpc.IMessage, error) {
+	if !msg.IsRequest() {
+		if err != nil {
 			msg.Log().Warnf("error %s", err)
+		}
+		return nil, err
+	}
+
+	reqmsg, ok := msg.(*jsonrpc.RequestMessage)
+	if !ok {
+		msg.Log().Panicf("convert to request message failed")
+		return nil, err
+	}
+
+	if err != nil {
+		var rpcErr *jsonrpc.RPCError
+		if errors.As(err, &rpcErr) {
+			return rpcErr.ToMessage(reqmsg), nil
+		} else {
+			return jsonrpc.ErrInternalError.ToMessage(reqmsg), nil
 		}
 	} else if resmsg1, ok := res.(jsonrpc.IMessage); ok {
 		// normal response
 		return resmsg1, nil
-	} else if reqmsg != nil {
+	} else {
 		return jsonrpc.NewResultMessage(reqmsg, res), nil
 	}
 	return nil, nil

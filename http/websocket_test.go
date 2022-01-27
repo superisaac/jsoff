@@ -16,15 +16,15 @@ import (
 func TestWSServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	disp := NewDispatcher()
-	disp.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewWSServer(nil)
+	server.Router.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
 			return nil, jsonrpc.ParamsError("no argument given")
 		}
 	})
-	server := NewWSServer(disp)
+
 	go http.ListenAndServe("127.0.0.1:28100", server)
 	time.Sleep(100 * time.Millisecond)
 
@@ -53,18 +53,16 @@ func TestWSServerClient(t *testing.T) {
 func TestTypedWSServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	disp := NewDispatcher()
-	err := disp.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server := NewWSServer(nil)
+	err := server.Router.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = disp.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = server.Router.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
-
-	server := NewWSServer(disp)
 
 	go http.ListenAndServe("127.0.0.1:28101", server)
 	time.Sleep(100 * time.Millisecond)
