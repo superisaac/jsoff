@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"encoding/json"
 	"github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
 )
@@ -40,6 +41,13 @@ func parseParams(parsed *simplejson.Json) ([]interface{}, bool, error) {
 
 func Parse(parsed *simplejson.Json) (IMessage, error) {
 	id := parsed.Get("id").Interface()
+	if numId, ok := id.(json.Number); ok {
+		intId, err := numId.Int64()
+		if err != nil {
+			return nil, err
+		}
+		id = int(intId)
+	}
 	method, err := parsed.Get("method").String()
 	if err != nil {
 		method = ""

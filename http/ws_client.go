@@ -90,7 +90,8 @@ func (self *WSClient) recvLoop() {
 }
 
 func (self *WSClient) handleResult(msg jsonrpc.IMessage) {
-	v, loaded := self.pendingRequests.LoadAndDelete(msg.MustId())
+	msgId := msg.MustId()
+	v, loaded := self.pendingRequests.LoadAndDelete(msgId)
 	if !loaded {
 		msg.Log().Warnf("fail to find pending request")
 		return

@@ -28,7 +28,7 @@ func NewWSServer(dispatcher *Dispatcher) *WSServer {
 	}
 }
 
-func (self *WSServer) ServerHTTP(w http.ResponseWriter, r *http.Request) {
+func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Warnf("ws upgrade failed %s", err)

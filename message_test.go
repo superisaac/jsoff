@@ -77,7 +77,7 @@ func TestRequestMsg(t *testing.T) {
 	assert.False(msg.IsError())
 	assert.False(msg.IsResult())
 
-	assert.Equal(json.Number("100"), msg.MustId())
+	assert.Equal(100, msg.MustId())
 	assert.Equal("abc::add", msg.MustMethod())
 }
 
