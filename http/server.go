@@ -2,9 +2,9 @@ package jsonrpchttp
 
 import (
 	"bytes"
-	//"context"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonrpc"
+	"io"
 	"net/http"
 )
 
@@ -44,10 +44,21 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resmsg, err := self.Router.handleMessage(r.Context(), msg, r)
 	if err != nil {
-		var bearErr *BearHttpResponse
-		if errors.As(err, &bearErr) {
-			w.WriteHeader(bearErr.Code)
-			w.Write(bearErr.Body)
+		var simpleResp *SimpleHttpResponse
+		var upResp *UpstreamResponse
+		if errors.As(err, &simpleResp) {
+			w.WriteHeader(simpleResp.Code)
+			w.Write(simpleResp.Body)
+			return
+		} else if errors.As(err, &upResp) {
+			origResp := upResp.Response
+			for hn, hvs := range origResp.Header {
+				for _, hv := range hvs {
+					w.Header().Add(hn, hv)
+				}
+			}
+			w.WriteHeader(origResp.StatusCode)
+			io.Copy(w, origResp.Body)
 			return
 		}
 		msg.Log().Warnf("err.handleMessage %s", err)

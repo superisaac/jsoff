@@ -1,25 +1,14 @@
 package jsonrpchttp
 
 import (
-	"fmt"
-	"io/ioutil"
-
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonrpc"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
-
-// errors
-type AbnormalResponse struct {
-	Response *http.Response
-}
-
-func (self AbnormalResponse) Error() string {
-	return fmt.Sprintf("Abnormal response %d", self.Response.StatusCode)
-}
 
 type Client struct {
 	serverUrl  string
@@ -77,7 +66,7 @@ func (self *Client) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		abnResp := &AbnormalResponse{
+		abnResp := &UpstreamResponse{
 			Response: resp,
 		}
 		return nil, errors.Wrap(abnResp, "abnormal response")
@@ -126,7 +115,7 @@ func (self *Client) Send(rootCtx context.Context, msg jsonrpc.IMessage) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		abnResp := &AbnormalResponse{
+		abnResp := &UpstreamResponse{
 			Response: resp,
 		}
 		return errors.Wrap(abnResp, "abnormal response")

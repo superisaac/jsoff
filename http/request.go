@@ -2,7 +2,6 @@ package jsonrpchttp
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonrpc"
 	"net/http"
@@ -25,15 +24,6 @@ func (self RPCRequest) Msg() jsonrpc.IMessage {
 
 func (self RPCRequest) HttpRequest() *http.Request {
 	return self.r
-}
-
-type BearHttpResponse struct {
-	Code int
-	Body []byte
-}
-
-func (self BearHttpResponse) Error() string {
-	return fmt.Sprintf("%d/%s", self.Code, self.Body)
 }
 
 // handler func
