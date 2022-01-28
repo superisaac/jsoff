@@ -17,10 +17,13 @@ type pendingRequest struct {
 	expire        time.Time
 }
 
+type WSMessageHandler func(msg jsoz.Message)
+
 type WSClient struct {
 	serverUrl       string
 	ws              *websocket.Conn
 	pendingRequests sync.Map
+	messageHandler  WSMessageHandler
 }
 
 func NewWSClient(serverUrl string) *WSClient {
@@ -32,6 +35,14 @@ func (self *WSClient) Close() {
 		self.ws.Close()
 		self.ws = nil
 	}
+}
+
+func (self *WSClient) OnMessage(handler WSMessageHandler) error {
+	if self.messageHandler != nil {
+		return errors.New("message handler already exist!")
+	}
+	self.messageHandler = handler
+	return nil
 }
 
 func (self WSClient) Connected() bool {
@@ -82,10 +93,14 @@ func (self *WSClient) recvLoop() {
 		}
 
 		if !msg.IsResultOrError() {
-			msg.Log().Warnf("message type accepted")
-			return
+			if self.messageHandler != nil {
+				self.messageHandler(msg)
+			} else {
+				msg.Log().Debugf("no message handler found")
+			}
+		} else {
+			self.handleResult(msg)
 		}
-		self.handleResult(msg)
 	}
 }
 
@@ -93,7 +108,9 @@ func (self *WSClient) handleResult(msg jsoz.Message) {
 	msgId := msg.MustId()
 	v, loaded := self.pendingRequests.LoadAndDelete(msgId)
 	if !loaded {
-		msg.Log().Warnf("fail to find pending request")
+		if self.messageHandler != nil {
+			self.messageHandler(msg)
+		}
 		return
 	}
 

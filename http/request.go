@@ -12,6 +12,7 @@ type RPCRequest struct {
 	context context.Context
 	msg     jsoz.Message
 	r       *http.Request
+	data    interface{} // arbitrary data
 }
 
 func (self RPCRequest) Context() context.Context {
@@ -26,10 +27,14 @@ func (self RPCRequest) HttpRequest() *http.Request {
 	return self.r
 }
 
+func (self RPCRequest) Data() interface{} {
+	return self.data
+}
+
 // handler func
 type HandlerFunc func(req *RPCRequest, params []interface{}) (interface{}, error)
 type MissingHandlerFunc func(req *RPCRequest) (interface{}, error)
-type CloseHandlerFunc  func(r *http.Request)
+type CloseHandlerFunc func(r *http.Request)
 
 type Router struct {
 	methodHandlers map[string]HandlerFunc
@@ -88,8 +93,8 @@ func (self *Router) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Router) handleMessage(rootCtx context.Context, msg jsoz.Message, r *http.Request) (jsoz.Message, error) {
-	req := &RPCRequest{context: rootCtx, msg: msg, r: r}
+func (self *Router) handleRequest(req *RPCRequest) (jsoz.Message, error) {
+	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
 			res, err := self.missingHandler(req)

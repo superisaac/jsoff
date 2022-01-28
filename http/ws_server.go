@@ -91,21 +91,29 @@ func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws
 		return
 	}
 
-	resmsg, err := self.Router.handleMessage(rootCtx, msg, r)
+	req := &RPCRequest{context: rootCtx, msg: msg, r: r, data: ws}
+	resmsg, err := self.Router.handleRequest(req)
 	if err != nil {
 		done <- errors.Wrap(err, "router.handleMessage")
 		return
 	}
 	if resmsg != nil {
-		resMsgBytes, err := jsoz.MessageBytes(resmsg)
+		err := self.SendMessage(ws, resmsg)
 		if err != nil {
-			done <- errors.Wrap(err, "MessageBytes")
-			return
-		}
-		err = ws.WriteMessage(websocket.TextMessage, resMsgBytes)
-		if err != nil {
-			done <- errors.Wrap(err, "webocket.WriteMessage")
+			done <- err
 			return
 		}
 	}
+}
+
+func (self WSServer) SendMessage(ws *websocket.Conn, msg jsoz.Message) error {
+	bytes, err := jsoz.MessageBytes(msg)
+	if err != nil {
+		return err
+	}
+	err = ws.WriteMessage(websocket.TextMessage, bytes)
+	if err != nil {
+		return errors.Wrap(err, "websocket.WriteMessage")
+	}
+	return nil
 }
