@@ -1,19 +1,19 @@
-package jsonrpchttp
+package jsozhttp
 
 import (
 	"context"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonrpc"
+	"github.com/superisaac/jsoz"
 	"io"
 	"sync"
 	"time"
 )
 
 type pendingRequest struct {
-	reqmsg        *jsonrpc.RequestMessage
-	resultChannel chan jsonrpc.IMessage
+	reqmsg        *jsoz.RequestMessage
+	resultChannel chan jsoz.Message
 	expire        time.Time
 }
 
@@ -75,7 +75,7 @@ func (self *WSClient) recvLoop() {
 			continue
 		}
 
-		msg, err := jsonrpc.ParseBytes(msgBytes)
+		msg, err := jsoz.ParseBytes(msgBytes)
 		if err != nil {
 			log.Warnf("bad jsonrpc message %s", msgBytes)
 			return
@@ -89,7 +89,7 @@ func (self *WSClient) recvLoop() {
 	}
 }
 
-func (self *WSClient) handleResult(msg jsonrpc.IMessage) {
+func (self *WSClient) handleResult(msg jsoz.Message) {
 	msgId := msg.MustId()
 	v, loaded := self.pendingRequests.LoadAndDelete(msgId)
 	if !loaded {
@@ -112,21 +112,21 @@ func (self *WSClient) expire(k interface{}, after time.Duration) {
 		v, loaded := self.pendingRequests.LoadAndDelete(k)
 		if loaded {
 			if pending, ok := v.(*pendingRequest); ok {
-				timeout := jsonrpc.ErrTimeout.ToMessage(pending.reqmsg)
+				timeout := jsoz.ErrTimeout.ToMessage(pending.reqmsg)
 				pending.resultChannel <- timeout
 			}
 		}
 	}
 }
 
-func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage) (jsonrpc.IMessage, error) {
+func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessage) (jsoz.Message, error) {
 	err := self.connect()
 	if err != nil {
 		return nil, err
 	}
-	ch := make(chan jsonrpc.IMessage, 10)
+	ch := make(chan jsoz.Message, 10)
 
-	marshaled, err := jsonrpc.MessageBytes(reqmsg)
+	marshaled, err := jsoz.MessageBytes(reqmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -155,13 +155,13 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessa
 	return resmsg, nil
 }
 
-func (self *WSClient) Send(rootCtx context.Context, msg jsonrpc.IMessage) error {
+func (self *WSClient) Send(rootCtx context.Context, msg jsoz.Message) error {
 	err := self.connect()
 	if err != nil {
 		return err
 	}
 
-	marshaled, err := jsonrpc.MessageBytes(msg)
+	marshaled, err := jsoz.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

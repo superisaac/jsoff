@@ -1,5 +1,5 @@
 // error defination https://www.jsonrpc.org/specification#error_object
-package jsonrpc
+package jsoz
 
 var (
 	ErrServerError = &RPCError{100, "server error", nil}

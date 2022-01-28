@@ -1,16 +1,16 @@
-package jsonrpchttp
+package jsozhttp
 
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonrpc"
+	"github.com/superisaac/jsoz"
 	"net/http"
 )
 
 // rpc context
 type RPCRequest struct {
 	context context.Context
-	msg     jsonrpc.IMessage
+	msg     jsoz.Message
 	r       *http.Request
 }
 
@@ -18,7 +18,7 @@ func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) Msg() jsonrpc.IMessage {
+func (self RPCRequest) Msg() jsoz.Message {
 	return self.msg
 }
 
@@ -78,7 +78,7 @@ func (self *Router) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Router) handleMessage(rootCtx context.Context, msg jsonrpc.IMessage, r *http.Request) (jsonrpc.IMessage, error) {
+func (self *Router) handleMessage(rootCtx context.Context, msg jsoz.Message, r *http.Request) (jsoz.Message, error) {
 	req := &RPCRequest{context: rootCtx, msg: msg, r: r}
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -102,13 +102,13 @@ func (self *Router) handleMessage(rootCtx context.Context, msg jsonrpc.IMessage,
 		return resmsg, err
 	} else {
 		if msg.IsRequest() {
-			return jsonrpc.ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
+			return jsoz.ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
 		}
 	}
 	return nil, nil
 }
 
-func (self Router) wrapResult(res interface{}, err error, msg jsonrpc.IMessage) (jsonrpc.IMessage, error) {
+func (self Router) wrapResult(res interface{}, err error, msg jsoz.Message) (jsoz.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Warnf("error %s", err)
@@ -116,24 +116,24 @@ func (self Router) wrapResult(res interface{}, err error, msg jsonrpc.IMessage) 
 		return nil, err
 	}
 
-	reqmsg, ok := msg.(*jsonrpc.RequestMessage)
+	reqmsg, ok := msg.(*jsoz.RequestMessage)
 	if !ok {
 		msg.Log().Panicf("convert to request message failed")
 		return nil, err
 	}
 
 	if err != nil {
-		var rpcErr *jsonrpc.RPCError
+		var rpcErr *jsoz.RPCError
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
-			return jsonrpc.ErrInternalError.ToMessage(reqmsg), nil
+			return jsoz.ErrInternalError.ToMessage(reqmsg), nil
 		}
-	} else if resmsg1, ok := res.(jsonrpc.IMessage); ok {
+	} else if resmsg1, ok := res.(jsoz.Message); ok {
 		// normal response
 		return resmsg1, nil
 	} else {
-		return jsonrpc.NewResultMessage(reqmsg, res), nil
+		return jsoz.NewResultMessage(reqmsg, res), nil
 	}
 	return nil, nil
 }

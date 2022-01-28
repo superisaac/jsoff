@@ -1,25 +1,25 @@
-package jsonrpchttp
+package jsozhttp
 
 import (
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonrpc"
+	"github.com/superisaac/jsoz"
 	"io/ioutil"
 	"net/http"
 	"time"
 )
 
-type Client struct {
+type HTTPClient struct {
 	serverUrl  string
 	httpClient *http.Client
 }
 
-func NewClient(serverUrl string) *Client {
-	return &Client{serverUrl: serverUrl}
+func NewHTTPClient(serverUrl string) *HTTPClient {
+	return &HTTPClient{serverUrl: serverUrl}
 }
 
-func (self *Client) connect() {
+func (self *HTTPClient) connect() {
 	if self.httpClient == nil {
 		tr := &http.Transport{
 			MaxIdleConns:        30,
@@ -33,14 +33,14 @@ func (self *Client) connect() {
 	}
 }
 
-func (self *Client) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage) (jsonrpc.IMessage, error) {
+func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessage) (jsoz.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
 
 	reqmsg.SetTraceId("")
 
-	marshaled, err := jsonrpc.MessageBytes(reqmsg)
+	marshaled, err := jsoz.MessageBytes(reqmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (self *Client) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil.ReadAll")
 	}
-	respmsg, err := jsonrpc.ParseBytes(respBody)
+	respmsg, err := jsoz.ParseBytes(respBody)
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +83,13 @@ func (self *Client) Call(rootCtx context.Context, reqmsg *jsonrpc.RequestMessage
 	return respmsg, nil
 }
 
-func (self *Client) Send(rootCtx context.Context, msg jsonrpc.IMessage) error {
+func (self *HTTPClient) Send(rootCtx context.Context, msg jsoz.Message) error {
 	self.connect()
 
 	traceId := msg.TraceId()
 	msg.SetTraceId("")
 
-	marshaled, err := jsonrpc.MessageBytes(msg)
+	marshaled, err := jsoz.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

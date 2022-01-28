@@ -1,4 +1,4 @@
-module github.com/superisaac/jsonrpc
+module github.com/superisaac/jsoz
 
 go 1.17
 

@@ -1,4 +1,4 @@
-package jsonrpc
+package jsoz
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ func parseRPCError(errIntf *simplejson.Json) (*RPCError, error) {
 	return &RPCError{code, message, data}, nil
 }
 
-func ParseBytes(data []byte) (IMessage, error) {
+func ParseBytes(data []byte) (Message, error) {
 	parsed, err := simplejson.NewJson(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "simplejson.NewJson")
@@ -39,7 +39,7 @@ func parseParams(parsed *simplejson.Json) ([]interface{}, bool, error) {
 	}
 }
 
-func Parse(parsed *simplejson.Json) (IMessage, error) {
+func Parse(parsed *simplejson.Json) (Message, error) {
 	id := parsed.Get("id").Interface()
 	if numId, ok := id.(json.Number); ok {
 		intId, err := numId.Int64()

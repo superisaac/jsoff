@@ -1,4 +1,4 @@
-package jsonrpc
+package jsoz
 
 import (
 	"fmt"
@@ -88,8 +88,8 @@ func (self BaseMessage) IsResultOrError() bool {
 	return self.IsResult() || self.IsError()
 }
 
-// IMessage methods
-func EncodePretty(msg IMessage) (string, error) {
+// Message methods
+func EncodePretty(msg Message) (string, error) {
 	bytes, err := MessageJson(msg).EncodePretty()
 	if err != nil {
 		return "", errors.Wrap(err, "simplejson.Json.EncodePretty()")
@@ -98,7 +98,7 @@ func EncodePretty(msg IMessage) (string, error) {
 }
 
 // A Message object to Json object for further trans
-func MessageJson(msg IMessage) *simplejson.Json {
+func MessageJson(msg Message) *simplejson.Json {
 	jsonObj := msg.GetJson()
 	if traceId := msg.TraceId(); traceId != "" {
 		jsonObj.Set("traceid", traceId)
@@ -106,11 +106,11 @@ func MessageJson(msg IMessage) *simplejson.Json {
 	return jsonObj
 }
 
-func MessageInterface(msg IMessage) interface{} {
+func MessageInterface(msg Message) interface{} {
 	return MessageJson(msg).Interface()
 }
 
-func MessageString(msg IMessage) string {
+func MessageString(msg Message) string {
 	bytes, err := MessageBytes(msg)
 	if err != nil {
 		panic(err)
@@ -118,7 +118,7 @@ func MessageString(msg IMessage) string {
 	return string(bytes)
 }
 
-func MessageBytes(msg IMessage) ([]byte, error) {
+func MessageBytes(msg Message) ([]byte, error) {
 	return MessageJson(msg).MarshalJSON()
 }
 
@@ -337,13 +337,13 @@ func rawResultMessage(id interface{}, result interface{}) *ResultMessage {
 	return msg
 }
 
-func NewResultMessage(reqmsg IMessage, result interface{}) *ResultMessage {
+func NewResultMessage(reqmsg Message, result interface{}) *ResultMessage {
 	resmsg := rawResultMessage(reqmsg.MustId(), result)
 	resmsg.SetTraceId(reqmsg.TraceId())
 	return resmsg
 }
 
-func NewErrorMessage(reqmsg IMessage, errbody *RPCError) *ErrorMessage {
+func NewErrorMessage(reqmsg Message, errbody *RPCError) *ErrorMessage {
 	errmsg := rawErrorMessage(reqmsg.MustId(), errbody)
 	errmsg.SetTraceId(reqmsg.TraceId())
 	return errmsg
@@ -363,7 +363,7 @@ func rawErrorMessage(id interface{}, errbody *RPCError) *ErrorMessage {
 	return msg
 }
 
-func RPCErrorMessage(reqmsg IMessage, code int, message string, data interface{}) *ErrorMessage {
+func RPCErrorMessage(reqmsg Message, code int, message string, data interface{}) *ErrorMessage {
 	errbody := &RPCError{code, message, data}
 	return NewErrorMessage(reqmsg, errbody)
 }

@@ -1,4 +1,4 @@
-package jsonrpc
+package jsoz
 
 import (
 	"github.com/bitly/go-simplejson"
@@ -20,7 +20,7 @@ const (
 	MTError   = 4
 )
 
-type IMessage interface {
+type Message interface {
 	IsRequest() bool
 	IsNotify() bool
 	IsRequestOrNotify() bool

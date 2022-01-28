@@ -4,7 +4,7 @@ import (
 	"fmt"
 	simplejson "github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
-	jsonrpc "github.com/superisaac/jsonrpc"
+	"github.com/superisaac/jsoz"
 	"strings"
 )
 
@@ -17,8 +17,8 @@ func (self ErrorPos) Error() string {
 	return fmt.Sprintf("Validation Error: %s %s", self.Path(), self.hint)
 }
 
-func (self ErrorPos) ToMessage(reqmsg *jsonrpc.RequestMessage) *jsonrpc.ErrorMessage {
-	err := &jsonrpc.RPCError{10901, self.Error(), false}
+func (self ErrorPos) ToMessage(reqmsg *jsoz.RequestMessage) *jsoz.ErrorMessage {
+	err := &jsoz.RPCError{10901, self.Error(), false}
 	return err.ToMessage(reqmsg)
 }
 

@@ -1,4 +1,4 @@
-package jsonrpc
+package jsoz
 
 import (
 	json "encoding/json"

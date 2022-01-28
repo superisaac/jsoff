@@ -1,4 +1,4 @@
-package jsonrpchttp
+package jsozhttp
 
 import (
 	"fmt"
