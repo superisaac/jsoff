@@ -44,6 +44,12 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	done := make(chan error, 10)
 	go self.recvLoop(r.Context(), ws, r, done)
 
+	defer func() {
+		if self.Router.closeHandler != nil {
+			self.Router.closeHandler(r)
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():

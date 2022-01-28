@@ -29,10 +29,12 @@ func (self RPCRequest) HttpRequest() *http.Request {
 // handler func
 type HandlerFunc func(req *RPCRequest, params []interface{}) (interface{}, error)
 type MissingHandlerFunc func(req *RPCRequest) (interface{}, error)
+type CloseHandlerFunc  func(r *http.Request)
 
 type Router struct {
 	methodHandlers map[string]HandlerFunc
 	missingHandler MissingHandlerFunc
+	closeHandler   CloseHandlerFunc
 }
 
 func NewRouter() *Router {
@@ -62,6 +64,14 @@ func (self *Router) OnMissing(handler MissingHandlerFunc) error {
 		return errors.New("missing handler already exist!")
 	}
 	self.missingHandler = handler
+	return nil
+}
+
+func (self *Router) OnClose(handler CloseHandlerFunc) error {
+	if self.closeHandler != nil {
+		return errors.New("close handler already exist!")
+	}
+	self.closeHandler = handler
 	return nil
 }
 
