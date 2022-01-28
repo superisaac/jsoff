@@ -1,4 +1,5 @@
 gofiles := $(shell find . -name '*.go')
+goflag := -gcflags=-G=3
 
 all: test
 
@@ -11,6 +12,15 @@ gofmt:
 	go fmt *.go
 	go fmt schema/*.go
 	go fmt http/*.go
+	go fmt cli/*.go
 
-.PHONY: test gofmt
+build-cli: jsonrpc-cli
+
+jsonrpc-cli: ${gofiles}
+	go build $(goflag) -o $@ cli/jsonrpc_client.go
+
+clean:
+	rm -rf jsonrpc-cli build dist
+
+.PHONY: test gofmt build-cli clean
 .SECONDARY: $(buildarchdirs)

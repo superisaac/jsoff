@@ -1,2 +1,3 @@
-# jsonrpc
-jsonrpc proto and schema in golang
+# jsoz
+
+JSON-RPC 2.0 library and relative tools in golang
