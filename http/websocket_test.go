@@ -1,4 +1,4 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	//"fmt"
@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	//log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"net/http"
 	"strings"
 	"testing"
@@ -21,7 +21,7 @@ func TestWSServerClient(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jsoz.ParamsError("no argument given")
+			return nil, jsonz.ParamsError("no argument given")
 		}
 	})
 
@@ -32,7 +32,7 @@ func TestWSServerClient(t *testing.T) {
 
 	// right request
 	params := [](interface{}){"hello999"}
-	reqmsg := jsoz.NewRequestMessage(1, "echo", params)
+	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(context.Background(), reqmsg)
 	assert.Nil(err)
@@ -42,12 +42,12 @@ func TestWSServerClient(t *testing.T) {
 
 	// method not found
 	params1 := [](interface{}){"hello999"}
-	reqmsg1 := jsoz.NewRequestMessage(666, "echoxxx", params1)
+	reqmsg1 := jsonz.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(context.Background(), reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
 	errbody := resmsg1.MustError()
-	assert.Equal(jsoz.ErrMethodNotFound.Code, errbody.Code)
+	assert.Equal(jsonz.ErrMethodNotFound.Code, errbody.Code)
 }
 
 func TestTypedWSServerClient(t *testing.T) {
@@ -71,7 +71,7 @@ func TestTypedWSServerClient(t *testing.T) {
 
 	// right request
 	params := [](interface{}){"hello999"}
-	reqmsg := jsoz.NewRequestMessage(1, "echoTyped", params)
+	reqmsg := jsonz.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(context.Background(), reqmsg)
 	assert.Nil(err)
@@ -81,7 +81,7 @@ func TestTypedWSServerClient(t *testing.T) {
 
 	// type mismatch
 	params1 := [](interface{}){true}
-	reqmsg1 := jsoz.NewRequestMessage(1, "echoTyped", params1)
+	reqmsg1 := jsonz.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(context.Background(), reqmsg1)
 	assert.Nil(err1)
@@ -91,7 +91,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
 	// test params size
 	params2 := [](interface{}){"hello", 2}
-	reqmsg2 := jsoz.NewRequestMessage(2, "echoTyped", params2)
+	reqmsg2 := jsonz.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(context.Background(), reqmsg2)
 	assert.Nil(err2)
@@ -102,7 +102,7 @@ func TestTypedWSServerClient(t *testing.T) {
 
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
-	reqmsg3 := jsoz.NewRequestMessage(3, "add", params3)
+	reqmsg3 := jsonz.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(context.Background(), reqmsg3)
 	assert.Nil(err3)
 	assert.True(resmsg3.IsResult())
@@ -111,7 +111,7 @@ func TestTypedWSServerClient(t *testing.T) {
 
 	// test add 2 numbers with typing mismatch
 	params4 := [](interface{}){"6", 4}
-	reqmsg4 := jsoz.NewRequestMessage(4, "add", params4)
+	reqmsg4 := jsonz.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(context.Background(), reqmsg4)
 	assert.Nil(err4)
 	assert.True(resmsg4.IsError())

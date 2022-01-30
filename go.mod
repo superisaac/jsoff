@@ -1,4 +1,4 @@
-module github.com/superisaac/jsoz
+module github.com/superisaac/jsonz
 
 go 1.17
 

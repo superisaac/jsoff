@@ -1,10 +1,10 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"bytes"
 	"context"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -33,14 +33,14 @@ func (self *HTTPClient) connect() {
 	}
 }
 
-func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessage) (jsoz.Message, error) {
+func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
 
 	reqmsg.SetTraceId("")
 
-	marshaled, err := jsoz.MessageBytes(reqmsg)
+	marshaled, err := jsonz.MessageBytes(reqmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessag
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil.ReadAll")
 	}
-	respmsg, err := jsoz.ParseBytes(respBody)
+	respmsg, err := jsonz.ParseBytes(respBody)
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +83,13 @@ func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessag
 	return respmsg, nil
 }
 
-func (self *HTTPClient) Send(rootCtx context.Context, msg jsoz.Message) error {
+func (self *HTTPClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 	self.connect()
 
 	traceId := msg.TraceId()
 	msg.SetTraceId("")
 
-	marshaled, err := jsoz.MessageBytes(msg)
+	marshaled, err := jsonz.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	//"encoding/json"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 )
 
 func typeIsStruct(tp reflect.Type) bool {
@@ -67,7 +67,7 @@ func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
 		return nil, errors.New("func must have 1 more arguments")
 	}
 	firstArgType := funcType.In(0)
-	if !(firstArgType.Kind() == reflect.Ptr && firstArgType.String() == "*jsozhttp.RPCRequest") {
+	if !(firstArgType.Kind() == reflect.Ptr && firstArgType.String() == "*jsonzhttp.RPCRequest") {
 		return nil, errors.New("the first arg must be context.Context")
 	}
 
@@ -86,7 +86,7 @@ func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
 	handler := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// check inputs
 		if funcType.NumIn() != len(params)+1 {
-			return nil, jsoz.ParamsError("different params size")
+			return nil, jsonz.ParamsError("different params size")
 		}
 
 		// params -> []reflect.Value
@@ -96,7 +96,7 @@ func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
 			//fmt.Printf("i %d, interface type %s from %#v\n", i, argType, param)
 			argValue, err := interfaceToValue(argType, param)
 			if err != nil {
-				return nil, jsoz.ParamsError(
+				return nil, jsonz.ParamsError(
 					fmt.Sprintf("params %d %s", i+1, err))
 			}
 			fnArgs = append(fnArgs, argValue)

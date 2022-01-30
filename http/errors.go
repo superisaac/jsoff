@@ -1,4 +1,4 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"fmt"

@@ -1,11 +1,11 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"context"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"net/http"
 )
 
@@ -84,7 +84,7 @@ func (self *WSServer) recvLoop(rootCtx context.Context, ws *websocket.Conn, r *h
 }
 
 func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws *websocket.Conn, r *http.Request, done chan error) {
-	msg, err := jsoz.ParseBytes(msgBytes)
+	msg, err := jsonz.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
 		done <- errors.New("bad jsonrpc message")
@@ -106,8 +106,8 @@ func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws
 	}
 }
 
-func (self WSServer) SendMessage(ws *websocket.Conn, msg jsoz.Message) error {
-	bytes, err := jsoz.MessageBytes(msg)
+func (self WSServer) SendMessage(ws *websocket.Conn, msg jsonz.Message) error {
+	bytes, err := jsonz.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

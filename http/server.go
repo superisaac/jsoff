@@ -1,9 +1,9 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"bytes"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"io"
 	"net/http"
 )
@@ -24,7 +24,7 @@ func NewServer(router *Router) *Server {
 func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only support POST
 	if r.Method != "POST" {
-		jsoz.ErrorResponse(w, r, errors.New("method not allowed"), 405, "Method not allowed")
+		jsonz.ErrorResponse(w, r, errors.New("method not allowed"), 405, "Method not allowed")
 		return
 	}
 
@@ -32,13 +32,13 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var buffer bytes.Buffer
 	_, err := buffer.ReadFrom(r.Body)
 	if err != nil {
-		jsoz.ErrorResponse(w, r, err, 400, "Bad request")
+		jsonz.ErrorResponse(w, r, err, 400, "Bad request")
 		return
 	}
 
-	msg, err := jsoz.ParseBytes(buffer.Bytes())
+	msg, err := jsonz.ParseBytes(buffer.Bytes())
 	if err != nil {
-		jsoz.ErrorResponse(w, r, err, 400, "Bad jsonrpc request")
+		jsonz.ErrorResponse(w, r, err, 400, "Bad jsonrpc request")
 		return
 	}
 
@@ -72,11 +72,11 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		traceId := resmsg.TraceId()
 		resmsg.SetTraceId("")
 
-		data, err1 := jsoz.MessageBytes(resmsg)
+		data, err1 := jsonz.MessageBytes(resmsg)
 		if err1 != nil {
 			resmsg.Log().Warnf("error marshaling msg %s", err1)
-			errmsg := jsoz.ErrInternalError.ToMessageFromId(msg.MustId(), msg.TraceId())
-			data, _ = jsoz.MessageBytes(errmsg)
+			errmsg := jsonz.ErrInternalError.ToMessageFromId(msg.MustId(), msg.TraceId())
+			data, _ = jsonz.MessageBytes(errmsg)
 		}
 		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")

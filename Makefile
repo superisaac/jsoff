@@ -4,9 +4,9 @@ goflag := -gcflags=-G=3
 all: test
 
 test:
-	go test -v github.com/superisaac/jsoz
-	go test -v github.com/superisaac/jsoz/schema
-	go test -v github.com/superisaac/jsoz/http
+	go test -v github.com/superisaac/jsonz
+	go test -v github.com/superisaac/jsonz/schema
+	go test -v github.com/superisaac/jsonz/http
 
 gofmt:
 	go fmt *.go

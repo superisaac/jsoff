@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/superisaac/jsoz"
-	"github.com/superisaac/jsoz/http"
+	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jsonz/http"
 	"os"
 	"strings"
 )
@@ -26,7 +26,7 @@ func main() {
 	method := args[0]
 	clParams := args[1:len(args)]
 
-	params, err := jsoz.GuessJsonArray(clParams)
+	params, err := jsonz.GuessJsonArray(clParams)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "params error: %s\n", err)
 		os.Exit(1)
@@ -41,21 +41,21 @@ func main() {
 		serverUrl = "http://127.0.0.1:9990"
 	}
 
-	c, err := jsozhttp.GetClient(serverUrl)
+	c, err := jsonzhttp.GetClient(serverUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fail to find jsonrpc client: %s\n", err)
 		os.Exit(1)
 	}
 
 	reqId := strings.ReplaceAll(uuid.New().String(), "-", "")
-	reqmsg := jsoz.NewRequestMessage(reqId, method, params)
+	reqmsg := jsonz.NewRequestMessage(reqId, method, params)
 	resmsg, err := c.Call(context.Background(), reqmsg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "rpc error: %s\n", err)
 		os.Exit(1)
 	}
 
-	repr, err := jsoz.EncodePretty(resmsg)
+	repr, err := jsonz.EncodePretty(resmsg)
 	if err != nil {
 		panic(err)
 	}

@@ -1,4 +1,4 @@
-package jsoz
+package jsonz
 
 import (
 	"fmt"

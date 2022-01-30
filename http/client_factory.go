@@ -1,15 +1,15 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"net/url"
 )
 
 type Client interface {
-	Call(ctx context.Context, reqmsg *jsoz.RequestMessage) (jsoz.Message, error)
-	Send(ctx context.Context, msg jsoz.Message) error
+	Call(ctx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error)
+	Send(ctx context.Context, msg jsonz.Message) error
 }
 
 func GetClient(serverUrl string) (Client, error) {

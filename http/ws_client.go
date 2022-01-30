@@ -1,23 +1,23 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"context"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"io"
 	"sync"
 	"time"
 )
 
 type pendingRequest struct {
-	reqmsg        *jsoz.RequestMessage
-	resultChannel chan jsoz.Message
+	reqmsg        *jsonz.RequestMessage
+	resultChannel chan jsonz.Message
 	expire        time.Time
 }
 
-type WSMessageHandler func(msg jsoz.Message)
+type WSMessageHandler func(msg jsonz.Message)
 
 type WSClient struct {
 	serverUrl       string
@@ -86,7 +86,7 @@ func (self *WSClient) recvLoop() {
 			continue
 		}
 
-		msg, err := jsoz.ParseBytes(msgBytes)
+		msg, err := jsonz.ParseBytes(msgBytes)
 		if err != nil {
 			log.Warnf("bad jsonrpc message %s", msgBytes)
 			return
@@ -104,7 +104,7 @@ func (self *WSClient) recvLoop() {
 	}
 }
 
-func (self *WSClient) handleResult(msg jsoz.Message) {
+func (self *WSClient) handleResult(msg jsonz.Message) {
 	msgId := msg.MustId()
 	v, loaded := self.pendingRequests.LoadAndDelete(msgId)
 	if !loaded {
@@ -129,21 +129,21 @@ func (self *WSClient) expire(k interface{}, after time.Duration) {
 		v, loaded := self.pendingRequests.LoadAndDelete(k)
 		if loaded {
 			if pending, ok := v.(*pendingRequest); ok {
-				timeout := jsoz.ErrTimeout.ToMessage(pending.reqmsg)
+				timeout := jsonz.ErrTimeout.ToMessage(pending.reqmsg)
 				pending.resultChannel <- timeout
 			}
 		}
 	}
 }
 
-func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessage) (jsoz.Message, error) {
+func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
 	err := self.connect()
 	if err != nil {
 		return nil, err
 	}
-	ch := make(chan jsoz.Message, 10)
+	ch := make(chan jsonz.Message, 10)
 
-	marshaled, err := jsoz.MessageBytes(reqmsg)
+	marshaled, err := jsonz.MessageBytes(reqmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -172,13 +172,13 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsoz.RequestMessage)
 	return resmsg, nil
 }
 
-func (self *WSClient) Send(rootCtx context.Context, msg jsoz.Message) error {
+func (self *WSClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 	err := self.connect()
 	if err != nil {
 		return err
 	}
 
-	marshaled, err := jsoz.MessageBytes(msg)
+	marshaled, err := jsonz.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

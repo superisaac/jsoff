@@ -1,16 +1,16 @@
-package jsozhttp
+package jsonzhttp
 
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsoz"
+	"github.com/superisaac/jsonz"
 	"net/http"
 )
 
 // rpc context
 type RPCRequest struct {
 	context context.Context
-	msg     jsoz.Message
+	msg     jsonz.Message
 	r       *http.Request
 	data    interface{} // arbitrary data
 }
@@ -19,7 +19,7 @@ func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) Msg() jsoz.Message {
+func (self RPCRequest) Msg() jsonz.Message {
 	return self.msg
 }
 
@@ -93,7 +93,7 @@ func (self *Router) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Router) handleRequest(req *RPCRequest) (jsoz.Message, error) {
+func (self *Router) handleRequest(req *RPCRequest) (jsonz.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -117,13 +117,13 @@ func (self *Router) handleRequest(req *RPCRequest) (jsoz.Message, error) {
 		return resmsg, err
 	} else {
 		if msg.IsRequest() {
-			return jsoz.ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
+			return jsonz.ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
 		}
 	}
 	return nil, nil
 }
 
-func (self Router) wrapResult(res interface{}, err error, msg jsoz.Message) (jsoz.Message, error) {
+func (self Router) wrapResult(res interface{}, err error, msg jsonz.Message) (jsonz.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Warnf("error %s", err)
@@ -131,24 +131,24 @@ func (self Router) wrapResult(res interface{}, err error, msg jsoz.Message) (jso
 		return nil, err
 	}
 
-	reqmsg, ok := msg.(*jsoz.RequestMessage)
+	reqmsg, ok := msg.(*jsonz.RequestMessage)
 	if !ok {
 		msg.Log().Panicf("convert to request message failed")
 		return nil, err
 	}
 
 	if err != nil {
-		var rpcErr *jsoz.RPCError
+		var rpcErr *jsonz.RPCError
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
-			return jsoz.ErrInternalError.ToMessage(reqmsg), nil
+			return jsonz.ErrInternalError.ToMessage(reqmsg), nil
 		}
-	} else if resmsg1, ok := res.(jsoz.Message); ok {
+	} else if resmsg1, ok := res.(jsonz.Message); ok {
 		// normal response
 		return resmsg1, nil
 	} else {
-		return jsoz.NewResultMessage(reqmsg, res), nil
+		return jsonz.NewResultMessage(reqmsg, res), nil
 	}
 	return nil, nil
 }
