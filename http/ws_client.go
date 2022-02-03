@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"io"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -24,10 +25,15 @@ type WSClient struct {
 	ws              *websocket.Conn
 	pendingRequests sync.Map
 	messageHandler  WSMessageHandler
+	sendChannel     chan jsonz.Message
+	connectOnce     sync.Once
 }
 
 func NewWSClient(serverUrl string) *WSClient {
-	return &WSClient{serverUrl: serverUrl}
+	return &WSClient{
+		serverUrl:   serverUrl,
+		sendChannel: make(chan jsonz.Message, 100),
+	}
 }
 
 func (self *WSClient) Close() {
@@ -49,18 +55,44 @@ func (self WSClient) Connected() bool {
 	return self.ws != nil
 }
 
-func (self *WSClient) connect() error {
-	if self.Connected() {
-		// already connectd
-		return nil
-	}
-	ws, _, err := websocket.DefaultDialer.Dial(self.serverUrl, nil)
-	if err != nil {
-		return errors.Wrap(err, "websocket error")
-	}
-	self.ws = ws
-	go self.recvLoop()
+func (self *WSClient) connect() (e error) {
+	self.connectOnce.Do(func() {
+		ws, _, err := websocket.DefaultDialer.Dial(self.serverUrl, nil)
+		if err != nil {
+			//panic(err)
+			e = err
+			return
+		}
+		self.ws = ws
+		go self.sendLoop()
+		go self.recvLoop()
+	})
 	return nil
+}
+
+func (self *WSClient) sendLoop() {
+	defer self.Close()
+	for {
+		select {
+		case msg, ok := <-self.sendChannel:
+			if !ok {
+				return
+			}
+			if self.ws == nil {
+				return
+			}
+			marshaled, err := jsonz.MessageBytes(msg)
+			if err != nil {
+				log.Warnf("marshal msg error %s", err)
+				return
+			}
+
+			if err := self.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
+				log.Warnf("write warning message %s", err)
+				return
+			}
+		}
+	}
 }
 
 func (self *WSClient) recvLoop() {
@@ -77,7 +109,7 @@ func (self *WSClient) recvLoop() {
 			} else if errors.As(err, &closeErr) {
 				log.Infof("websocket close error %d %s", closeErr.Code, closeErr.Text)
 			} else {
-				log.Warnf("ws.ReadMessage error %s", err)
+				log.Warnf("ws.ReadMessage error %s %s", reflect.TypeOf(err), err)
 			}
 			self.Close()
 			return
@@ -143,10 +175,10 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	}
 	ch := make(chan jsonz.Message, 10)
 
-	marshaled, err := jsonz.MessageBytes(reqmsg)
-	if err != nil {
-		return nil, err
-	}
+	// marshaled, err := jsonz.MessageBytes(reqmsg)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	if _, loaded := self.pendingRequests.Load(reqmsg.Id); loaded {
 		return nil, errors.New("duplicate request Id")
@@ -157,9 +189,10 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 		resultChannel: ch,
 		expire:        time.Now().Add(time.Second * 10),
 	}
-
 	self.pendingRequests.Store(reqmsg.Id, p)
-	err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
+
+	err = self.Send(rootCtx, reqmsg)
+	//err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
 	if err != nil {
 		return nil, err
 	}
@@ -178,14 +211,16 @@ func (self *WSClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 		return err
 	}
 
-	marshaled, err := jsonz.MessageBytes(msg)
-	if err != nil {
-		return err
-	}
+	self.sendChannel <- msg
 
-	err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
-	if err != nil {
-		return errors.Wrap(err, "websocket.WriteMessage")
-	}
+	// marshaled, err := jsonz.MessageBytes(msg)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
+	// if err != nil {
+	// 	return errors.Wrap(err, "websocket.WriteMessage")
+	// }
 	return nil
 }
