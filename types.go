@@ -40,6 +40,8 @@ type Message interface {
 	MustResult() interface{}
 	MustError() *RPCError
 
+	ReplaceId(interface{}) Message
+
 	Log() *log.Entry
 }
 

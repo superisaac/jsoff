@@ -27,8 +27,8 @@ type WSClient struct {
 	messageHandler  WSMessageHandler
 	sendChannel     chan jsonz.Message
 
-	connectErr      error
-	connectOnce     sync.Once
+	connectErr  error
+	connectOnce sync.Once
 }
 
 func NewWSClient(serverUrl string) *WSClient {
@@ -148,7 +148,12 @@ func (self *WSClient) handleResult(msg jsonz.Message) {
 	}
 
 	if pending, ok := v.(*pendingRequest); ok {
-		pending.resultChannel <- msg
+		if msgId != pending.reqmsg.Id {
+			resmsg := msg.ReplaceId(pending.reqmsg.Id)
+			pending.resultChannel <- resmsg
+		} else {
+			pending.resultChannel <- msg
+		}
 	}
 }
 
@@ -176,13 +181,9 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	}
 	ch := make(chan jsonz.Message, 10)
 
-	// marshaled, err := jsonz.MessageBytes(reqmsg)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
+	sendmsg := reqmsg
 	if _, loaded := self.pendingRequests.Load(reqmsg.Id); loaded {
-		return nil, errors.New("duplicate request Id")
+		sendmsg = reqmsg.Clone(jsonz.NewUuid())
 	}
 
 	p := &pendingRequest{
@@ -190,14 +191,13 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 		resultChannel: ch,
 		expire:        time.Now().Add(time.Second * 10),
 	}
-	self.pendingRequests.Store(reqmsg.Id, p)
+	self.pendingRequests.Store(sendmsg.Id, p)
 
-	err = self.Send(rootCtx, reqmsg)
-	//err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
+	err = self.Send(rootCtx, sendmsg)
 	if err != nil {
 		return nil, err
 	}
-	go self.expire(reqmsg.Id, time.Second*10)
+	go self.expire(sendmsg.Id, time.Second*10)
 
 	resmsg, ok := <-ch
 	if !ok {
@@ -214,14 +214,5 @@ func (self *WSClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 
 	self.sendChannel <- msg
 
-	// marshaled, err := jsonz.MessageBytes(msg)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = self.ws.WriteMessage(websocket.TextMessage, marshaled)
-	// if err != nil {
-	// 	return errors.Wrap(err, "websocket.WriteMessage")
-	// }
 	return nil
 }

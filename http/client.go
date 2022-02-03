@@ -15,7 +15,7 @@ type HTTPClient struct {
 	serverUrl  string
 	httpClient *http.Client
 
-	connectOnce     sync.Once
+	connectOnce sync.Once
 }
 
 func NewHTTPClient(serverUrl string) *HTTPClient {

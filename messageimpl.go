@@ -162,6 +162,26 @@ func (self ErrorMessage) Log() *log.Entry {
 	})
 }
 
+func (self RequestMessage) ReplaceId(newId interface{}) Message {
+	return self.Clone(newId)
+}
+
+func (self NotifyMessage) ReplaceId(newId interface{}) Message {
+	panic(NewErrMsgType("ReplaceId"))
+}
+
+func (self ResultMessage) ReplaceId(newId interface{}) Message {
+	resmsg := rawResultMessage(newId, self.Result)
+	resmsg.SetTraceId(self.TraceId())
+	return resmsg
+}
+
+func (self ErrorMessage) ReplaceId(newId interface{}) Message {
+	errmsg := rawErrorMessage(newId, self.Error)
+	errmsg.SetTraceId(self.TraceId())
+	return errmsg
+}
+
 // Must methods
 
 // MustId

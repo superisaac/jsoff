@@ -2,9 +2,11 @@ package jsonz
 
 import (
 	simplejson "github.com/bitly/go-simplejson"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func MarshalJson(data interface{}) (string, error) {
@@ -99,4 +101,8 @@ func ErrorResponse(w http.ResponseWriter, r *http.Request, err error, status int
 	log.Warnf("HTTP error: %s %d", err.Error(), status)
 	w.WriteHeader(status)
 	w.Write([]byte(message))
+}
+
+func NewUuid() string {
+	return strings.ReplaceAll(uuid.New().String(), "-", "")
 }
