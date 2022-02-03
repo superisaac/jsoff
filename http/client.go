@@ -7,12 +7,15 @@ import (
 	"github.com/superisaac/jsonz"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type HTTPClient struct {
 	serverUrl  string
 	httpClient *http.Client
+
+	connectOnce     sync.Once
 }
 
 func NewHTTPClient(serverUrl string) *HTTPClient {
@@ -20,7 +23,7 @@ func NewHTTPClient(serverUrl string) *HTTPClient {
 }
 
 func (self *HTTPClient) connect() {
-	if self.httpClient == nil {
+	self.connectOnce.Do(func() {
 		tr := &http.Transport{
 			MaxIdleConns:        30,
 			MaxIdleConnsPerHost: 10,
@@ -30,7 +33,7 @@ func (self *HTTPClient) connect() {
 			Transport: tr,
 			Timeout:   5 * time.Second,
 		}
-	}
+	})
 }
 
 func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {

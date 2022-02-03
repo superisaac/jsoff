@@ -26,6 +26,8 @@ type WSClient struct {
 	pendingRequests sync.Map
 	messageHandler  WSMessageHandler
 	sendChannel     chan jsonz.Message
+
+	connectErr      error
 	connectOnce     sync.Once
 }
 
@@ -55,19 +57,18 @@ func (self WSClient) Connected() bool {
 	return self.ws != nil
 }
 
-func (self *WSClient) connect() (e error) {
+func (self *WSClient) connect() error {
 	self.connectOnce.Do(func() {
 		ws, _, err := websocket.DefaultDialer.Dial(self.serverUrl, nil)
 		if err != nil {
-			//panic(err)
-			e = err
+			self.connectErr = err
 			return
 		}
 		self.ws = ws
 		go self.sendLoop()
 		go self.recvLoop()
 	})
-	return nil
+	return self.connectErr
 }
 
 func (self *WSClient) sendLoop() {
