@@ -69,7 +69,7 @@ func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		abnResp := &UpstreamResponse{
+		abnResp := &WrappedResponse{
 			Response: resp,
 		}
 		return nil, errors.Wrap(abnResp, "abnormal response")
@@ -118,7 +118,7 @@ func (self *HTTPClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		abnResp := &UpstreamResponse{
+		abnResp := &WrappedResponse{
 			Response: resp,
 		}
 		return errors.Wrap(abnResp, "abnormal response")

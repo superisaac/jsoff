@@ -45,8 +45,8 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req := &RPCRequest{context: r.Context(), msg: msg, r: r}
 	resmsg, err := self.Router.handleRequest(req)
 	if err != nil {
-		var simpleResp *SimpleHttpResponse
-		var upResp *UpstreamResponse
+		var simpleResp *SimpleResponse
+		var upResp *WrappedResponse
 		if errors.As(err, &simpleResp) {
 			w.WriteHeader(simpleResp.Code)
 			w.Write(simpleResp.Body)

@@ -8,20 +8,20 @@ import (
 // errors
 
 // non standard Response returned by endpoints
-type UpstreamResponse struct {
+type WrappedResponse struct {
 	Response *http.Response
 }
 
-func (self UpstreamResponse) Error() string {
+func (self WrappedResponse) Error() string {
 	return fmt.Sprintf("upstream response %d", self.Response.StatusCode)
 }
 
-// Simple Http response to instant return
-type SimpleHttpResponse struct {
+// Simple HTTP response to instant return
+type SimpleResponse struct {
 	Code int
 	Body []byte
 }
 
-func (self SimpleHttpResponse) Error() string {
+func (self SimpleResponse) Error() string {
 	return fmt.Sprintf("%d/%s", self.Code, self.Body)
 }
