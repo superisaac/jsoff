@@ -22,8 +22,8 @@ func TestMain(m *testing.M) {
 func TestServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewServer(nil)
-	server.Router.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewServer()
+	server.Handler.On("echo", func(req *jsonz.RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -59,8 +59,8 @@ func TestServerClient(t *testing.T) {
 func TestMissing(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewServer(nil)
-	err := server.Router.OnMissing(func(req *RPCRequest) (interface{}, error) {
+	server := NewServer()
+	err := server.Handler.OnMissing(func(req *jsonz.RPCRequest) (interface{}, error) {
 		msg := req.Msg()
 		assert.True(msg.IsNotify())
 		assert.Equal("testnotify", msg.MustMethod())
@@ -83,13 +83,13 @@ func TestMissing(t *testing.T) {
 func TestTypedServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewServer(nil)
-	err := server.Router.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server := NewServer()
+	err := server.Handler.OnTyped("echoTyped", func(req *jsonz.RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.Router.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = server.Handler.OnTyped("add", func(req *jsonz.RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)

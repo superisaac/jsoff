@@ -1,12 +1,10 @@
-package jsonzhttp
+package jsonz
 
 import (
 	"fmt"
-	"reflect"
-	//"encoding/json"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonz"
+	"reflect"
 )
 
 func typeIsStruct(tp reflect.Type) bool {
@@ -67,8 +65,8 @@ func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
 		return nil, errors.New("func must have 1 more arguments")
 	}
 	firstArgType := funcType.In(0)
-	if !(firstArgType.Kind() == reflect.Ptr && firstArgType.String() == "*jsonzhttp.RPCRequest") {
-		return nil, errors.New("the first arg must be context.Context")
+	if !(firstArgType.Kind() == reflect.Ptr && firstArgType.String() == "*jsonz.RPCRequest") {
+		return nil, errors.New("the first arg must be jsonz.RPCRequest")
 	}
 
 	// check outputs
@@ -86,7 +84,7 @@ func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
 	handler := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// check inputs
 		if funcType.NumIn() != len(params)+1 {
-			return nil, jsonz.ParamsError("different params size")
+			return nil, ParamsError("different params size")
 		}
 
 		// params -> []reflect.Value
@@ -96,7 +94,7 @@ func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
 			//fmt.Printf("i %d, interface type %s from %#v\n", i, argType, param)
 			argValue, err := interfaceToValue(argType, param)
 			if err != nil {
-				return nil, jsonz.ParamsError(
+				return nil, ParamsError(
 					fmt.Sprintf("params %d %s", i+1, err))
 			}
 			fnArgs = append(fnArgs, argValue)

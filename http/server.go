@@ -9,15 +9,19 @@ import (
 )
 
 type Server struct {
-	Router *Router
+	Handler *jsonz.Handler
 }
 
-func NewServer(router *Router) *Server {
-	if router == nil {
-		router = NewRouter()
+func NewServer() *Server {
+	return NewServerFromHandler(nil)
+}
+
+func NewServerFromHandler(handler *jsonz.Handler) *Server {
+	if handler == nil {
+		handler = jsonz.NewHandler()
 	}
 	return &Server{
-		Router: router,
+		Handler: handler,
 	}
 }
 
@@ -42,8 +46,8 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := &RPCRequest{context: r.Context(), msg: msg, r: r}
-	resmsg, err := self.Router.handleRequest(req)
+	req := jsonz.NewRPCRequest(r.Context(), msg, r, nil)
+	resmsg, err := self.Handler.HandleRequest(req)
 	if err != nil {
 		var simpleResp *SimpleResponse
 		var upResp *WrappedResponse

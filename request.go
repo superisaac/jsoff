@@ -1,25 +1,28 @@
-package jsonzhttp
+package jsonz
 
 import (
 	"context"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonz"
 	"net/http"
 )
 
 // rpc context
 type RPCRequest struct {
 	context context.Context
-	msg     jsonz.Message
+	msg     Message
 	r       *http.Request
 	data    interface{} // arbitrary data
+}
+
+func NewRPCRequest(ctx context.Context, msg Message, r *http.Request, data interface{}) *RPCRequest {
+	return &RPCRequest{context: ctx, msg: msg, r: r, data: data}
 }
 
 func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) Msg() jsonz.Message {
+func (self RPCRequest) Msg() Message {
 	return self.msg
 }
 
@@ -36,19 +39,19 @@ type HandlerFunc func(req *RPCRequest, params []interface{}) (interface{}, error
 type MissingHandlerFunc func(req *RPCRequest) (interface{}, error)
 type CloseHandlerFunc func(r *http.Request)
 
-type Router struct {
+type Handler struct {
 	methodHandlers map[string]HandlerFunc
 	missingHandler MissingHandlerFunc
 	closeHandler   CloseHandlerFunc
 }
 
-func NewRouter() *Router {
-	return &Router{
+func NewHandler() *Handler {
+	return &Handler{
 		methodHandlers: make(map[string]HandlerFunc),
 	}
 }
 
-func (self *Router) On(method string, handler HandlerFunc) error {
+func (self *Handler) On(method string, handler HandlerFunc) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
 	}
@@ -56,7 +59,7 @@ func (self *Router) On(method string, handler HandlerFunc) error {
 	return nil
 }
 
-func (self *Router) OnTyped(method string, typedHandler interface{}) error {
+func (self *Handler) OnTyped(method string, typedHandler interface{}) error {
 	handler, err := wrapTyped(typedHandler)
 	if err != nil {
 		return err
@@ -64,7 +67,7 @@ func (self *Router) OnTyped(method string, typedHandler interface{}) error {
 	return self.On(method, handler)
 }
 
-func (self *Router) OnMissing(handler MissingHandlerFunc) error {
+func (self *Handler) OnMissing(handler MissingHandlerFunc) error {
 	if self.missingHandler != nil {
 		return errors.New("missing handler already exist!")
 	}
@@ -72,7 +75,7 @@ func (self *Router) OnMissing(handler MissingHandlerFunc) error {
 	return nil
 }
 
-func (self *Router) OnClose(handler CloseHandlerFunc) error {
+func (self *Handler) OnClose(handler CloseHandlerFunc) error {
 	if self.closeHandler != nil {
 		return errors.New("close handler already exist!")
 	}
@@ -80,12 +83,18 @@ func (self *Router) OnClose(handler CloseHandlerFunc) error {
 	return nil
 }
 
-func (self Router) HasHandler(method string) bool {
+func (self *Handler) HandleClose(r *http.Request) {
+	if self.closeHandler != nil {
+		self.closeHandler(r)
+	}
+}
+
+func (self Handler) HasHandler(method string) bool {
 	_, exist := self.methodHandlers[method]
 	return exist
 }
 
-func (self *Router) getHandler(method string) (HandlerFunc, bool) {
+func (self *Handler) getHandler(method string) (HandlerFunc, bool) {
 	if h, ok := self.methodHandlers[method]; ok {
 		return h, true
 	} else {
@@ -93,7 +102,7 @@ func (self *Router) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Router) handleRequest(req *RPCRequest) (jsonz.Message, error) {
+func (self *Handler) HandleRequest(req *RPCRequest) (Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -117,13 +126,13 @@ func (self *Router) handleRequest(req *RPCRequest) (jsonz.Message, error) {
 		return resmsg, err
 	} else {
 		if msg.IsRequest() {
-			return jsonz.ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
+			return ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
 		}
 	}
 	return nil, nil
 }
 
-func (self Router) wrapResult(res interface{}, err error, msg jsonz.Message) (jsonz.Message, error) {
+func (self Handler) wrapResult(res interface{}, err error, msg Message) (Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Warnf("error %s", err)
@@ -131,24 +140,24 @@ func (self Router) wrapResult(res interface{}, err error, msg jsonz.Message) (js
 		return nil, err
 	}
 
-	reqmsg, ok := msg.(*jsonz.RequestMessage)
+	reqmsg, ok := msg.(*RequestMessage)
 	if !ok {
 		msg.Log().Panicf("convert to request message failed")
 		return nil, err
 	}
 
 	if err != nil {
-		var rpcErr *jsonz.RPCError
+		var rpcErr *RPCError
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
-			return jsonz.ErrInternalError.ToMessage(reqmsg), nil
+			return ErrInternalError.ToMessage(reqmsg), nil
 		}
-	} else if resmsg1, ok := res.(jsonz.Message); ok {
+	} else if resmsg1, ok := res.(Message); ok {
 		// normal response
 		return resmsg1, nil
 	} else {
-		return jsonz.NewResultMessage(reqmsg, res), nil
+		return NewResultMessage(reqmsg, res), nil
 	}
 	return nil, nil
 }

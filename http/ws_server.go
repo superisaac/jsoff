@@ -16,15 +16,19 @@ var upgrader = websocket.Upgrader{
 
 type WSServer struct {
 	SpawnGoroutine bool
-	Router         *Router
+	Handler        *jsonz.Handler
 }
 
-func NewWSServer(router *Router) *WSServer {
-	if router == nil {
-		router = NewRouter()
+func NewWSServer() *WSServer {
+	return NewWSServerFromHandler(nil)
+}
+
+func NewWSServerFromHandler(handler *jsonz.Handler) *WSServer {
+	if handler == nil {
+		handler = jsonz.NewHandler()
 	}
 	return &WSServer{
-		Router: router,
+		Handler: handler,
 	}
 }
 
@@ -45,9 +49,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	go self.recvLoop(r.Context(), ws, r, done)
 
 	defer func() {
-		if self.Router.closeHandler != nil {
-			self.Router.closeHandler(r)
-		}
+		self.Handler.HandleClose(r)
 	}()
 
 	for {
@@ -91,10 +93,11 @@ func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws
 		return
 	}
 
-	req := &RPCRequest{context: rootCtx, msg: msg, r: r, data: ws}
-	resmsg, err := self.Router.handleRequest(req)
+	req := jsonz.NewRPCRequest(rootCtx, msg, r, ws)
+
+	resmsg, err := self.Handler.HandleRequest(req)
 	if err != nil {
-		done <- errors.Wrap(err, "router.handleMessage")
+		done <- errors.Wrap(err, "handler.handleMessage")
 		return
 	}
 	if resmsg != nil {

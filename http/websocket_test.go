@@ -16,8 +16,8 @@ import (
 func TestWSServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewWSServer(nil)
-	server.Router.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewWSServer()
+	server.Handler.On("echo", func(req *jsonz.RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -53,13 +53,13 @@ func TestWSServerClient(t *testing.T) {
 func TestTypedWSServerClient(t *testing.T) {
 	assert := assert.New(t)
 
-	server := NewWSServer(nil)
-	err := server.Router.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server := NewWSServer()
+	err := server.Handler.OnTyped("echoTyped", func(req *jsonz.RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.Router.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = server.Handler.OnTyped("add", func(req *jsonz.RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
