@@ -36,6 +36,22 @@ func (self *HTTPClient) connect() {
 	})
 }
 
+func (self *HTTPClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error {
+	resmsg, err := self.Call(rootCtx, reqmsg)
+	if err != nil {
+		return err
+	}
+	if resmsg.IsResult() {
+		err := jsonz.DecodeInterface(resmsg.MustResult(), output)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return resmsg.MustError()
+	}
+}
+
 func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
 	self.connect()
 

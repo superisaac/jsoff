@@ -9,6 +9,7 @@ import (
 
 type Client interface {
 	Call(ctx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error)
+	UnwrapCall(ctx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error
 	Send(ctx context.Context, msg jsonz.Message) error
 }
 

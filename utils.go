@@ -3,6 +3,7 @@ package jsonz
 import (
 	simplejson "github.com/bitly/go-simplejson"
 	"github.com/google/uuid"
+	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
@@ -105,4 +106,17 @@ func ErrorResponse(w http.ResponseWriter, r *http.Request, err error, status int
 
 func NewUuid() string {
 	return strings.ReplaceAll(uuid.New().String(), "-", "")
+}
+
+func DecodeInterface(input interface{}, output interface{}) error {
+	config := &mapstructure.DecoderConfig{
+		Metadata: nil,
+		TagName:  "json",
+		Result:   output,
+	}
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(input)
 }

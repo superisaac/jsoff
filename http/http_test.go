@@ -3,6 +3,7 @@ package jsonzhttp
 import (
 	"context"
 	"encoding/json"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
@@ -148,4 +149,16 @@ func TestTypedServerClient(t *testing.T) {
 	errbody4 := resmsg4.MustError()
 	assert.Equal(-32602, errbody4.Code)
 	assert.True(strings.Contains(errbody4.Message, "got unconvertible type"))
+
+	// test add 2 numbers with typing mismatch
+	params5 := [](interface{}){"6", 5}
+	reqmsg5 := jsonz.NewRequestMessage(5, "add", params5)
+	var res5 int
+	err5 := client.UnwrapCall(context.Background(), reqmsg5, &res5)
+	assert.NotNil(err5)
+	var errbody5 *jsonz.RPCError
+	assert.True(errors.As(err5, &errbody5))
+	assert.Equal(-32602, errbody5.Code)
+	assert.True(strings.Contains(errbody5.Message, "got unconvertible type"))
+
 }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// rpc context
+// http rpc quest structure
 type RPCRequest struct {
 	context context.Context
 	msg     Message
