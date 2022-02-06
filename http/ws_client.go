@@ -232,3 +232,8 @@ func (self *WSClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 
 	return nil
 }
+
+func (self *WSClient) ActivateSession(ctx context.Context) error {
+	ntf := jsonz.NewNotifyMessage("_session.activate", nil)
+	return self.Send(ctx, ntf)
+}

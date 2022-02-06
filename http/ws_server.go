@@ -9,6 +9,12 @@ import (
 	"net/http"
 )
 
+const (
+	modeUnlimited = iota
+	modeActive
+	modePassive
+)
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  10240,
 	WriteBufferSize: 10240,
@@ -26,6 +32,8 @@ type WSSession struct {
 	rootCtx     context.Context
 	done        chan error
 	sendChannel chan jsonz.Message
+	pushMode    int
+	pushBuffer  []jsonz.Message
 }
 
 func NewWSServer() *WSServer {
@@ -61,6 +69,8 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ws:          ws,
 		done:        make(chan error, 10),
 		sendChannel: make(chan jsonz.Message, 100),
+		pushMode:    modeUnlimited,
+		pushBuffer:  make([]jsonz.Message, 0),
 	}
 	session.wait()
 	session.server = nil
@@ -107,11 +117,26 @@ func (self *WSSession) recvLoop() {
 	}
 }
 
+func (self *WSSession) activateSession() {
+	self.pushMode = modeActive
+	if len(self.pushBuffer) > 0 {
+		msg := self.pushBuffer[0]
+		self.pushBuffer = self.pushBuffer[1:]
+		self.sendChannel <- msg
+		self.pushMode = modePassive
+	}
+}
+
 func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 	msg, err := jsonz.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
 		self.done <- errors.New("bad jsonrpc message")
+		return
+	}
+
+	if msg.IsNotify() && msg.MustMethod() == "_session.activate" {
+		self.activateSession()
 		return
 	}
 
@@ -123,16 +148,32 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 
 	resmsg, err := self.server.Handler.HandleRequest(req)
 	if err != nil {
-		self.done <- errors.Wrap(err, "handler.handleMessage")
+		self.done <- errors.Wrap(err, "handler.handlerRequest")
 		return
 	}
 	if resmsg != nil {
-		self.Send(resmsg)
+		if resmsg.IsResultOrError() {
+			self.sendChannel <- resmsg
+		} else {
+			self.Send(resmsg)
+		}
 	}
 }
 
 func (self *WSSession) Send(msg jsonz.Message) {
-	self.sendChannel <- msg
+	switch self.pushMode {
+	case modeUnlimited:
+		self.sendChannel <- msg
+	case modeActive:
+		self.sendChannel <- msg
+		self.pushMode = modePassive
+	case modePassive:
+		// TODO: synchronization around pushBuffer
+		self.pushBuffer = append(self.pushBuffer, msg)
+		if len(self.pushBuffer) > 100 {
+			log.Warnf("too many messages strucked in push buffer, len(pushBuffer) = %d", len(pushBuffer))
+		}
+	}
 }
 
 func (self *WSSession) sendLoop() {

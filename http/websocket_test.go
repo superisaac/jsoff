@@ -119,3 +119,106 @@ func TestTypedWSServerClient(t *testing.T) {
 	assert.Equal(-32602, errbody4.Code)
 	assert.True(strings.Contains(errbody4.Message, "got unconvertible type"))
 }
+
+func TestWSSession(t *testing.T) {
+	assert := assert.New(t)
+
+	sessions := make(map[int]*WSSession)
+	server := NewWSServer()
+	server.Handler.On("hijackSession", func(req *jsonz.RPCRequest, params []interface{}) (interface{}, error) {
+		// capture the websocket session to uplevel for
+		// following usage
+		s, _ := req.Data().(*WSSession)
+		sessions[0] = s
+		return "ok", nil
+	})
+	go http.ListenAndServe("127.0.0.1:28120", server)
+	time.Sleep(100 * time.Millisecond)
+
+	receivedMsgs := make(map[int]jsonz.Message)
+	client := NewWSClient("ws://127.0.0.1:28120")
+	client.OnMessage(func(msg jsonz.Message) {
+		// stores the latest received message, usually a server
+		// pushed notification
+		receivedMsgs[0] = msg
+	})
+	req1 := jsonz.NewRequestMessage(1, "hijackSession", nil)
+	res1, err := client.Call(context.Background(), req1)
+	assert.Nil(err)
+	assert.Equal("ok", res1.MustResult())
+
+	session := sessions[0]
+	assert.Equal(modeUnlimited, session.pushMode)
+
+	ntf1 := jsonz.NewNotifyMessage("notify0", nil)
+	// server push
+	session.Send(ntf1)
+	// under mod unlimited, the notify is sent directly to client
+	assert.Equal(0, len(session.pushBuffer))
+
+	err = client.ActivateSession(context.Background())
+	assert.Nil(err)
+
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(modeActive, session.pushMode)
+
+	ntf3 := jsonz.NewNotifyMessage("notify3", nil)
+	// server push
+	session.Send(ntf3)
+	// under mod active, the session's push mode is set to passive
+	// after a message sent
+	assert.Equal(modePassive, session.pushMode)
+	assert.Equal(0, len(session.pushBuffer))
+
+	ntf4 := jsonz.NewNotifyMessage("notify4", nil)
+	// server push
+	session.Send(ntf4)
+	// under mod passive, the session's pushed message will be
+	// buffered instead of being sent directly to client, the
+	// session will be passive until the next _session.activate
+	// notification.
+	assert.Equal(modePassive, session.pushMode)
+	assert.Equal(1, len(session.pushBuffer))
+	assert.Equal("notify4", session.pushBuffer[0].MustMethod())
+
+	ntf5 := jsonz.NewNotifyMessage("notify5", nil)
+	// server push
+	session.Send(ntf5)
+	// message buffered again
+	assert.Equal(modePassive, session.pushMode)
+	assert.Equal(2, len(session.pushBuffer))
+	assert.Equal("notify4", session.pushBuffer[0].MustMethod())
+	assert.Equal("notify5", session.pushBuffer[1].MustMethod())
+
+	// activate the session again
+	err = client.ActivateSession(context.Background())
+	assert.Nil(err)
+	time.Sleep(100 * time.Millisecond)
+	// notify4 received
+	assert.Equal("notify4", receivedMsgs[0].MustMethod())
+
+	// one buffered element is unshifted from push buffer
+	assert.Equal(modePassive, session.pushMode)
+	assert.Equal(1, len(session.pushBuffer))
+	assert.Equal("notify5", session.pushBuffer[0].MustMethod())
+
+	// activate the session again and again
+	err = client.ActivateSession(context.Background())
+	assert.Nil(err)
+	time.Sleep(100 * time.Millisecond)
+	// notify5 received
+	assert.Equal("notify5", receivedMsgs[0].MustMethod())
+
+	// one buffered element is unshifted from push buffer
+	assert.Equal(modePassive, session.pushMode)
+	assert.Equal(0, len(session.pushBuffer))
+
+	// activate the session again and again and again
+	err = client.ActivateSession(context.Background())
+	assert.Nil(err)
+	time.Sleep(100 * time.Millisecond)
+
+	// one buffered element is unshifted from push buffer
+	assert.Equal(modeActive, session.pushMode)
+	assert.Equal(0, len(session.pushBuffer))
+}
