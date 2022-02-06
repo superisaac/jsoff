@@ -171,7 +171,7 @@ func (self *WSSession) Send(msg jsonz.Message) {
 		// TODO: synchronization around pushBuffer
 		self.pushBuffer = append(self.pushBuffer, msg)
 		if len(self.pushBuffer) > 100 {
-			log.Warnf("too many messages strucked in push buffer, len(pushBuffer) = %d", len(pushBuffer))
+			log.Warnf("too many messages strucked in push buffer, len(pushBuffer) = %d", len(self.pushBuffer))
 		}
 	}
 }
