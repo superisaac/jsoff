@@ -19,6 +19,15 @@ type WSServer struct {
 	Handler        *jsonz.Handler
 }
 
+type WSSession struct {
+	server      *WSServer
+	ws          *websocket.Conn
+	httpRequest *http.Request
+	rootCtx     context.Context
+	done        chan error
+	sendChannel chan jsonz.Message
+}
+
 func NewWSServer() *WSServer {
 	return NewWSServerFromHandler(nil)
 }
@@ -41,22 +50,35 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer ws.Close()
-
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	done := make(chan error, 10)
-	go self.recvLoop(r.Context(), ws, r, done)
-
 	defer func() {
 		self.Handler.HandleClose(r)
 	}()
+
+	session := &WSSession{
+		server:      self,
+		rootCtx:     r.Context(),
+		httpRequest: r,
+		ws:          ws,
+		done:        make(chan error, 10),
+		sendChannel: make(chan jsonz.Message, 100),
+	}
+	session.wait()
+	session.server = nil
+}
+
+// websocket session
+func (self *WSSession) wait() {
+	ctx, cancel := context.WithCancel(self.rootCtx)
+	defer cancel()
+
+	go self.sendLoop()
+	go self.recvLoop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case err, ok := <-done:
+		case err, ok := <-self.done:
 			if ok && err != nil {
 				log.Warnf("websocket error %s", err)
 			}
@@ -65,11 +87,11 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (self *WSServer) recvLoop(rootCtx context.Context, ws *websocket.Conn, r *http.Request, done chan error) {
+func (self *WSSession) recvLoop() {
 	for {
-		messageType, msgBytes, err := ws.ReadMessage()
+		messageType, msgBytes, err := self.ws.ReadMessage()
 		if err != nil {
-			done <- errors.Wrap(err, "ws.ReadMessage()")
+			self.done <- errors.Wrap(err, "ws.ReadMessage()")
 			return
 		}
 		if messageType != websocket.TextMessage {
@@ -77,46 +99,67 @@ func (self *WSServer) recvLoop(rootCtx context.Context, ws *websocket.Conn, r *h
 			continue
 		}
 
-		if self.SpawnGoroutine {
-			go self.handleWSBytes(rootCtx, msgBytes, ws, r, done)
+		if self.server.SpawnGoroutine {
+			go self.msgBytesReceived(msgBytes)
 		} else {
-			self.handleWSBytes(rootCtx, msgBytes, ws, r, done)
+			self.msgBytesReceived(msgBytes)
 		}
 	}
 }
 
-func (self *WSServer) handleWSBytes(rootCtx context.Context, msgBytes []byte, ws *websocket.Conn, r *http.Request, done chan error) {
+func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 	msg, err := jsonz.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
-		done <- errors.New("bad jsonrpc message")
+		self.done <- errors.New("bad jsonrpc message")
 		return
 	}
 
-	req := jsonz.NewRPCRequest(rootCtx, msg, r, ws)
+	req := jsonz.NewRPCRequest(
+		self.rootCtx,
+		msg,
+		self.httpRequest,
+		self)
 
-	resmsg, err := self.Handler.HandleRequest(req)
+	resmsg, err := self.server.Handler.HandleRequest(req)
 	if err != nil {
-		done <- errors.Wrap(err, "handler.handleMessage")
+		self.done <- errors.Wrap(err, "handler.handleMessage")
 		return
 	}
 	if resmsg != nil {
-		err := self.SendMessage(ws, resmsg)
-		if err != nil {
-			done <- err
-			return
-		}
+		self.Send(resmsg)
 	}
 }
 
-func (self WSServer) SendMessage(ws *websocket.Conn, msg jsonz.Message) error {
-	bytes, err := jsonz.MessageBytes(msg)
-	if err != nil {
-		return err
+func (self *WSSession) Send(msg jsonz.Message) {
+	self.sendChannel <- msg
+}
+
+func (self *WSSession) sendLoop() {
+	ctx, cancel := context.WithCancel(self.rootCtx)
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-self.sendChannel:
+			if !ok {
+				return
+			}
+			if self.ws == nil {
+				return
+			}
+			marshaled, err := jsonz.MessageBytes(msg)
+			if err != nil {
+				log.Warnf("marshal msg error %s", err)
+				return
+			}
+
+			if err := self.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
+				log.Warnf("write warning message %s", err)
+				return
+			}
+		}
 	}
-	err = ws.WriteMessage(websocket.TextMessage, bytes)
-	if err != nil {
-		return errors.Wrap(err, "websocket.WriteMessage")
-	}
-	return nil
 }
