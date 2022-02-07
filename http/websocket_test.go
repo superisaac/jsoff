@@ -125,6 +125,7 @@ func TestWSSession(t *testing.T) {
 
 	sessions := make(map[int]*WSSession)
 	server := NewWSServer()
+	server.FlowControl = true
 	server.Handler.On("hijackSession", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// capture the websocket session to uplevel for
 		// following usage
@@ -148,7 +149,7 @@ func TestWSSession(t *testing.T) {
 	assert.Equal("ok", res1.MustResult())
 
 	session := sessions[0]
-	assert.Equal(modeUnlimited, session.pushMode)
+	assert.Equal(modeActive, session.pushMode)
 
 	ntf1 := jsonz.NewNotifyMessage("notify0", nil)
 	// server push

@@ -21,8 +21,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type WSServer struct {
+	Handler *Handler
+	// options
 	SpawnGoroutine bool
-	Handler        *Handler
+	FlowControl    bool
 }
 
 type WSSession struct {
@@ -62,6 +64,11 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		self.Handler.HandleClose(r)
 	}()
 
+	pushMode := modeUnlimited
+	if self.FlowControl {
+		pushMode = modeActive
+	}
+
 	session := &WSSession{
 		server:      self,
 		rootCtx:     r.Context(),
@@ -69,7 +76,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ws:          ws,
 		done:        make(chan error, 10),
 		sendChannel: make(chan jsonz.Message, 100),
-		pushMode:    modeUnlimited,
+		pushMode:    pushMode,
 		pushBuffer:  make([]jsonz.Message, 0),
 	}
 	session.wait()
@@ -118,6 +125,9 @@ func (self *WSSession) recvLoop() {
 }
 
 func (self *WSSession) activateSession() {
+	if !self.server.FlowControl {
+		return
+	}
 	self.pushMode = modeActive
 	if len(self.pushBuffer) > 0 {
 		msg := self.pushBuffer[0]
