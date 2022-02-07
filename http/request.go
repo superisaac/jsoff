@@ -1,20 +1,21 @@
-package jsonz
+package jsonzhttp
 
 import (
 	"context"
 	"github.com/pkg/errors"
+	"github.com/superisaac/jsonz"
 	"net/http"
 )
 
 // http rpc quest structure
 type RPCRequest struct {
 	context context.Context
-	msg     Message
+	msg     jsonz.Message
 	r       *http.Request
 	data    interface{} // arbitrary data
 }
 
-func NewRPCRequest(ctx context.Context, msg Message, r *http.Request, data interface{}) *RPCRequest {
+func NewRPCRequest(ctx context.Context, msg jsonz.Message, r *http.Request, data interface{}) *RPCRequest {
 	return &RPCRequest{context: ctx, msg: msg, r: r, data: data}
 }
 
@@ -22,7 +23,7 @@ func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) Msg() Message {
+func (self RPCRequest) Msg() jsonz.Message {
 	return self.msg
 }
 
@@ -102,7 +103,7 @@ func (self *Handler) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Handler) HandleRequest(req *RPCRequest) (Message, error) {
+func (self *Handler) HandleRequest(req *RPCRequest) (jsonz.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -126,13 +127,14 @@ func (self *Handler) HandleRequest(req *RPCRequest) (Message, error) {
 		return resmsg, err
 	} else {
 		if msg.IsRequest() {
-			return ErrMethodNotFound.ToMessageFromId(msg.MustId(), msg.TraceId()), nil
+			return jsonz.ErrMethodNotFound.ToMessageFromId(
+				msg.MustId(), msg.TraceId()), nil
 		}
 	}
 	return nil, nil
 }
 
-func (self Handler) wrapResult(res interface{}, err error, msg Message) (Message, error) {
+func (self Handler) wrapResult(res interface{}, err error, msg jsonz.Message) (jsonz.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Warnf("error %s", err)
@@ -140,24 +142,24 @@ func (self Handler) wrapResult(res interface{}, err error, msg Message) (Message
 		return nil, err
 	}
 
-	reqmsg, ok := msg.(*RequestMessage)
+	reqmsg, ok := msg.(*jsonz.RequestMessage)
 	if !ok {
 		msg.Log().Panicf("convert to request message failed")
 		return nil, err
 	}
 
 	if err != nil {
-		var rpcErr *RPCError
+		var rpcErr *jsonz.RPCError
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
-			return ErrInternalError.ToMessage(reqmsg), nil
+			return jsonz.ErrInternalError.ToMessage(reqmsg), nil
 		}
-	} else if resmsg1, ok := res.(Message); ok {
+	} else if resmsg1, ok := res.(jsonz.Message); ok {
 		// normal response
 		return resmsg1, nil
 	} else {
-		return NewResultMessage(reqmsg, res), nil
+		return jsonz.NewResultMessage(reqmsg, res), nil
 	}
 	return nil, nil
 }

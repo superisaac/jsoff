@@ -17,7 +17,7 @@ func TestWSServerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	server := NewWSServer()
-	server.Handler.On("echo", func(req *jsonz.RPCRequest, params []interface{}) (interface{}, error) {
+	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -54,12 +54,12 @@ func TestTypedWSServerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	server := NewWSServer()
-	err := server.Handler.OnTyped("echoTyped", func(req *jsonz.RPCRequest, v string) (string, error) {
+	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.Handler.OnTyped("add", func(req *jsonz.RPCRequest, a, b int) (int, error) {
+	err = server.Handler.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
@@ -125,7 +125,7 @@ func TestWSSession(t *testing.T) {
 
 	sessions := make(map[int]*WSSession)
 	server := NewWSServer()
-	server.Handler.On("hijackSession", func(req *jsonz.RPCRequest, params []interface{}) (interface{}, error) {
+	server.Handler.On("hijackSession", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// capture the websocket session to uplevel for
 		// following usage
 		s, _ := req.Data().(*WSSession)

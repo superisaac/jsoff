@@ -9,16 +9,16 @@ import (
 )
 
 type Server struct {
-	Handler *jsonz.Handler
+	Handler *Handler
 }
 
 func NewServer() *Server {
 	return NewServerFromHandler(nil)
 }
 
-func NewServerFromHandler(handler *jsonz.Handler) *Server {
+func NewServerFromHandler(handler *Handler) *Server {
 	if handler == nil {
-		handler = jsonz.NewHandler()
+		handler = NewHandler()
 	}
 	return &Server{
 		Handler: handler,
@@ -46,7 +46,7 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := jsonz.NewRPCRequest(r.Context(), msg, r, nil)
+	req := NewRPCRequest(r.Context(), msg, r, nil)
 	resmsg, err := self.Handler.HandleRequest(req)
 	if err != nil {
 		var simpleResp *SimpleResponse

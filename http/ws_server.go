@@ -22,7 +22,7 @@ var upgrader = websocket.Upgrader{
 
 type WSServer struct {
 	SpawnGoroutine bool
-	Handler        *jsonz.Handler
+	Handler        *Handler
 }
 
 type WSSession struct {
@@ -40,9 +40,9 @@ func NewWSServer() *WSServer {
 	return NewWSServerFromHandler(nil)
 }
 
-func NewWSServerFromHandler(handler *jsonz.Handler) *WSServer {
+func NewWSServerFromHandler(handler *Handler) *WSServer {
 	if handler == nil {
-		handler = jsonz.NewHandler()
+		handler = NewHandler()
 	}
 	return &WSServer{
 		Handler: handler,
@@ -140,7 +140,7 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 		return
 	}
 
-	req := jsonz.NewRPCRequest(
+	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
 		self.httpRequest,
