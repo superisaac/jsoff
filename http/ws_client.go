@@ -53,11 +53,11 @@ func (self *WSClient) OnMessage(handler WSMessageHandler) error {
 	return nil
 }
 
-func (self WSClient) Connected() bool {
+func (self *WSClient) Connected() bool {
 	return self.ws != nil
 }
 
-func (self *WSClient) connect() error {
+func (self *WSClient) dial() error {
 	self.connectOnce.Do(func() {
 		ws, _, err := websocket.DefaultDialer.Dial(self.serverUrl, nil)
 		if err != nil {
@@ -191,7 +191,7 @@ func (self *WSClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestM
 }
 
 func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
-	err := self.connect()
+	err := self.dial()
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func (self *WSClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 }
 
 func (self *WSClient) Send(rootCtx context.Context, msg jsonz.Message) error {
-	err := self.connect()
+	err := self.dial()
 	if err != nil {
 		return err
 	}

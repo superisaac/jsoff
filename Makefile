@@ -4,15 +4,12 @@ goflag := -gcflags=-G=3
 all: test
 
 test:
-	go test -v github.com/superisaac/jsonz
-	go test -v github.com/superisaac/jsonz/schema
-	go test -v github.com/superisaac/jsonz/http
+	go test -v ./...
 
+govet:
+	go vet ./...
 gofmt:
-	go fmt *.go
-	go fmt schema/*.go
-	go fmt http/*.go
-	go fmt cli/*.go
+	go fmt ./...
 
 build-cli: jsonrpc-cli
 

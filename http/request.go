@@ -161,5 +161,4 @@ func (self Handler) wrapResult(res interface{}, err error, msg jsonz.Message) (j
 	} else {
 		return jsonz.NewResultMessage(reqmsg, res), nil
 	}
-	return nil, nil
 }

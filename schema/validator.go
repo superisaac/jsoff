@@ -18,7 +18,10 @@ func (self ErrorPos) Error() string {
 }
 
 func (self ErrorPos) ToMessage(reqmsg *jsonz.RequestMessage) *jsonz.ErrorMessage {
-	err := &jsonz.RPCError{10901, self.Error(), false}
+	err := &jsonz.RPCError{
+		Code:    10901,
+		Message: self.Error(),
+		Data:    nil}
 	return err.ToMessage(reqmsg)
 }
 
