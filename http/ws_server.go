@@ -66,7 +66,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	pushMode := modeUnlimited
 	if self.FlowControl {
-		pushMode = modeActive
+		pushMode = modePassive
 	}
 
 	session := &WSSession{
