@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -23,6 +22,9 @@ func TestMain(m *testing.M) {
 func TestServerClient(t *testing.T) {
 	assert := assert.New(t)
 
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	server := NewServer()
 	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
@@ -32,7 +34,7 @@ func TestServerClient(t *testing.T) {
 		}
 	})
 
-	go http.ListenAndServe("127.0.0.1:28000", server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28000", server, nil)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewHTTPClient("http://127.0.0.1:28000")
@@ -41,7 +43,7 @@ func TestServerClient(t *testing.T) {
 	params := [](interface{}){"hello999"}
 	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
 
-	resmsg, err := client.Call(context.Background(), reqmsg)
+	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
@@ -50,7 +52,7 @@ func TestServerClient(t *testing.T) {
 	// method not found
 	params1 := [](interface{}){"hello999"}
 	reqmsg1 := jsonz.NewRequestMessage(666, "echoxxx", params1)
-	resmsg1, err := client.Call(context.Background(), reqmsg1)
+	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
 	errbody := resmsg1.MustError()
@@ -59,6 +61,9 @@ func TestServerClient(t *testing.T) {
 
 func TestMissing(t *testing.T) {
 	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	server := NewServer()
 	err := server.Handler.OnMissing(func(req *RPCRequest) (interface{}, error) {
@@ -69,7 +74,7 @@ func TestMissing(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go http.ListenAndServe("127.0.0.1:28003", server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28003", server, nil)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewHTTPClient("http://127.0.0.1:28003")
@@ -77,12 +82,15 @@ func TestMissing(t *testing.T) {
 	params := [](interface{}){"hello999"}
 	ntfmsg := jsonz.NewNotifyMessage("testnotify", params)
 
-	err = client.Send(context.Background(), ntfmsg)
+	err = client.Send(rootCtx, ntfmsg)
 	assert.Nil(err)
 }
 
 func TestTypedServerClient(t *testing.T) {
 	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	server := NewServer()
 	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
@@ -95,7 +103,7 @@ func TestTypedServerClient(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go http.ListenAndServe("127.0.0.1:28001", server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28001", server, nil)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewHTTPClient("http://127.0.0.1:28001")
@@ -104,7 +112,7 @@ func TestTypedServerClient(t *testing.T) {
 	params := [](interface{}){"hello999"}
 	reqmsg := jsonz.NewRequestMessage(1, "echoTyped", params)
 
-	resmsg, err := client.Call(context.Background(), reqmsg)
+	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
@@ -114,7 +122,7 @@ func TestTypedServerClient(t *testing.T) {
 	params1 := [](interface{}){true}
 	reqmsg1 := jsonz.NewRequestMessage(1, "echoTyped", params1)
 
-	resmsg1, err1 := client.Call(context.Background(), reqmsg1)
+	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
 	assert.True(resmsg1.IsError())
 	errbody1 := resmsg1.MustError()
@@ -124,7 +132,7 @@ func TestTypedServerClient(t *testing.T) {
 	params2 := [](interface{}){"hello", 2}
 	reqmsg2 := jsonz.NewRequestMessage(2, "echoTyped", params2)
 
-	resmsg2, err2 := client.Call(context.Background(), reqmsg2)
+	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.True(resmsg2.IsError())
 	errbody2 := resmsg2.MustError()
@@ -134,7 +142,7 @@ func TestTypedServerClient(t *testing.T) {
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
 	reqmsg3 := jsonz.NewRequestMessage(3, "add", params3)
-	resmsg3, err3 := client.Call(context.Background(), reqmsg3)
+	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
 	assert.True(resmsg3.IsResult())
 	res3 := resmsg3.MustResult()
@@ -143,7 +151,7 @@ func TestTypedServerClient(t *testing.T) {
 	// test add 2 numbers with typing mismatch
 	params4 := [](interface{}){"6", 4}
 	reqmsg4 := jsonz.NewRequestMessage(4, "add", params4)
-	resmsg4, err4 := client.Call(context.Background(), reqmsg4)
+	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
 	assert.True(resmsg4.IsError())
 	errbody4 := resmsg4.MustError()
@@ -154,7 +162,7 @@ func TestTypedServerClient(t *testing.T) {
 	params5 := [](interface{}){"6", 5}
 	reqmsg5 := jsonz.NewRequestMessage(5, "add", params5)
 	var res5 int
-	err5 := client.UnwrapCall(context.Background(), reqmsg5, &res5)
+	err5 := client.UnwrapCall(rootCtx, reqmsg5, &res5)
 	assert.NotNil(err5)
 	var errbody5 *jsonz.RPCError
 	assert.True(errors.As(err5, &errbody5))

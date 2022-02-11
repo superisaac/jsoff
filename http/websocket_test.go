@@ -7,7 +7,6 @@ import (
 	//log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +14,9 @@ import (
 
 func TestWSServerClient(t *testing.T) {
 	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	server := NewWSServer()
 	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
@@ -25,7 +27,7 @@ func TestWSServerClient(t *testing.T) {
 		}
 	})
 
-	go http.ListenAndServe("127.0.0.1:28100", server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28100", server, nil)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewWSClient("ws://127.0.0.1:28100")
@@ -34,7 +36,7 @@ func TestWSServerClient(t *testing.T) {
 	params := [](interface{}){"hello999"}
 	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
 
-	resmsg, err := client.Call(context.Background(), reqmsg)
+	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
@@ -43,7 +45,7 @@ func TestWSServerClient(t *testing.T) {
 	// method not found
 	params1 := [](interface{}){"hello999"}
 	reqmsg1 := jsonz.NewRequestMessage(666, "echoxxx", params1)
-	resmsg1, err := client.Call(context.Background(), reqmsg1)
+	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
 	errbody := resmsg1.MustError()
@@ -52,6 +54,9 @@ func TestWSServerClient(t *testing.T) {
 
 func TestTypedWSServerClient(t *testing.T) {
 	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	server := NewWSServer()
 	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
@@ -64,7 +69,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go http.ListenAndServe("127.0.0.1:28101", server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28101", server, nil)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewWSClient("ws://127.0.0.1:28101")
@@ -73,7 +78,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	params := [](interface{}){"hello999"}
 	reqmsg := jsonz.NewRequestMessage(1, "echoTyped", params)
 
-	resmsg, err := client.Call(context.Background(), reqmsg)
+	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
@@ -83,7 +88,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	params1 := [](interface{}){true}
 	reqmsg1 := jsonz.NewRequestMessage(1, "echoTyped", params1)
 
-	resmsg1, err1 := client.Call(context.Background(), reqmsg1)
+	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
 	assert.True(resmsg1.IsError())
 	errbody1 := resmsg1.MustError()
@@ -93,7 +98,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	params2 := [](interface{}){"hello", 2}
 	reqmsg2 := jsonz.NewRequestMessage(2, "echoTyped", params2)
 
-	resmsg2, err2 := client.Call(context.Background(), reqmsg2)
+	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.True(resmsg2.IsError())
 	errbody2 := resmsg2.MustError()
@@ -103,7 +108,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
 	reqmsg3 := jsonz.NewRequestMessage(3, "add", params3)
-	resmsg3, err3 := client.Call(context.Background(), reqmsg3)
+	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
 	assert.True(resmsg3.IsResult())
 	res3 := resmsg3.MustResult()
@@ -112,7 +117,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	// test add 2 numbers with typing mismatch
 	params4 := [](interface{}){"6", 4}
 	reqmsg4 := jsonz.NewRequestMessage(4, "add", params4)
-	resmsg4, err4 := client.Call(context.Background(), reqmsg4)
+	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
 	assert.True(resmsg4.IsError())
 	errbody4 := resmsg4.MustError()
@@ -122,6 +127,9 @@ func TestTypedWSServerClient(t *testing.T) {
 
 func TestWSSession(t *testing.T) {
 	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	sessions := make(map[int]*WSSession)
 	server := NewWSServer()
@@ -133,7 +141,7 @@ func TestWSSession(t *testing.T) {
 		sessions[0] = s
 		return "ok", nil
 	})
-	go http.ListenAndServe("127.0.0.1:28120", server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28120", server, nil)
 	time.Sleep(100 * time.Millisecond)
 
 	receivedMsgs := make(map[int]jsonz.Message)
@@ -144,7 +152,7 @@ func TestWSSession(t *testing.T) {
 		receivedMsgs[0] = msg
 	})
 	req1 := jsonz.NewRequestMessage(1, "hijackSession", nil)
-	res1, err := client.Call(context.Background(), req1)
+	res1, err := client.Call(rootCtx, req1)
 	assert.Nil(err)
 	assert.Equal("ok", res1.MustResult())
 
@@ -157,7 +165,7 @@ func TestWSSession(t *testing.T) {
 	// // under mod unlimited, the notify is sent directly to client
 	// assert.Equal(0, len(session.pushBuffer))
 
-	err = client.ActivateSession(context.Background())
+	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
 
 	time.Sleep(100 * time.Millisecond)
@@ -192,7 +200,7 @@ func TestWSSession(t *testing.T) {
 	assert.Equal("notify5", session.pushBuffer[1].MustMethod())
 
 	// activate the session again
-	err = client.ActivateSession(context.Background())
+	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
 	time.Sleep(100 * time.Millisecond)
 	// notify4 received
@@ -204,7 +212,7 @@ func TestWSSession(t *testing.T) {
 	assert.Equal("notify5", session.pushBuffer[0].MustMethod())
 
 	// activate the session again and again
-	err = client.ActivateSession(context.Background())
+	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
 	time.Sleep(100 * time.Millisecond)
 	// notify5 received
@@ -215,7 +223,7 @@ func TestWSSession(t *testing.T) {
 	assert.Equal(0, len(session.pushBuffer))
 
 	// activate the session again and again and again
-	err = client.ActivateSession(context.Background())
+	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
 	time.Sleep(100 * time.Millisecond)
 
