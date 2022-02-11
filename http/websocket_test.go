@@ -27,7 +27,7 @@ func TestWSServerClient(t *testing.T) {
 		}
 	})
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28100", server, nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28100", server)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewWSClient("ws://127.0.0.1:28100")
@@ -69,7 +69,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28101", server, nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28101", server)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewWSClient("ws://127.0.0.1:28101")
@@ -141,7 +141,7 @@ func TestWSSession(t *testing.T) {
 		sessions[0] = s
 		return "ok", nil
 	})
-	go ListenAndServe(rootCtx, "127.0.0.1:28120", server, nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28120", server)
 	time.Sleep(100 * time.Millisecond)
 
 	receivedMsgs := make(map[int]jsonz.Message)

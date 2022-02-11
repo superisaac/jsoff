@@ -34,7 +34,7 @@ func TestServerClient(t *testing.T) {
 		}
 	})
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28000", server, nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28000", server)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewHTTPClient("http://127.0.0.1:28000")
@@ -74,7 +74,7 @@ func TestMissing(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28003", server, nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28003", server)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewHTTPClient("http://127.0.0.1:28003")
@@ -103,7 +103,7 @@ func TestTypedServerClient(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28001", server, nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28001", server)
 	time.Sleep(100 * time.Millisecond)
 
 	client := NewHTTPClient("http://127.0.0.1:28001")

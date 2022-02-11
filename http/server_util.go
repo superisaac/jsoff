@@ -22,7 +22,14 @@ func (self *TLSConfig) ValidateValues() error {
 	return nil
 }
 
-func ListenAndServe(rootCtx context.Context, bind string, handler http.Handler, tlsConfig *TLSConfig) error {
+func ListenAndServe(rootCtx context.Context, bind string, handler http.Handler, tlsConfigs ...*TLSConfig) error {
+	var tlsConfig *TLSConfig
+	for _, cfg := range tlsConfigs {
+		if cfg != nil {
+			tlsConfig = cfg
+			break
+		}
+	}
 	server := &http.Server{Addr: bind, Handler: handler}
 	listener, err := net.Listen("tcp", bind)
 	if err != nil {
