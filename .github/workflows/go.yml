@@ -18,11 +18,14 @@ jobs:
       with:
         go-version: 1.17
 
-    - name: gofmt
+    - name: Go fmt
       run: make gofmt
     
-    - name: govet
+    - name: Go vet
       run: make govet
 
+    - name: Build cli
+      run: make build-cli
+
     - name: Test
-      run: go test -v ./...
+      run: make test

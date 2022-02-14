@@ -11,10 +11,13 @@ govet:
 gofmt:
 	go fmt ./...
 
-build-cli: jsonrpc-cli
+build-cli: jsonrpc-call jsonrpc-notify
 
-jsonrpc-cli: ${gofiles}
-	go build $(goflag) -o $@ cli/jsonrpc_client.go
+jsonrpc-call: ${gofiles}
+	go build $(goflag) -o $@ cli/call/jsonrpc_call.go
+
+jsonrpc-notify: ${gofiles}
+	go build $(goflag) -o $@ cli/notify/jsonrpc_notify.go
 
 clean:
 	rm -rf jsonrpc-cli build dist

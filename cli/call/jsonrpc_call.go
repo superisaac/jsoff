@@ -4,15 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/superisaac/jsonz"
 	"github.com/superisaac/jsonz/http"
 	"os"
-	"strings"
 )
 
 func main() {
-	cliFlags := flag.NewFlagSet("jsonrpc-cli", flag.ExitOnError)
+	cliFlags := flag.NewFlagSet("jsonrpc-call", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, https? or wss? prefixed, can be in env JSONRPC_CONNECT, default is http://127.0.0.1:9990")
 
 	cliFlags.Parse(os.Args[1:])
@@ -47,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	reqId := strings.ReplaceAll(uuid.New().String(), "-", "")
+	reqId := jsonz.NewUuid()
 	reqmsg := jsonz.NewRequestMessage(reqId, method, params)
 	resmsg, err := c.Call(context.Background(), reqmsg)
 	if err != nil {
