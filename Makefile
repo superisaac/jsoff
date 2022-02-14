@@ -11,6 +11,11 @@ govet:
 gofmt:
 	go fmt ./...
 
+compile-grpc: grpc/%.go
+
+grpc/%.go: grpc/jsonz.proto
+	protoc -I grpc/ --go_out=grpc --go-grpc_out=grpc $<
+
 build-cli: jsonrpc-call jsonrpc-notify
 
 jsonrpc-call: ${gofiles}
@@ -22,5 +27,5 @@ jsonrpc-notify: ${gofiles}
 clean:
 	rm -rf jsonrpc-cli build dist
 
-.PHONY: test gofmt build-cli clean
+.PHONY: test gofmt build-cli compile-grpc clean
 .SECONDARY: $(buildarchdirs)

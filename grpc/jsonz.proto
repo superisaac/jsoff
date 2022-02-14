@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = ".;jsonzgrpc";
+
+service JSONZ {
+  // bi-direction streams
+  rpc Dial(stream JSONRPCMessage) returns (stream JSONRPCMessage);
+}
+
+message JSONRPCMessage {
+  bytes body = 1;
+}
