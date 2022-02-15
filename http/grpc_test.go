@@ -143,11 +143,11 @@ func TestGRPCClose(t *testing.T) {
 		}
 	})
 
-	go GRPCServe(serverCtx, "127.0.0.1:28220", server)
+	go GRPCServe(serverCtx, "127.0.0.1:28223", server)
 	time.Sleep(100 * time.Millisecond)
 
 	closeCalled := make(map[int]bool)
-	client := NewGRPCClient("h2c://127.0.0.1:28220")
+	client := NewGRPCClient("h2c://127.0.0.1:28223")
 	client.OnClose(func() {
 		closeCalled[0] = true
 	})
