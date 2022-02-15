@@ -43,7 +43,7 @@ func (self *gRPCTransport) Close() {
 	}
 }
 
-func (self *gRPCTransport) Connected() bool {
+func (self gRPCTransport) Connected() bool {
 	return self.stream != nil
 }
 

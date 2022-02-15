@@ -94,7 +94,7 @@ func (self *StreamingClient) handleError(err error) {
 	}
 }
 
-func (self StreamingClient) Connected() bool {
+func (self *StreamingClient) Connected() bool {
 	return self.transport.Connected()
 }
 

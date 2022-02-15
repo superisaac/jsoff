@@ -38,7 +38,7 @@ func (self *wsTransport) Close() {
 	}
 }
 
-func (self *wsTransport) Connected() bool {
+func (self wsTransport) Connected() bool {
 	return self.ws != nil
 }
 
