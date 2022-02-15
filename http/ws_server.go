@@ -88,7 +88,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // websocket session
 func (self *WSSession) wait() {
-	ctx, cancel := context.WithCancel(self.rootCtx)
+	connCtx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
 
 	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
@@ -99,9 +99,9 @@ func (self *WSSession) wait() {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <- connCtx.Done():
 			return
-		case <-serverCtx.Done():
+		case <- serverCtx.Done():
 			return
 		case err, ok := <-self.done:
 			if ok && err != nil {

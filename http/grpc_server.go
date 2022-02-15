@@ -55,7 +55,7 @@ func (self *GRPCServer) OpenStream(stream jsonzgrpc.JSONZ_OpenStreamServer) erro
 
 // gRPC session
 func (self *GRPCSession) wait() error {
-	ctx, cancel := context.WithCancel(self.rootCtx)
+	connCtx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
 
 	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
@@ -66,9 +66,9 @@ func (self *GRPCSession) wait() error {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <- connCtx.Done():
 			return nil
-		case <-serverCtx.Done():
+		case <- serverCtx.Done():
 			return nil
 		case err, ok := <-self.done:
 			if !ok {
