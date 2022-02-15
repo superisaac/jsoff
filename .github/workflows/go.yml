@@ -19,7 +19,7 @@ jobs:
         go-version: 1.17
 
     - name: Setup protoc
-      run: apt-get -y install protobuf-compiler
+      run: sudo apt-get -y install protobuf-compiler
 
     - name: Go fmt
       run: make gofmt
