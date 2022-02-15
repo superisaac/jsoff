@@ -28,7 +28,7 @@ func TestGRPCServerClient(t *testing.T) {
 	})
 
 	go GRPCServe(rootCtx, "127.0.0.1:28200", server)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	client := NewGRPCClient("h2c://127.0.0.1:28200")
 
@@ -70,7 +70,7 @@ func TestTypedGRPCServerClient(t *testing.T) {
 	assert.Nil(err)
 
 	go GRPCServe(rootCtx, "127.0.0.1:28201", server)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	client := NewGRPCClient("h2c://127.0.0.1:28201")
 

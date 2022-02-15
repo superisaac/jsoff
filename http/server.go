@@ -46,8 +46,8 @@ func (self *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := NewRPCRequest(r.Context(), msg, r, nil)
-	resmsg, err := self.Handler.HandleRequest(req)
+	req := NewRPCRequest(r.Context(), msg, TransportHTTP, r, nil)
+	resmsg, err := self.Handler.Feed(req)
 	if err != nil {
 		var simpleResp *SimpleResponse
 		var upResp *WrappedResponse

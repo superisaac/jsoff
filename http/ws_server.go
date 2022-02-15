@@ -153,10 +153,11 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
+		TransportWebsocket,
 		self.httpRequest,
 		self)
 
-	resmsg, err := self.server.Handler.HandleRequest(req)
+	resmsg, err := self.server.Handler.Feed(req)
 	if err != nil {
 		self.done <- errors.Wrap(err, "handler.handlerRequest")
 		return

@@ -28,7 +28,7 @@ func TestWSServerClient(t *testing.T) {
 	})
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28100", server)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	client := NewWSClient("ws://127.0.0.1:28100")
 
@@ -70,7 +70,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	assert.Nil(err)
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28101", server)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	client := NewWSClient("ws://127.0.0.1:28101")
 
@@ -142,7 +142,7 @@ func TestWSSession(t *testing.T) {
 		return "ok", nil
 	})
 	go ListenAndServe(rootCtx, "127.0.0.1:28120", server)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	receivedMsgs := make(map[int]jsonz.Message)
 	client := NewWSClient("ws://127.0.0.1:28120")
@@ -168,7 +168,7 @@ func TestWSSession(t *testing.T) {
 	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	assert.Equal(modeActive, session.pushMode)
 
 	ntf3 := jsonz.NewNotifyMessage("notify3", nil)
@@ -202,7 +202,7 @@ func TestWSSession(t *testing.T) {
 	// activate the session again
 	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	// notify4 received
 	assert.Equal("notify4", receivedMsgs[0].MustMethod())
 
@@ -214,7 +214,7 @@ func TestWSSession(t *testing.T) {
 	// activate the session again and again
 	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	// notify5 received
 	assert.Equal("notify5", receivedMsgs[0].MustMethod())
 
@@ -225,7 +225,7 @@ func TestWSSession(t *testing.T) {
 	// activate the session again and again and again
 	err = client.ActivateSession(rootCtx)
 	assert.Nil(err)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	// one buffered element is unshifted from push buffer
 	assert.Equal(modeActive, session.pushMode)

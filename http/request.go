@@ -3,20 +3,34 @@ package jsonzhttp
 import (
 	"context"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"net/http"
 )
 
+const (
+	TransportHTTP      = "http"
+	TransportWebsocket = "websocket"
+	TransportGRPC      = "grpc"
+)
+
 // http rpc quest structure
 type RPCRequest struct {
-	context context.Context
-	msg     jsonz.Message
-	r       *http.Request
-	data    interface{} // arbitrary data
+	context       context.Context
+	msg           jsonz.Message
+	transportType string
+	r             *http.Request
+	data          interface{} // arbitrary data
 }
 
-func NewRPCRequest(ctx context.Context, msg jsonz.Message, r *http.Request, data interface{}) *RPCRequest {
-	return &RPCRequest{context: ctx, msg: msg, r: r, data: data}
+func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string, r *http.Request, data interface{}) *RPCRequest {
+	return &RPCRequest{
+		context:       ctx,
+		msg:           msg,
+		transportType: transportType,
+		r:             r,
+		data:          data,
+	}
 }
 
 func (self RPCRequest) Context() context.Context {
@@ -28,11 +42,25 @@ func (self RPCRequest) Msg() jsonz.Message {
 }
 
 func (self RPCRequest) HttpRequest() *http.Request {
+	if self.r == nil {
+		panic("Http Request is nil")
+	}
 	return self.r
 }
 
 func (self RPCRequest) Data() interface{} {
 	return self.data
+}
+
+func (self RPCRequest) Log() *log.Entry {
+	remoteAddr := ""
+	if self.r != nil {
+		remoteAddr = self.r.RemoteAddr
+	}
+	return self.msg.Log().WithFields(log.Fields{
+		"ttype":      self.transportType,
+		"remoteAddr": remoteAddr,
+	})
 }
 
 // handler func
@@ -103,14 +131,14 @@ func (self *Handler) getHandler(method string) (HandlerFunc, bool) {
 	}
 }
 
-func (self *Handler) HandleRequest(req *RPCRequest) (jsonz.Message, error) {
+func (self *Handler) Feed(req *RPCRequest) (jsonz.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
 			res, err := self.missingHandler(req)
 			return self.wrapResult(res, err, msg)
 		} else {
-			msg.Log().Info("no handler to handle this message")
+			req.Log().Info("no handler to handle this message")
 			return nil, nil
 		}
 	}

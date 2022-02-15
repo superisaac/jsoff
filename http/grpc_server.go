@@ -97,9 +97,10 @@ func (self *GRPCSession) msgReceived(msg jsonz.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
+		TransportGRPC,
 		nil, // HttpRequest is nil
 		self)
-	resmsg, err := self.server.Handler.HandleRequest(req)
+	resmsg, err := self.server.Handler.Feed(req)
 	if err != nil {
 		self.done <- errors.Wrap(err, "handler.handlerRequest")
 		return
