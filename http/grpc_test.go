@@ -18,7 +18,7 @@ func TestGRPCServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewGRPCServer()
+	server := NewGRPCServer(rootCtx)
 	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -58,7 +58,7 @@ func TestTypedGRPCServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewGRPCServer()
+	server := NewGRPCServer(rootCtx)
 	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
@@ -123,4 +123,46 @@ func TestTypedGRPCServerClient(t *testing.T) {
 	errbody4 := resmsg4.MustError()
 	assert.Equal(-32602, errbody4.Code)
 	assert.True(strings.Contains(errbody4.Message, "got unconvertible type"))
+}
+
+func TestGRPCClose(t *testing.T) {
+	assert := assert.New(t)
+
+	serverCtx, cancelServer := context.WithCancel(context.Background())
+	defer cancelServer()
+
+	clientCtx, cancelClient := context.WithCancel(context.Background())
+	defer cancelClient()
+
+	server := NewGRPCServer(serverCtx)
+	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return nil, jsonz.ParamsError("no argument given")
+		}
+	})
+
+	go GRPCServe(serverCtx, "127.0.0.1:28220", server)
+	time.Sleep(100 * time.Millisecond)
+
+	closeCalled := make(map[int]bool)
+	client := NewGRPCClient("h2c://127.0.0.1:28220")
+	client.OnClose(func() {
+		closeCalled[0] = true
+	})
+	// right request
+	params := [](interface{}){"hello999"}
+	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
+
+	resmsg, err := client.Call(clientCtx, reqmsg)
+	assert.Nil(err)
+	assert.True(resmsg.IsResult())
+	res := resmsg.MustResult()
+	assert.Equal("hello999", res)
+
+	// cancel root
+	cancelServer()
+	time.Sleep(100 * time.Millisecond)
+	assert.True(closeCalled[0])
 }

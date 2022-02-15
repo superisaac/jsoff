@@ -8,7 +8,13 @@ import (
 	"github.com/superisaac/jsonz"
 	jsonzgrpc "github.com/superisaac/jsonz/grpc"
 	"google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	"io"
 	"net/url"
+)
+
+var (
+	safeCodes = []codes.Code{codes.Unavailable, codes.Canceled}
 )
 
 // implements StreamingClient
@@ -68,10 +74,32 @@ func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl string) er
 	return nil
 }
 
+func (self *gRPCTransport) handleGRPCError(err error) error {
+	if errors.Is(err, io.EOF) {
+		log.Infof("cannot connect stream")
+		return &TransportClosed{}
+	}
+	code := grpc.Code(err)
+	if code == codes.Unknown {
+		cause := errors.Cause(err)
+		if cause != nil {
+			code = grpc.Code(cause)
+		}
+	}
+	for _, safeCode := range safeCodes {
+		if code == safeCode {
+			log.Debugf("grpc connect code %d %s", code, code)
+			return &TransportClosed{}
+		}
+	}
+	log.Warnf("error on handle %+v", err)
+	return err
+}
+
 func (self *gRPCTransport) WriteMessage(msg jsonz.Message) error {
 	marshaled, err := jsonz.MessageBytes(msg)
 	if err != nil {
-		return err
+		return self.handleGRPCError(err)
 	}
 
 	gmsg := &jsonzgrpc.JSONRPCMessage{
@@ -87,8 +115,7 @@ func (self *gRPCTransport) WriteMessage(msg jsonz.Message) error {
 func (self *gRPCTransport) ReadMessage() (jsonz.Message, bool, error) {
 	gmsg, err := self.stream.Recv()
 	if err != nil {
-		log.Warnf("stream recv error %s", err)
-		return nil, false, err
+		return nil, false, self.handleGRPCError(err)
 	}
 	msg, err := jsonz.ParseBytes(gmsg.Body)
 	if err != nil {

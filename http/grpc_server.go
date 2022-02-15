@@ -13,8 +13,8 @@ import (
 
 type GRPCServer struct {
 	jsonzgrpc.UnimplementedJSONZServer
-
-	Handler *Handler
+	Handler   *Handler
+	serverCtx context.Context
 }
 
 type GRPCSession struct {
@@ -25,16 +25,17 @@ type GRPCSession struct {
 	sendChannel chan jsonz.Message
 }
 
-func NewGRPCServer() *GRPCServer {
-	return NewGRPCServerFromHandler(nil)
+func NewGRPCServer(serverCtx context.Context) *GRPCServer {
+	return NewGRPCServerFromHandler(serverCtx, nil)
 }
 
-func NewGRPCServerFromHandler(handler *Handler) *GRPCServer {
+func NewGRPCServerFromHandler(serverCtx context.Context, handler *Handler) *GRPCServer {
 	if handler == nil {
 		handler = NewHandler()
 	}
 	return &GRPCServer{
-		Handler: handler,
+		Handler:   handler,
+		serverCtx: serverCtx,
 	}
 }
 
@@ -57,12 +58,17 @@ func (self *GRPCSession) wait() error {
 	ctx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
 
+	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
+	defer cancelServer()
+
 	go self.sendLoop()
 	go self.recvLoop()
 
 	for {
 		select {
 		case <-ctx.Done():
+			return nil
+		case <-serverCtx.Done():
 			return nil
 		case err, ok := <-self.done:
 			if !ok {

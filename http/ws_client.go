@@ -51,6 +51,20 @@ func (self *wsTransport) Connect(rootCtx context.Context, serverUrl string) erro
 	return nil
 }
 
+func (self *wsTransport) handleWebsocketError(err error) error {
+	var closeErr *websocket.CloseError
+	if errors.Is(err, io.EOF) {
+		log.Infof("websocket conn failed")
+		return &TransportClosed{}
+	} else if errors.As(err, &closeErr) {
+		log.Infof("websocket close error %d %s", closeErr.Code, closeErr.Text)
+		return &TransportClosed{}
+	} else {
+		log.Warnf("ws.ReadMessage error %s %s", reflect.TypeOf(err), err)
+	}
+	return err
+}
+
 func (self *wsTransport) WriteMessage(msg jsonz.Message) error {
 	marshaled, err := jsonz.MessageBytes(msg)
 	if err != nil {
@@ -58,7 +72,7 @@ func (self *wsTransport) WriteMessage(msg jsonz.Message) error {
 	}
 
 	if err := self.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
-		return err
+		return self.handleWebsocketError(err)
 	}
 	return nil
 }
@@ -66,15 +80,7 @@ func (self *wsTransport) WriteMessage(msg jsonz.Message) error {
 func (self *wsTransport) ReadMessage() (jsonz.Message, bool, error) {
 	messageType, msgBytes, err := self.ws.ReadMessage()
 	if err != nil {
-		var closeErr *websocket.CloseError
-		if errors.Is(err, io.EOF) {
-			log.Infof("websocket conn failed")
-		} else if errors.As(err, &closeErr) {
-			log.Infof("websocket close error %d %s", closeErr.Code, closeErr.Text)
-		} else {
-			log.Warnf("ws.ReadMessage error %s %s", reflect.TypeOf(err), err)
-		}
-		return nil, false, err
+		return nil, false, self.handleWebsocketError(err)
 	}
 	if messageType != websocket.TextMessage {
 		return nil, false, nil

@@ -53,6 +53,7 @@ func ListenAndServe(rootCtx context.Context, bind string, handler http.Handler, 
 			tlsConfig.Certfile,
 			tlsConfig.Keyfile)
 	} else {
-		return server.Serve(listener)
+		err := server.Serve(listener)
+		return err
 	}
 }

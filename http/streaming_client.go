@@ -16,6 +16,14 @@ type pendingRequest struct {
 }
 
 type MessageHandler func(msg jsonz.Message)
+type CloseHandler func()
+
+type TransportClosed struct {
+}
+
+func (self TransportClosed) Error() string {
+	return "streaming closed"
+}
 
 // the underline transport, currently there are websocket and gRPC
 // implementations
@@ -31,6 +39,7 @@ type StreamingClient struct {
 	serverUrl       string
 	pendingRequests sync.Map
 	messageHandler  MessageHandler
+	closeHandler    CloseHandler
 	sendChannel     chan jsonz.Message
 
 	transport Transport
@@ -53,6 +62,14 @@ func (self *StreamingClient) OnMessage(handler MessageHandler) error {
 	return nil
 }
 
+func (self *StreamingClient) OnClose(handler CloseHandler) error {
+	if self.closeHandler != nil {
+		return errors.New("close handler already exist!")
+	}
+	self.closeHandler = handler
+	return nil
+}
+
 func (self *StreamingClient) connect(rootCtx context.Context) error {
 	self.connectOnce.Do(func() {
 		err := self.transport.Connect(rootCtx, self.serverUrl)
@@ -64,6 +81,21 @@ func (self *StreamingClient) connect(rootCtx context.Context) error {
 		go self.recvLoop()
 	})
 	return self.connectErr
+}
+
+func (self *StreamingClient) handleError(err error) {
+	var transClosed *TransportClosed
+	if errors.As(err, &transClosed) {
+		log.Infof("transport closed")
+		self.transport.Close()
+		if self.closeHandler != nil {
+			self.closeHandler()
+		}
+	}
+}
+
+func (self StreamingClient) Connected() bool {
+	return self.transport.Connected()
 }
 
 func (self *StreamingClient) sendLoop() {
@@ -81,6 +113,7 @@ func (self *StreamingClient) sendLoop() {
 			err := self.transport.WriteMessage(msg)
 			if err != nil {
 				log.Warnf("write msg error %s", err)
+				self.handleError(err)
 				return
 			}
 		}
@@ -94,6 +127,7 @@ func (self *StreamingClient) recvLoop() {
 		}
 		msg, readed, err := self.transport.ReadMessage()
 		if err != nil {
+			self.handleError(err)
 			return
 		}
 		if !readed {
@@ -203,8 +237,6 @@ func (self *StreamingClient) Send(rootCtx context.Context, msg jsonz.Message) er
 	if err != nil {
 		return err
 	}
-
 	self.sendChannel <- msg
-
 	return nil
 }

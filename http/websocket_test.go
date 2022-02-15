@@ -1,7 +1,6 @@
 package jsonzhttp
 
 import (
-	//"fmt"
 	"context"
 	"encoding/json"
 	//log "github.com/sirupsen/logrus"
@@ -18,7 +17,7 @@ func TestWSServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewWSServer()
+	server := NewWSServer(rootCtx)
 	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -58,7 +57,7 @@ func TestTypedWSServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewWSServer()
+	server := NewWSServer(rootCtx)
 	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
@@ -132,7 +131,7 @@ func TestWSSession(t *testing.T) {
 	defer cancel()
 
 	sessions := make(map[int]*WSSession)
-	server := NewWSServer()
+	server := NewWSServer(rootCtx)
 	server.FlowControl = true
 	server.Handler.On("hijackSession", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// capture the websocket session to uplevel for
@@ -230,4 +229,46 @@ func TestWSSession(t *testing.T) {
 	// one buffered element is unshifted from push buffer
 	assert.Equal(modeActive, session.pushMode)
 	assert.Equal(0, len(session.pushBuffer))
+}
+
+func TestWSClose(t *testing.T) {
+	assert := assert.New(t)
+
+	serverCtx, cancelServer := context.WithCancel(context.Background())
+	defer cancelServer()
+
+	clientCtx, cancelClient := context.WithCancel(context.Background())
+	defer cancelClient()
+
+	server := NewWSServer(serverCtx)
+	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return nil, jsonz.ParamsError("no argument given")
+		}
+	})
+
+	go ListenAndServe(serverCtx, "127.0.0.1:28120", server)
+	time.Sleep(100 * time.Millisecond)
+
+	closeCalled := make(map[int]bool)
+	client := NewWSClient("ws://127.0.0.1:28120")
+	client.OnClose(func() {
+		closeCalled[0] = true
+	})
+	// right request
+	params := [](interface{}){"hello999"}
+	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
+
+	resmsg, err := client.Call(clientCtx, reqmsg)
+	assert.Nil(err)
+	assert.True(resmsg.IsResult())
+	res := resmsg.MustResult()
+	assert.Equal("hello999", res)
+
+	// cancel root
+	cancelServer()
+	time.Sleep(100 * time.Millisecond)
+	assert.True(closeCalled[0])
 }

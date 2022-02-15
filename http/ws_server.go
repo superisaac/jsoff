@@ -1,6 +1,7 @@
 package jsonzhttp
 
 import (
+	//"fmt"
 	"context"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
@@ -21,7 +22,8 @@ var upgrader = websocket.Upgrader{
 }
 
 type WSServer struct {
-	Handler *Handler
+	Handler   *Handler
+	serverCtx context.Context
 	// options
 	SpawnGoroutine bool
 	FlowControl    bool
@@ -38,16 +40,17 @@ type WSSession struct {
 	pushBuffer  []jsonz.Message
 }
 
-func NewWSServer() *WSServer {
-	return NewWSServerFromHandler(nil)
+func NewWSServer(serverCtx context.Context) *WSServer {
+	return NewWSServerFromHandler(serverCtx, nil)
 }
 
-func NewWSServerFromHandler(handler *Handler) *WSServer {
+func NewWSServerFromHandler(serverCtx context.Context, handler *Handler) *WSServer {
 	if handler == nil {
 		handler = NewHandler()
 	}
 	return &WSServer{
-		Handler: handler,
+		serverCtx: serverCtx,
+		Handler:   handler,
 	}
 }
 
@@ -88,12 +91,17 @@ func (self *WSSession) wait() {
 	ctx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
 
+	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
+	defer cancelServer()
+
 	go self.sendLoop()
 	go self.recvLoop()
 
 	for {
 		select {
 		case <-ctx.Done():
+			return
+		case <-serverCtx.Done():
 			return
 		case err, ok := <-self.done:
 			if ok && err != nil {
