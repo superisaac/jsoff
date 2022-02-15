@@ -249,11 +249,11 @@ func TestWSClose(t *testing.T) {
 		}
 	})
 
-	go ListenAndServe(serverCtx, "127.0.0.1:28120", server)
+	go ListenAndServe(serverCtx, "127.0.0.1:28123", server)
 	time.Sleep(100 * time.Millisecond)
 
 	closeCalled := make(map[int]bool)
-	client := NewWSClient("ws://127.0.0.1:28120")
+	client := NewWSClient("ws://127.0.0.1:28123")
 	client.OnClose(func() {
 		closeCalled[0] = true
 	})
