@@ -18,7 +18,7 @@ type GRPCServer struct {
 }
 
 type GRPCSession struct {
-	stream      jsonzgrpc.JSONZ_DialServer
+	stream      jsonzgrpc.JSONZ_OpenStreamServer
 	server      *GRPCServer
 	rootCtx     context.Context
 	done        chan error
@@ -26,10 +26,19 @@ type GRPCSession struct {
 }
 
 func NewGRPCServer() *GRPCServer {
-	return &GRPCServer{}
+	return NewGRPCServerFromHandler(nil)
 }
 
-func (self *GRPCServer) Dial(stream jsonzgrpc.JSONZ_DialServer) error {
+func NewGRPCServerFromHandler(handler *Handler) *GRPCServer {
+	if handler == nil {
+		handler = NewHandler()
+	}
+	return &GRPCServer{
+		Handler: handler,
+	}
+}
+
+func (self *GRPCServer) OpenStream(stream jsonzgrpc.JSONZ_OpenStreamServer) error {
 	session := &GRPCSession{
 		stream:      stream,
 		server:      self,
@@ -143,7 +152,7 @@ func (self *GRPCSession) sendLoop() {
 }
 
 // start grpc server
-func StartGRPCServer(rootCtx context.Context, bind string, opts ...grpc.ServerOption) {
+func GRPCServe(rootCtx context.Context, bind string, server *GRPCServer, opts ...grpc.ServerOption) {
 	lis, err := net.Listen("tcp", bind)
 	if err != nil {
 		log.Panicf("failed to listen: %v", err)
@@ -171,6 +180,6 @@ func StartGRPCServer(rootCtx context.Context, bind string, opts ...grpc.ServerOp
 		}
 	}()
 
-	jsonzgrpc.RegisterJSONZServer(grpcServer, NewGRPCServer())
+	jsonzgrpc.RegisterJSONZServer(grpcServer, server)
 	grpcServer.Serve(lis)
 }

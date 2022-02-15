@@ -4,7 +4,7 @@ option go_package = ".;jsonzgrpc";
 
 service JSONZ {
   // bi-direction streams
-  rpc Dial(stream JSONRPCMessage) returns (stream JSONRPCMessage);
+  rpc OpenStream(stream JSONRPCMessage) returns (stream JSONRPCMessage);
 }
 
 message JSONRPCMessage {

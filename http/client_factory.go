@@ -18,10 +18,14 @@ func GetClient(serverUrl string) (Client, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "url.Parse")
 	}
-	if u.Scheme == "http" || u.Scheme == "https" {
+	switch u.Scheme {
+	case "http", "https":
 		return NewHTTPClient(serverUrl), nil
-	} else if u.Scheme == "ws" || u.Scheme == "wss" {
+	case "ws", "wss":
 		return NewWSClient(serverUrl), nil
+	case "h2", "h2c":
+		return NewGRPCClient(serverUrl), nil
+	default:
+		return nil, errors.New("url scheme not supported")
 	}
-	return nil, errors.New("bad url schema")
 }

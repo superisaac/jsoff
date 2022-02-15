@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type JSONZClient interface {
 	// bi-direction streams
-	Dial(ctx context.Context, opts ...grpc.CallOption) (JSONZ_DialClient, error)
+	OpenStream(ctx context.Context, opts ...grpc.CallOption) (JSONZ_OpenStreamClient, error)
 }
 
 type jSONZClient struct {
@@ -29,30 +29,30 @@ func NewJSONZClient(cc grpc.ClientConnInterface) JSONZClient {
 	return &jSONZClient{cc}
 }
 
-func (c *jSONZClient) Dial(ctx context.Context, opts ...grpc.CallOption) (JSONZ_DialClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_JSONZ_serviceDesc.Streams[0], "/JSONZ/Dial", opts...)
+func (c *jSONZClient) OpenStream(ctx context.Context, opts ...grpc.CallOption) (JSONZ_OpenStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_JSONZ_serviceDesc.Streams[0], "/JSONZ/OpenStream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &jSONZDialClient{stream}
+	x := &jSONZOpenStreamClient{stream}
 	return x, nil
 }
 
-type JSONZ_DialClient interface {
+type JSONZ_OpenStreamClient interface {
 	Send(*JSONRPCMessage) error
 	Recv() (*JSONRPCMessage, error)
 	grpc.ClientStream
 }
 
-type jSONZDialClient struct {
+type jSONZOpenStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *jSONZDialClient) Send(m *JSONRPCMessage) error {
+func (x *jSONZOpenStreamClient) Send(m *JSONRPCMessage) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *jSONZDialClient) Recv() (*JSONRPCMessage, error) {
+func (x *jSONZOpenStreamClient) Recv() (*JSONRPCMessage, error) {
 	m := new(JSONRPCMessage)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (x *jSONZDialClient) Recv() (*JSONRPCMessage, error) {
 // for forward compatibility
 type JSONZServer interface {
 	// bi-direction streams
-	Dial(JSONZ_DialServer) error
+	OpenStream(JSONZ_OpenStreamServer) error
 	mustEmbedUnimplementedJSONZServer()
 }
 
@@ -73,8 +73,8 @@ type JSONZServer interface {
 type UnimplementedJSONZServer struct {
 }
 
-func (UnimplementedJSONZServer) Dial(JSONZ_DialServer) error {
-	return status.Errorf(codes.Unimplemented, "method Dial not implemented")
+func (UnimplementedJSONZServer) OpenStream(JSONZ_OpenStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method OpenStream not implemented")
 }
 func (UnimplementedJSONZServer) mustEmbedUnimplementedJSONZServer() {}
 
@@ -89,25 +89,25 @@ func RegisterJSONZServer(s *grpc.Server, srv JSONZServer) {
 	s.RegisterService(&_JSONZ_serviceDesc, srv)
 }
 
-func _JSONZ_Dial_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(JSONZServer).Dial(&jSONZDialServer{stream})
+func _JSONZ_OpenStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(JSONZServer).OpenStream(&jSONZOpenStreamServer{stream})
 }
 
-type JSONZ_DialServer interface {
+type JSONZ_OpenStreamServer interface {
 	Send(*JSONRPCMessage) error
 	Recv() (*JSONRPCMessage, error)
 	grpc.ServerStream
 }
 
-type jSONZDialServer struct {
+type jSONZOpenStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *jSONZDialServer) Send(m *JSONRPCMessage) error {
+func (x *jSONZOpenStreamServer) Send(m *JSONRPCMessage) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *jSONZDialServer) Recv() (*JSONRPCMessage, error) {
+func (x *jSONZOpenStreamServer) Recv() (*JSONRPCMessage, error) {
 	m := new(JSONRPCMessage)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -121,8 +121,8 @@ var _JSONZ_serviceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Dial",
-			Handler:       _JSONZ_Dial_Handler,
+			StreamName:    "OpenStream",
+			Handler:       _JSONZ_OpenStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
