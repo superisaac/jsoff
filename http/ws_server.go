@@ -99,9 +99,9 @@ func (self *WSSession) wait() {
 
 	for {
 		select {
-		case <- connCtx.Done():
+		case <-connCtx.Done():
 			return
-		case <- serverCtx.Done():
+		case <-serverCtx.Done():
 			return
 		case err, ok := <-self.done:
 			if ok && err != nil {

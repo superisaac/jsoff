@@ -3,6 +3,7 @@ package jsonzhttp
 import (
 	"context"
 	"errors"
+	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
 )
@@ -56,4 +57,11 @@ func ListenAndServe(rootCtx context.Context, bind string, handler http.Handler, 
 		err := server.Serve(listener)
 		return err
 	}
+}
+
+// log attaching remoteAddr
+func Logger(r *http.Request) *log.Entry {
+	return log.WithFields(log.Fields{
+		"remoteAddr": r.RemoteAddr,
+	})
 }

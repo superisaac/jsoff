@@ -66,9 +66,9 @@ func (self *GRPCSession) wait() error {
 
 	for {
 		select {
-		case <- connCtx.Done():
+		case <-connCtx.Done():
 			return nil
-		case <- serverCtx.Done():
+		case <-serverCtx.Done():
 			return nil
 		case err, ok := <-self.done:
 			if !ok {
