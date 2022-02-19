@@ -28,9 +28,9 @@ type JwtAuthConfig struct {
 }
 
 type AuthConfig struct {
-	Basic  *BasicAuthConfig  `yaml:"basic,omitempty" json:"basic,omitempty"`
-	Bearer *BearerAuthConfig `yaml:"bearer,omitempty" json:"bearer,omitempty"`
-	Jwt    *JwtAuthConfig    `yaml:"jwt,omitempty" json:"jwt,omitempty"`
+	Basic  []BasicAuthConfig  `yaml:"basic,omitempty" json:"basic,omitempty"`
+	Bearer []BearerAuthConfig `yaml:"bearer,omitempty" json:"bearer,omitempty"`
+	Jwt    *JwtAuthConfig     `yaml:"jwt,omitempty" json:"jwt,omitempty"`
 }
 
 type jwtClaims struct {
@@ -68,21 +68,27 @@ func (self HttpAuthHandler) TryAuth(r *http.Request) (string, bool) {
 		}
 	}
 
-	if self.authConfig.Basic != nil {
-		basicAuth := self.authConfig.Basic
+	if self.authConfig.Basic != nil && len(self.authConfig.Basic) > 0 {
 		if username, password, ok := r.BasicAuth(); ok {
-			if basicAuth.Username == username && basicAuth.Password == password {
-				return username, true
+			for _, basicCfg := range self.authConfig.Basic {
+				if basicCfg.Username == username && basicCfg.Password == password {
+					return username, true
+				}
 			}
 		}
 	}
 
-	if self.authConfig.Bearer != nil && self.authConfig.Bearer.Token != "" {
-		bearerAuth := self.authConfig.Bearer
+	if self.authConfig.Bearer != nil && len(self.authConfig.Bearer) > 0 {
 		authHeader := r.Header.Get("Authorization")
-		expect := fmt.Sprintf("Bearer %s", bearerAuth.Token)
-		if authHeader == expect {
-			return bearerAuth.Username, true
+		for _, bearCfg := range self.authConfig.Bearer {
+			expect := fmt.Sprintf("Bearer %s", bearCfg.Token)
+			if authHeader == expect {
+				username := bearCfg.Username
+				if username == "" {
+					username = bearCfg.Token
+				}
+				return username, true
+			}
 		}
 	}
 
@@ -152,12 +158,20 @@ func (self *AuthConfig) ValidateValues() error {
 		return nil
 	}
 
-	if self.Bearer != nil && self.Bearer.Token == "" {
-		return errors.New("bearer token cannot be empty")
+	if self.Bearer != nil && len(self.Bearer) > 0 {
+		for _, bearCfg := range self.Bearer {
+			if bearCfg.Token == "" {
+				return errors.New("bearer token cannot be empty")
+			}
+		}
 	}
 
-	if self.Basic != nil && (self.Basic.Username == "" || self.Basic.Password == "") {
-		return errors.New("basic username and password cannot be empty")
+	if self.Basic != nil && len(self.Basic) > 0 {
+		for _, basicCfg := range self.Basic {
+			if basicCfg.Username == "" || basicCfg.Password == "" {
+				return errors.New("basic username and password cannot be empty")
+			}
+		}
 	}
 
 	if self.Jwt != nil && self.Jwt.Secret != "" {
