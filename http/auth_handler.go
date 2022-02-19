@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"net/http"
 	"strings"
@@ -17,6 +18,9 @@ type BasicAuthConfig struct {
 
 type BearerAuthConfig struct {
 	Token string
+
+	// username attached to request when token authorized
+	Username string `yaml:"username,omitempty" json:"username,omitempty"`
 }
 
 type JwtAuthConfig struct {
@@ -38,10 +42,19 @@ type jwtClaims struct {
 type HttpAuthHandler struct {
 	authConfig *AuthConfig
 	next       http.Handler
+	jwtCache   *lru.Cache
 }
 
 func NewHttpAuthHandler(authConfig *AuthConfig, next http.Handler) *HttpAuthHandler {
-	return &HttpAuthHandler{authConfig: authConfig, next: next}
+	cache, err := lru.New(100)
+	if err != nil {
+		panic(err)
+	}
+	return &HttpAuthHandler{
+		authConfig: authConfig,
+		jwtCache:   cache,
+		next:       next,
+	}
 }
 
 func (self HttpAuthHandler) TryAuth(r *http.Request) (string, bool) {
@@ -69,7 +82,7 @@ func (self HttpAuthHandler) TryAuth(r *http.Request) (string, bool) {
 		authHeader := r.Header.Get("Authorization")
 		expect := fmt.Sprintf("Bearer %s", bearerAuth.Token)
 		if authHeader == expect {
-			return bearerAuth.Token, true
+			return bearerAuth.Username, true
 		}
 	}
 
@@ -83,31 +96,44 @@ func (self *HttpAuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (st
 		return "", false
 	}
 	if arr := strings.SplitN(authHeader, " ", 2); len(arr) <= 2 && arr[0] == "Bearer" {
-		jwtFromHeader := arr[1]
-		token, err := jwt.ParseWithClaims(
-			jwtFromHeader,
-			&jwtClaims{},
-			func(token *jwt.Token) (interface{}, error) {
-				return []byte(jwtCfg.Secret), nil
-			},
-		)
-		if err != nil {
-			Logger(r).Warnf("jwt auth error %s", err)
-			return "", false
-		}
-		claims, ok := token.Claims.(*jwtClaims)
-		if !ok {
-			return "", false
+		var claims *jwtClaims
+		fromCache := false
+
+		if cached, ok := self.jwtCache.Get(authHeader); ok {
+			claims, _ = cached.(*jwtClaims)
+			fromCache = true
+		} else {
+			jwtFromHeader := arr[1]
+			token, err := jwt.ParseWithClaims(
+				jwtFromHeader,
+				&jwtClaims{},
+				func(token *jwt.Token) (interface{}, error) {
+					return []byte(jwtCfg.Secret), nil
+				},
+			)
+			if err != nil {
+				Logger(r).Warnf("jwt auth error %s", err)
+				return "", false
+			}
+			claims, ok = token.Claims.(*jwtClaims)
+			if !ok {
+				return "", false
+			}
 		}
 		// check expiration
 		if claims.ExpiresAt < time.Now().UTC().Unix() {
-			Logger(r).Warnf("claims expired %s", jwtFromHeader)
+			Logger(r).Warnf("claims expired %s", authHeader)
+			if fromCache {
+				self.jwtCache.Remove(authHeader)
+			}
 			return "", false
+		}
+		if !fromCache {
+			self.jwtCache.Add(authHeader, claims)
 		}
 		return claims.Username, true
 	}
 	return "", false
-
 }
 
 func (self *HttpAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +144,6 @@ func (self *HttpAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 		w.Write([]byte("auth failed!\n"))
 	}
-
 }
 
 // Auth config
