@@ -22,6 +22,8 @@ var (
 
 	ErrNotAllowed = &RPCError{406, "type not allowed", nil}
 	ErrAuthFailed = &RPCError{401, "auth failed", nil}
+
+	ErrInvalidSchema = &RPCError{-32633, "invalid schema", nil}
 )
 
 func ParamsError(message string) *RPCError {

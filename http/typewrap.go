@@ -54,7 +54,7 @@ func valueToInterface(tp reflect.Type, val reflect.Value) (interface{}, error) {
 	return output, nil
 }
 
-func wrapTyped(tfunc interface{}) (HandlerFunc, error) {
+func wrapTyped(tfunc interface{}) (HandlerCallback, error) {
 	funcType := reflect.TypeOf(tfunc)
 	if funcType.Kind() != reflect.Func {
 		return nil, errors.New("tfunc is not func type")

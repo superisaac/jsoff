@@ -1,6 +1,7 @@
 package jsonz
 
 import (
+	"encoding/json"
 	simplejson "github.com/bitly/go-simplejson"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
@@ -94,6 +95,12 @@ func ConvertStringList(v interface{}) []string {
 func ConvertInt(v interface{}) int {
 	if intv, ok := v.(int); ok {
 		return intv
+	} else if nv, ok := v.(json.Number); ok {
+		i64v, err := nv.Int64()
+		if err != nil {
+			panic(err)
+		}
+		return int(i64v)
 	}
 	panic("cannot convert to int")
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jsonz/schema"
 	"net/http"
 )
 
@@ -64,39 +65,79 @@ func (self RPCRequest) Log() *log.Entry {
 }
 
 // handler func
-type HandlerFunc func(req *RPCRequest, params []interface{}) (interface{}, error)
-type MissingHandlerFunc func(req *RPCRequest) (interface{}, error)
-type CloseHandlerFunc func(r *http.Request)
+type HandlerCallback func(req *RPCRequest, params []interface{}) (interface{}, error)
+type MissingCallback func(req *RPCRequest) (interface{}, error)
+type CloseCallback func(r *http.Request)
+
+// With method handler
+type MethodHandler struct {
+	callback HandlerCallback
+	schema   schema.Schema
+}
+
+type HandlerSetter func(h *MethodHandler)
+
+func WithSchema(s schema.Schema) HandlerSetter {
+	return func(h *MethodHandler) {
+		h.schema = s
+	}
+}
+
+func WithSchemaYaml(yamlSchema string) HandlerSetter {
+	builder := schema.NewSchemaBuilder()
+	s, err := builder.BuildYamlBytes([]byte(yamlSchema))
+	if err != nil {
+		panic(err)
+	}
+	return WithSchema(s)
+}
+
+func WithSchemaJson(jsonSchema string) HandlerSetter {
+	builder := schema.NewSchemaBuilder()
+	s, err := builder.BuildBytes([]byte(jsonSchema))
+	if err != nil {
+		panic(err)
+	}
+	return WithSchema(s)
+}
 
 type Handler struct {
-	methodHandlers map[string]HandlerFunc
-	missingHandler MissingHandlerFunc
-	closeHandler   CloseHandlerFunc
+	VerifySchema   bool
+	methodHandlers map[string]*MethodHandler
+	missingHandler MissingCallback
+	closeHandler   CloseCallback
 }
 
 func NewHandler() *Handler {
 	return &Handler{
-		methodHandlers: make(map[string]HandlerFunc),
+		methodHandlers: make(map[string]*MethodHandler),
 	}
 }
 
-func (self *Handler) On(method string, handler HandlerFunc) error {
+func (self *Handler) On(method string, callback HandlerCallback, setters ...HandlerSetter) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
 	}
-	self.methodHandlers[method] = handler
+	h := &MethodHandler{
+		callback: callback,
+	}
+
+	for _, setter := range setters {
+		setter(h)
+	}
+	self.methodHandlers[method] = h
 	return nil
 }
 
-func (self *Handler) OnTyped(method string, typedHandler interface{}) error {
+func (self *Handler) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) error {
 	handler, err := wrapTyped(typedHandler)
 	if err != nil {
 		return err
 	}
-	return self.On(method, handler)
+	return self.On(method, handler, setters...)
 }
 
-func (self *Handler) OnMissing(handler MissingHandlerFunc) error {
+func (self *Handler) OnMissing(handler MissingCallback) error {
 	if self.missingHandler != nil {
 		return errors.New("missing handler already exist!")
 	}
@@ -104,7 +145,7 @@ func (self *Handler) OnMissing(handler MissingHandlerFunc) error {
 	return nil
 }
 
-func (self *Handler) OnClose(handler CloseHandlerFunc) error {
+func (self *Handler) OnClose(handler CloseCallback) error {
 	if self.closeHandler != nil {
 		return errors.New("close handler already exist!")
 	}
@@ -123,7 +164,7 @@ func (self Handler) HasHandler(method string) bool {
 	return exist
 }
 
-func (self *Handler) getHandler(method string) (HandlerFunc, bool) {
+func (self *Handler) getHandler(method string) (*MethodHandler, bool) {
 	if h, ok := self.methodHandlers[method]; ok {
 		return h, true
 	} else {
@@ -146,7 +187,20 @@ func (self *Handler) Feed(req *RPCRequest) (jsonz.Message, error) {
 	// TODO: recover from panic
 	if handler, found := self.getHandler(msg.MustMethod()); found {
 		params := msg.MustParams()
-		res, err := handler(req, params)
+		if handler.schema != nil && self.VerifySchema {
+			// validate the request
+			validator := schema.NewSchemaValidator()
+			errPos := validator.Validate(
+				handler.schema,
+				jsonz.MessageInterface(msg))
+			if errPos != nil {
+				if reqmsg, ok := msg.(*jsonz.RequestMessage); ok {
+					return errPos.ToMessage(reqmsg), nil
+				}
+				return nil, errPos
+			}
+		}
+		res, err := handler.callback(req, params)
 		resmsg, err := self.wrapResult(res, err, msg)
 		return resmsg, err
 	} else if self.missingHandler != nil {

@@ -19,6 +19,13 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+const (
+	addSchema = `{
+  "type": "method",
+  "params": ["integer", {"type": "integer"}]
+}`
+)
+
 func TestServerClient(t *testing.T) {
 	assert := assert.New(t)
 
@@ -169,4 +176,38 @@ func TestTypedServerClient(t *testing.T) {
 	assert.Equal(-32602, errbody5.Code)
 	assert.True(strings.Contains(errbody5.Message, "got unconvertible type"))
 
+}
+
+func TestHandlerSchema(t *testing.T) {
+	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := NewServer()
+	server.Handler.VerifySchema = true
+	server.Handler.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		a := jsonz.ConvertInt(params[0])
+		b := jsonz.ConvertInt(params[1])
+		return a + b, nil
+	}, WithSchemaJson(addSchema))
+
+	go ListenAndServe(rootCtx, "127.0.0.1:28040", server)
+	time.Sleep(10 * time.Millisecond)
+
+	client := NewHTTPClient("http://127.0.0.1:28040")
+
+	// right request
+	reqmsg := jsonz.NewRequestMessage(
+		1, "add2num", []interface{}{5, 8})
+	resmsg, err := client.Call(rootCtx, reqmsg)
+	assert.Nil(err)
+	assert.Equal(json.Number("13"), resmsg.MustResult())
+
+	reqmsg2 := jsonz.NewRequestMessage(
+		2, "add2num", []interface{}{"12", "a str"})
+	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
+	assert.Nil(err2)
+	assert.Equal(jsonz.ErrInvalidSchema.Code, resmsg2.MustError().Code)
+	assert.Equal("Validation Error: .params[0] data is not integer", resmsg2.MustError().Message)
 }
