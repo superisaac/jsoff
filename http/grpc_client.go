@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	"io"
+	"net/http"
 	"net/url"
 )
 
@@ -47,7 +48,8 @@ func (self gRPCTransport) Connected() bool {
 	return self.stream != nil
 }
 
-func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl string) error {
+func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl string, headers ...http.Header) error {
+	// headers is not used
 	var opts []grpc.DialOption
 	u, err := url.Parse(serverUrl)
 	if err != nil {

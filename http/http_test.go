@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -175,7 +176,6 @@ func TestTypedServerClient(t *testing.T) {
 	assert.True(errors.As(err5, &errbody5))
 	assert.Equal(-32602, errbody5.Code)
 	assert.True(strings.Contains(errbody5.Message, "got unconvertible type"))
-
 }
 
 func TestHandlerSchema(t *testing.T) {
@@ -210,4 +210,33 @@ func TestHandlerSchema(t *testing.T) {
 	assert.Nil(err2)
 	assert.Equal(jsonz.ErrInvalidSchema.Code, resmsg2.MustError().Code)
 	assert.Equal("Validation Error: .params[0] data is not integer", resmsg2.MustError().Message)
+}
+
+func TestPassingHeader(t *testing.T) {
+	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := NewServer()
+	server.Handler.VerifySchema = true
+	server.Handler.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		// echo the http reader X-Input back to client
+		r := req.HttpRequest()
+		resp := r.Header.Get("X-Input")
+		return resp, nil
+	})
+
+	go ListenAndServe(rootCtx, "127.0.0.1:28050", server)
+	time.Sleep(10 * time.Millisecond)
+
+	client := NewHTTPClient("http://127.0.0.1:28050")
+
+	// right request
+	reqmsg := jsonz.NewRequestMessage(
+		1, "echoHeader", nil)
+	resmsg, err := client.Call(rootCtx, reqmsg, http.Header{"X-Input": []string{"Hello"}})
+	assert.Nil(err)
+	assert.Equal("Hello", resmsg.MustResult())
+
 }

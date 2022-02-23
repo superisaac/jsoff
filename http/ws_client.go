@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"io"
+	"net/http"
 	"reflect"
 )
 
@@ -42,8 +43,24 @@ func (self wsTransport) Connected() bool {
 	return self.ws != nil
 }
 
-func (self *wsTransport) Connect(rootCtx context.Context, serverUrl string) error {
-	ws, _, err := websocket.DefaultDialer.Dial(serverUrl, nil)
+func (self *wsTransport) mergeHeaders(headers []http.Header) http.Header {
+	//merged := http.Header{}
+	var merged http.Header = nil
+	for _, h := range headers {
+		for k, vs := range h {
+			for _, v := range vs {
+				if merged == nil {
+					merged = make(http.Header)
+				}
+				merged.Add(k, v)
+			}
+		}
+	}
+	return merged
+}
+
+func (self *wsTransport) Connect(rootCtx context.Context, serverUrl string, headers ...http.Header) error {
+	ws, _, err := websocket.DefaultDialer.Dial(serverUrl, MergeHeaders(headers))
 	if err != nil {
 		return err
 	}

@@ -4,13 +4,14 @@ import (
 	"context"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonz"
+	"net/http"
 	"net/url"
 )
 
 type Client interface {
-	Call(ctx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error)
-	UnwrapCall(ctx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error
-	Send(ctx context.Context, msg jsonz.Message) error
+	Call(ctx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error)
+	UnwrapCall(ctx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error
+	Send(ctx context.Context, msg jsonz.Message, headers ...http.Header) error
 }
 
 func GetClient(serverUrl string) (Client, error) {

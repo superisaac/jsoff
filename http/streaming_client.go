@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -28,7 +29,7 @@ func (self TransportClosed) Error() string {
 // the underline transport, currently there are websocket and gRPC
 // implementations
 type Transport interface {
-	Connect(rootCtx context.Context, serverUrl string) error
+	Connect(rootCtx context.Context, serverUrl string, headers ...http.Header) error
 	Close()
 	Connected() bool
 	ReadMessage() (msg jsonz.Message, readed bool, err error)
@@ -70,9 +71,9 @@ func (self *StreamingClient) OnClose(handler CloseHandler) error {
 	return nil
 }
 
-func (self *StreamingClient) connect(rootCtx context.Context) error {
+func (self *StreamingClient) connect(rootCtx context.Context, headers ...http.Header) error {
 	self.connectOnce.Do(func() {
-		err := self.transport.Connect(rootCtx, self.serverUrl)
+		err := self.transport.Connect(rootCtx, self.serverUrl, headers...)
 		if err != nil {
 			self.connectErr = err
 			return
@@ -184,8 +185,8 @@ func (self *StreamingClient) expire(k interface{}, after time.Duration) {
 	}
 }
 
-func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error {
-	resmsg, err := self.Call(rootCtx, reqmsg)
+func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {
+	resmsg, err := self.Call(rootCtx, reqmsg, headers...)
 	if err != nil {
 		return err
 	}
@@ -200,8 +201,8 @@ func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.R
 	}
 }
 
-func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
-	err := self.connect(rootCtx)
+func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error) {
+	err := self.connect(rootCtx, headers...)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +220,7 @@ func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.Request
 	}
 	self.pendingRequests.Store(sendmsg.Id, p)
 
-	err = self.Send(rootCtx, sendmsg)
+	err = self.Send(rootCtx, sendmsg, headers...)
 	if err != nil {
 		return nil, err
 	}
@@ -232,8 +233,8 @@ func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.Request
 	return resmsg, nil
 }
 
-func (self *StreamingClient) Send(rootCtx context.Context, msg jsonz.Message) error {
-	err := self.connect(rootCtx)
+func (self *StreamingClient) Send(rootCtx context.Context, msg jsonz.Message, headers ...http.Header) error {
+	err := self.connect(rootCtx, headers...)
 	if err != nil {
 		return err
 	}

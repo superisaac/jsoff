@@ -36,8 +36,8 @@ func (self *HTTPClient) connect() {
 	})
 }
 
-func (self *HTTPClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error {
-	resmsg, err := self.Call(rootCtx, reqmsg)
+func (self *HTTPClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {
+	resmsg, err := self.Call(rootCtx, reqmsg, headers...)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (self *HTTPClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.Reques
 	}
 }
 
-func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
+func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
@@ -78,6 +78,14 @@ func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessa
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
+	for _, extheader := range headers {
+		for k, vs := range extheader {
+			for _, v := range vs {
+				req.Header.Add(k, v)
+			}
+		}
+	}
+
 	resp, err := self.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "http Do")
@@ -102,7 +110,7 @@ func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessa
 	return respmsg, nil
 }
 
-func (self *HTTPClient) Send(rootCtx context.Context, msg jsonz.Message) error {
+func (self *HTTPClient) Send(rootCtx context.Context, msg jsonz.Message, headers ...http.Header) error {
 	self.connect()
 
 	traceId := msg.TraceId()
@@ -126,6 +134,14 @@ func (self *HTTPClient) Send(rootCtx context.Context, msg jsonz.Message) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+
+	for _, extheader := range headers {
+		for k, vs := range extheader {
+			for _, v := range vs {
+				req.Header.Add(k, v)
+			}
+		}
+	}
 
 	resp, err := self.httpClient.Do(req)
 	if err != nil {
