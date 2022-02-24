@@ -9,7 +9,7 @@ import (
 
 // shared handler serve http/websocket/grpc server over the same port
 // using http protocol detection.
-// 
+//
 // NOTE: smart handler must work over TLS to serve gRPC
 type SmartHandler struct {
 	h1Handler   *H1Handler

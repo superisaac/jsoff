@@ -22,7 +22,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type WSHandler struct {
-	Actor   *Actor
+	Actor     *Actor
 	serverCtx context.Context
 	// options
 	SpawnGoroutine bool
@@ -43,7 +43,7 @@ func NewWSHandler(serverCtx context.Context, actor *Actor) *WSHandler {
 	}
 	return &WSHandler{
 		serverCtx: serverCtx,
-		Actor:   actor,
+		Actor:     actor,
 	}
 }
 

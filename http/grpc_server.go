@@ -13,7 +13,7 @@ import (
 
 type GRPCHandler struct {
 	jsonzgrpc.UnimplementedJSONZServer
-	Actor   *Actor
+	Actor     *Actor
 	serverCtx context.Context
 }
 
@@ -30,7 +30,7 @@ func NewGRPCHandler(serverCtx context.Context, actor *Actor) *GRPCHandler {
 		actor = NewActor()
 	}
 	return &GRPCHandler{
-		Actor:   actor,
+		Actor:     actor,
 		serverCtx: serverCtx,
 	}
 }
