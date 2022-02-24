@@ -11,18 +11,18 @@ import (
 	"time"
 )
 
-type HTTPClient struct {
+type H1Client struct {
 	serverUrl  string
 	httpClient *http.Client
 
 	connectOnce sync.Once
 }
 
-func NewHTTPClient(serverUrl string) *HTTPClient {
-	return &HTTPClient{serverUrl: serverUrl}
+func NewH1Client(serverUrl string) *H1Client {
+	return &H1Client{serverUrl: serverUrl}
 }
 
-func (self *HTTPClient) connect() {
+func (self *H1Client) connect() {
 	self.connectOnce.Do(func() {
 		tr := &http.Transport{
 			MaxIdleConns:        30,
@@ -36,7 +36,7 @@ func (self *HTTPClient) connect() {
 	})
 }
 
-func (self *HTTPClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {
+func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {
 	resmsg, err := self.Call(rootCtx, reqmsg, headers...)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (self *HTTPClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.Reques
 	}
 }
 
-func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error) {
+func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
@@ -110,7 +110,7 @@ func (self *HTTPClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessa
 	return respmsg, nil
 }
 
-func (self *HTTPClient) Send(rootCtx context.Context, msg jsonz.Message, headers ...http.Header) error {
+func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message, headers ...http.Header) error {
 	self.connect()
 
 	traceId := msg.TraceId()

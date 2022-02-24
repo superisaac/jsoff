@@ -33,7 +33,7 @@ func TestServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewServer()
+	server := NewH1Server()
 	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -45,7 +45,7 @@ func TestServerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28000", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewHTTPClient("http://127.0.0.1:28000")
+	client := NewH1Client("http://127.0.0.1:28000")
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -73,7 +73,7 @@ func TestMissing(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewServer()
+	server := NewH1Server()
 	err := server.Handler.OnMissing(func(req *RPCRequest) (interface{}, error) {
 		msg := req.Msg()
 		assert.True(msg.IsNotify())
@@ -85,7 +85,7 @@ func TestMissing(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28003", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewHTTPClient("http://127.0.0.1:28003")
+	client := NewH1Client("http://127.0.0.1:28003")
 	// right request
 	params := [](interface{}){"hello999"}
 	ntfmsg := jsonz.NewNotifyMessage("testnotify", params)
@@ -100,7 +100,7 @@ func TestTypedServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewServer()
+	server := NewH1Server()
 	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
@@ -114,7 +114,7 @@ func TestTypedServerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28001", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewHTTPClient("http://127.0.0.1:28001")
+	client := NewH1Client("http://127.0.0.1:28001")
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -184,7 +184,7 @@ func TestHandlerSchema(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewServer()
+	server := NewH1Server()
 	server.Handler.VerifySchema = true
 	server.Handler.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		a := jsonz.ConvertInt(params[0])
@@ -195,7 +195,7 @@ func TestHandlerSchema(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28040", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewHTTPClient("http://127.0.0.1:28040")
+	client := NewH1Client("http://127.0.0.1:28040")
 
 	// right request
 	reqmsg := jsonz.NewRequestMessage(
@@ -218,7 +218,7 @@ func TestPassingHeader(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewServer()
+	server := NewH1Server()
 	server.Handler.VerifySchema = true
 	server.Handler.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// echo the http reader X-Input back to client
@@ -230,7 +230,7 @@ func TestPassingHeader(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28050", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewHTTPClient("http://127.0.0.1:28050")
+	client := NewH1Client("http://127.0.0.1:28050")
 
 	// right request
 	reqmsg := jsonz.NewRequestMessage(

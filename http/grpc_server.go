@@ -39,6 +39,20 @@ func NewGRPCServerFromHandler(serverCtx context.Context, handler *Handler) *GRPC
 	}
 }
 
+/// grpc.Server implements http.Handler
+func (self *GRPCServer) ServerHandler(opts ...grpc.ServerOption) *grpc.Server {
+	opts = append(opts,
+		grpc.MaxConcurrentStreams(math.MaxUint32),
+		grpc.WriteBufferSize(1024000),
+		grpc.ReadBufferSize(1024000),
+		grpc.ReadBufferSize(1024000),
+	)
+	handler := grpc.NewServer(opts...)
+	jsonzgrpc.RegisterJSONZServer(handler, self)
+	return handler
+
+}
+
 func (self *GRPCServer) OpenStream(stream jsonzgrpc.JSONZ_OpenStreamServer) error {
 	session := &GRPCSession{
 		stream:      stream,
@@ -167,13 +181,7 @@ func GRPCServe(rootCtx context.Context, bind string, server *GRPCServer, opts ..
 		log.Debugf("entry server listen at %s", bind)
 	}
 
-	opts = append(opts,
-		grpc.MaxConcurrentStreams(math.MaxUint32),
-		grpc.WriteBufferSize(1024000),
-		grpc.ReadBufferSize(1024000),
-		grpc.ReadBufferSize(1024000),
-	)
-	grpcServer := grpc.NewServer(opts...)
+	handler := server.ServerHandler(opts...)
 
 	serverCtx, cancelServer := context.WithCancel(rootCtx)
 	defer cancelServer()
@@ -182,11 +190,11 @@ func GRPCServe(rootCtx context.Context, bind string, server *GRPCServer, opts ..
 		for {
 			<-serverCtx.Done()
 			log.Debugf("gRPC Server %s stops", bind)
-			grpcServer.Stop()
+			handler.Stop()
 			return
 		}
 	}()
 
-	jsonzgrpc.RegisterJSONZServer(grpcServer, server)
-	grpcServer.Serve(lis)
+	//jsonzgrpc.RegisterJSONZServer(handler, server)
+	handler.Serve(lis)
 }

@@ -39,25 +39,25 @@ type jwtClaims struct {
 }
 
 // Auth handler
-type HttpAuthHandler struct {
+type AuthHandler struct {
 	authConfig *AuthConfig
 	next       http.Handler
 	jwtCache   *lru.Cache
 }
 
-func NewHttpAuthHandler(authConfig *AuthConfig, next http.Handler) *HttpAuthHandler {
+func NewAuthHandler(authConfig *AuthConfig, next http.Handler) *AuthHandler {
 	cache, err := lru.New(100)
 	if err != nil {
 		panic(err)
 	}
-	return &HttpAuthHandler{
+	return &AuthHandler{
 		authConfig: authConfig,
 		jwtCache:   cache,
 		next:       next,
 	}
 }
 
-func (self HttpAuthHandler) TryAuth(r *http.Request) (string, bool) {
+func (self AuthHandler) TryAuth(r *http.Request) (string, bool) {
 	if self.authConfig == nil {
 		return "", true
 	}
@@ -95,7 +95,7 @@ func (self HttpAuthHandler) TryAuth(r *http.Request) (string, bool) {
 	return "", false
 }
 
-func (self *HttpAuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (string, bool) {
+func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (string, bool) {
 	// refers to https://qvault.io/cryptography/jwts-in-golang/
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -142,7 +142,7 @@ func (self *HttpAuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (st
 	return "", false
 }
 
-func (self *HttpAuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (self *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if username, ok := self.TryAuth(r); ok {
 		ctx := context.WithValue(r.Context(), "username", username)
 		self.next.ServeHTTP(w, r.WithContext(ctx))

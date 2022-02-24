@@ -21,7 +21,7 @@ func GetClient(serverUrl string) (Client, error) {
 	}
 	switch u.Scheme {
 	case "http", "https":
-		return NewHTTPClient(serverUrl), nil
+		return NewH1Client(serverUrl), nil
 	case "ws", "wss":
 		return NewWSClient(serverUrl), nil
 	case "h2", "h2c":
