@@ -9,19 +9,15 @@ import (
 )
 
 type H1Server struct {
-	Handler *Handler
+	Actor *Actor
 }
 
-func NewH1Server() *H1Server {
-	return NewH1ServerFromHandler(nil)
-}
-
-func NewH1ServerFromHandler(handler *Handler) *H1Server {
-	if handler == nil {
-		handler = NewHandler()
+func NewH1Server(actor *Actor) *H1Server {
+	if actor == nil {
+		actor = NewActor()
 	}
 	return &H1Server{
-		Handler: handler,
+		Actor: actor,
 	}
 }
 
@@ -47,7 +43,7 @@ func (self *H1Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := NewRPCRequest(r.Context(), msg, TransportHTTP, r, nil)
-	resmsg, err := self.Handler.Feed(req)
+	resmsg, err := self.Actor.Feed(req)
 	if err != nil {
 		var simpleResp *SimpleResponse
 		var upResp *WrappedResponse

@@ -7,19 +7,24 @@ import (
 	"strings"
 )
 
-// shanred handler serve http/websocket/grpc server over the same port using http protocol detection.
-// NOTE: smart handler must work over TLS to server gRPC
+// shared handler serve http/websocket/grpc server over the same port
+// using http protocol detection.
+// 
+// NOTE: smart handler must work over TLS to serve gRPC
 type SmartHandler struct {
 	h1Handler   *H1Server
 	wsHandler   *WSServer
 	grpcHandler *grpc.Server
 }
 
-func NewSmartHandler(serverCtx context.Context) *SmartHandler {
-	grpcServer := NewGRPCServer(serverCtx)
+func NewSmartHandler(serverCtx context.Context, actor *Actor) *SmartHandler {
+	if actor == nil {
+		actor = NewActor()
+	}
+	grpcServer := NewGRPCServer(serverCtx, actor)
 	return &SmartHandler{
-		h1Handler:   NewH1Server(),
-		wsHandler:   NewWSServer(serverCtx),
+		h1Handler:   NewH1Server(actor),
+		wsHandler:   NewWSServer(serverCtx, actor),
 		grpcHandler: grpcServer.ServerHandler(),
 	}
 }

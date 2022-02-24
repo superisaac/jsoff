@@ -18,8 +18,8 @@ func TestGRPCServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewGRPCServer(rootCtx)
-	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewGRPCServer(rootCtx, nil)
+	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -58,13 +58,13 @@ func TestTypedGRPCServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewGRPCServer(rootCtx)
-	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server := NewGRPCServer(rootCtx, nil)
+	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.Handler.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = server.Actor.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
@@ -134,8 +134,8 @@ func TestGRPCClose(t *testing.T) {
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	defer cancelClient()
 
-	server := NewGRPCServer(serverCtx)
-	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewGRPCServer(serverCtx, nil)
+	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {

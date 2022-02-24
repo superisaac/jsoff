@@ -33,8 +33,8 @@ func TestServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server()
-	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewH1Server(nil)
+	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -73,8 +73,8 @@ func TestMissing(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server()
-	err := server.Handler.OnMissing(func(req *RPCRequest) (interface{}, error) {
+	server := NewH1Server(nil)
+	err := server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
 		msg := req.Msg()
 		assert.True(msg.IsNotify())
 		assert.Equal("testnotify", msg.MustMethod())
@@ -100,13 +100,13 @@ func TestTypedServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server()
-	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server := NewH1Server(nil)
+	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.Handler.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = server.Actor.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
@@ -184,9 +184,9 @@ func TestHandlerSchema(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server()
-	server.Handler.VerifySchema = true
-	server.Handler.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewH1Server(nil)
+	server.Actor.VerifySchema = true
+	server.Actor.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		a := jsonz.ConvertInt(params[0])
 		b := jsonz.ConvertInt(params[1])
 		return a + b, nil
@@ -218,9 +218,9 @@ func TestPassingHeader(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server()
-	server.Handler.VerifySchema = true
-	server.Handler.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewH1Server(nil)
+	server.Actor.VerifySchema = true
+	server.Actor.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// echo the http reader X-Input back to client
 		r := req.HttpRequest()
 		resp := r.Header.Get("X-Input")

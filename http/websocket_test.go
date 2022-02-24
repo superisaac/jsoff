@@ -17,8 +17,8 @@ func TestWSServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewWSServer(rootCtx)
-	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewWSServer(rootCtx, nil)
+	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -57,13 +57,13 @@ func TestTypedWSServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewWSServer(rootCtx)
-	err := server.Handler.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server := NewWSServer(rootCtx, nil)
+	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
 
-	err = server.Handler.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	err = server.Actor.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.Nil(err)
@@ -133,8 +133,8 @@ func TestWSClose(t *testing.T) {
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	defer cancelClient()
 
-	server := NewWSServer(serverCtx)
-	server.Handler.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server := NewWSServer(serverCtx, nil)
+	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {

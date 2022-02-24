@@ -13,7 +13,7 @@ import (
 
 type GRPCServer struct {
 	jsonzgrpc.UnimplementedJSONZServer
-	Handler   *Handler
+	Actor   *Actor
 	serverCtx context.Context
 }
 
@@ -25,21 +25,17 @@ type GRPCSession struct {
 	sendChannel chan jsonz.Message
 }
 
-func NewGRPCServer(serverCtx context.Context) *GRPCServer {
-	return NewGRPCServerFromHandler(serverCtx, nil)
-}
-
-func NewGRPCServerFromHandler(serverCtx context.Context, handler *Handler) *GRPCServer {
-	if handler == nil {
-		handler = NewHandler()
+func NewGRPCServer(serverCtx context.Context, actor *Actor) *GRPCServer {
+	if actor == nil {
+		actor = NewActor()
 	}
 	return &GRPCServer{
-		Handler:   handler,
+		Actor:   actor,
 		serverCtx: serverCtx,
 	}
 }
 
-/// grpc.Server implements http.Handler
+/// grpc.Server implements http.Actor
 func (self *GRPCServer) ServerHandler(opts ...grpc.ServerOption) *grpc.Server {
 	opts = append(opts,
 		grpc.MaxConcurrentStreams(math.MaxUint32),
@@ -120,9 +116,9 @@ func (self *GRPCSession) msgReceived(msg jsonz.Message) {
 		TransportGRPC,
 		nil, // HttpRequest is nil
 		self)
-	resmsg, err := self.server.Handler.Feed(req)
+	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {
-		self.done <- errors.Wrap(err, "handler.handlerRequest")
+		self.done <- errors.Wrap(err, "actor.Feed")
 		return
 	}
 	if resmsg != nil {

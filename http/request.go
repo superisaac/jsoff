@@ -101,20 +101,20 @@ func WithSchemaJson(jsonSchema string) HandlerSetter {
 	return WithSchema(s)
 }
 
-type Handler struct {
+type Actor struct {
 	VerifySchema   bool
 	methodHandlers map[string]*MethodHandler
 	missingHandler MissingCallback
 	closeHandler   CloseCallback
 }
 
-func NewHandler() *Handler {
-	return &Handler{
+func NewActor() *Actor {
+	return &Actor{
 		methodHandlers: make(map[string]*MethodHandler),
 	}
 }
 
-func (self *Handler) On(method string, callback HandlerCallback, setters ...HandlerSetter) error {
+func (self *Actor) On(method string, callback HandlerCallback, setters ...HandlerSetter) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
 	}
@@ -129,7 +129,7 @@ func (self *Handler) On(method string, callback HandlerCallback, setters ...Hand
 	return nil
 }
 
-func (self *Handler) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) error {
 	handler, err := wrapTyped(typedHandler)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (self *Handler) OnTyped(method string, typedHandler interface{}, setters ..
 	return self.On(method, handler, setters...)
 }
 
-func (self *Handler) OnMissing(handler MissingCallback) error {
+func (self *Actor) OnMissing(handler MissingCallback) error {
 	if self.missingHandler != nil {
 		return errors.New("missing handler already exist!")
 	}
@@ -145,7 +145,7 @@ func (self *Handler) OnMissing(handler MissingCallback) error {
 	return nil
 }
 
-func (self *Handler) OnClose(handler CloseCallback) error {
+func (self *Actor) OnClose(handler CloseCallback) error {
 	if self.closeHandler != nil {
 		return errors.New("close handler already exist!")
 	}
@@ -153,18 +153,18 @@ func (self *Handler) OnClose(handler CloseCallback) error {
 	return nil
 }
 
-func (self *Handler) HandleClose(r *http.Request) {
+func (self *Actor) HandleClose(r *http.Request) {
 	if self.closeHandler != nil {
 		self.closeHandler(r)
 	}
 }
 
-func (self Handler) HasHandler(method string) bool {
+func (self Actor) HasHandler(method string) bool {
 	_, exist := self.methodHandlers[method]
 	return exist
 }
 
-func (self *Handler) getHandler(method string) (*MethodHandler, bool) {
+func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 	if h, ok := self.methodHandlers[method]; ok {
 		return h, true
 	} else {
@@ -172,7 +172,7 @@ func (self *Handler) getHandler(method string) (*MethodHandler, bool) {
 	}
 }
 
-func (self *Handler) Feed(req *RPCRequest) (jsonz.Message, error) {
+func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -216,7 +216,7 @@ func (self *Handler) Feed(req *RPCRequest) (jsonz.Message, error) {
 	return nil, nil
 }
 
-func (self Handler) wrapResult(res interface{}, err error, msg jsonz.Message) (jsonz.Message, error) {
+func (self Actor) wrapResult(res interface{}, err error, msg jsonz.Message) (jsonz.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Warnf("error %s", err)

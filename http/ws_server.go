@@ -22,7 +22,7 @@ var upgrader = websocket.Upgrader{
 }
 
 type WSServer struct {
-	Handler   *Handler
+	Actor   *Actor
 	serverCtx context.Context
 	// options
 	SpawnGoroutine bool
@@ -37,17 +37,13 @@ type WSSession struct {
 	sendChannel chan jsonz.Message
 }
 
-func NewWSServer(serverCtx context.Context) *WSServer {
-	return NewWSServerFromHandler(serverCtx, nil)
-}
-
-func NewWSServerFromHandler(serverCtx context.Context, handler *Handler) *WSServer {
-	if handler == nil {
-		handler = NewHandler()
+func NewWSServer(serverCtx context.Context, actor *Actor) *WSServer {
+	if actor == nil {
+		actor = NewActor()
 	}
 	return &WSServer{
 		serverCtx: serverCtx,
-		Handler:   handler,
+		Actor:   actor,
 	}
 }
 
@@ -61,7 +57,7 @@ func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 	defer func() {
-		self.Handler.HandleClose(r)
+		self.Actor.HandleClose(r)
 	}()
 
 	session := &WSSession{
@@ -137,9 +133,9 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 		self.httpRequest,
 		self)
 
-	resmsg, err := self.server.Handler.Feed(req)
+	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {
-		self.done <- errors.Wrap(err, "handler.handlerRequest")
+		self.done <- errors.Wrap(err, "actor.Feed")
 		return
 	}
 	if resmsg != nil {
