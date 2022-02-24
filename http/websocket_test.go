@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-func TestWSServerClient(t *testing.T) {
+func TestWSHandlerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewWSServer(rootCtx, nil)
+	server := NewWSHandler(rootCtx, nil)
 	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -51,13 +51,13 @@ func TestWSServerClient(t *testing.T) {
 	assert.Equal(jsonz.ErrMethodNotFound.Code, errbody.Code)
 }
 
-func TestTypedWSServerClient(t *testing.T) {
+func TestTypedWSHandlerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewWSServer(rootCtx, nil)
+	server := NewWSHandler(rootCtx, nil)
 	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
@@ -133,7 +133,7 @@ func TestWSClose(t *testing.T) {
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	defer cancelClient()
 
-	server := NewWSServer(serverCtx, nil)
+	server := NewWSHandler(serverCtx, nil)
 	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil

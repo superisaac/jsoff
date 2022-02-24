@@ -12,13 +12,13 @@ import (
 	"time"
 )
 
-func TestGRPCServerClient(t *testing.T) {
+func TestGRPCHandlerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewGRPCServer(rootCtx, nil)
+	server := NewGRPCHandler(rootCtx, nil)
 	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -52,13 +52,13 @@ func TestGRPCServerClient(t *testing.T) {
 	assert.Equal(jsonz.ErrMethodNotFound.Code, errbody.Code)
 }
 
-func TestTypedGRPCServerClient(t *testing.T) {
+func TestTypedGRPCHandlerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewGRPCServer(rootCtx, nil)
+	server := NewGRPCHandler(rootCtx, nil)
 	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
@@ -134,7 +134,7 @@ func TestGRPCClose(t *testing.T) {
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	defer cancelClient()
 
-	server := NewGRPCServer(serverCtx, nil)
+	server := NewGRPCHandler(serverCtx, nil)
 	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil

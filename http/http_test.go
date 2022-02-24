@@ -33,7 +33,7 @@ func TestServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server(nil)
+	server := NewH1Handler(nil)
 	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -73,7 +73,7 @@ func TestMissing(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server(nil)
+	server := NewH1Handler(nil)
 	err := server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
 		msg := req.Msg()
 		assert.True(msg.IsNotify())
@@ -100,7 +100,7 @@ func TestTypedServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server(nil)
+	server := NewH1Handler(nil)
 	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
@@ -184,7 +184,7 @@ func TestHandlerSchema(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server(nil)
+	server := NewH1Handler(nil)
 	server.Actor.VerifySchema = true
 	server.Actor.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		a := jsonz.ConvertInt(params[0])
@@ -218,7 +218,7 @@ func TestPassingHeader(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Server(nil)
+	server := NewH1Handler(nil)
 	server.Actor.VerifySchema = true
 	server.Actor.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// echo the http reader X-Input back to client

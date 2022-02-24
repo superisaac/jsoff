@@ -8,20 +8,20 @@ import (
 	"net/http"
 )
 
-type H1Server struct {
+type H1Handler struct {
 	Actor *Actor
 }
 
-func NewH1Server(actor *Actor) *H1Server {
+func NewH1Handler(actor *Actor) *H1Handler {
 	if actor == nil {
 		actor = NewActor()
 	}
-	return &H1Server{
+	return &H1Handler{
 		Actor: actor,
 	}
 }
 
-func (self *H1Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only support POST
 	if r.Method != "POST" {
 		jsonz.ErrorResponse(w, r, errors.New("method not allowed"), 405, "Method not allowed")

@@ -12,8 +12,8 @@ import (
 // 
 // NOTE: smart handler must work over TLS to serve gRPC
 type SmartHandler struct {
-	h1Handler   *H1Server
-	wsHandler   *WSServer
+	h1Handler   *H1Handler
+	wsHandler   *WSHandler
 	grpcHandler *grpc.Server
 }
 
@@ -21,10 +21,10 @@ func NewSmartHandler(serverCtx context.Context, actor *Actor) *SmartHandler {
 	if actor == nil {
 		actor = NewActor()
 	}
-	grpcServer := NewGRPCServer(serverCtx, actor)
+	grpcServer := NewGRPCHandler(serverCtx, actor)
 	return &SmartHandler{
-		h1Handler:   NewH1Server(actor),
-		wsHandler:   NewWSServer(serverCtx, actor),
+		h1Handler:   NewH1Handler(actor),
+		wsHandler:   NewWSHandler(serverCtx, actor),
 		grpcHandler: grpcServer.ServerHandler(),
 	}
 }

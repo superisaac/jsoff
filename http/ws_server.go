@@ -21,7 +21,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 10240,
 }
 
-type WSServer struct {
+type WSHandler struct {
 	Actor   *Actor
 	serverCtx context.Context
 	// options
@@ -29,7 +29,7 @@ type WSServer struct {
 }
 
 type WSSession struct {
-	server      *WSServer
+	server      *WSHandler
 	ws          *websocket.Conn
 	httpRequest *http.Request
 	rootCtx     context.Context
@@ -37,17 +37,17 @@ type WSSession struct {
 	sendChannel chan jsonz.Message
 }
 
-func NewWSServer(serverCtx context.Context, actor *Actor) *WSServer {
+func NewWSHandler(serverCtx context.Context, actor *Actor) *WSHandler {
 	if actor == nil {
 		actor = NewActor()
 	}
-	return &WSServer{
+	return &WSHandler{
 		serverCtx: serverCtx,
 		Actor:   actor,
 	}
 }
 
-func (self *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Warnf("ws upgrade failed %s", err)

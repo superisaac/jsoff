@@ -11,7 +11,7 @@ import (
 	"net"
 )
 
-type GRPCServer struct {
+type GRPCHandler struct {
 	jsonzgrpc.UnimplementedJSONZServer
 	Actor   *Actor
 	serverCtx context.Context
@@ -19,24 +19,24 @@ type GRPCServer struct {
 
 type GRPCSession struct {
 	stream      jsonzgrpc.JSONZ_OpenStreamServer
-	server      *GRPCServer
+	server      *GRPCHandler
 	rootCtx     context.Context
 	done        chan error
 	sendChannel chan jsonz.Message
 }
 
-func NewGRPCServer(serverCtx context.Context, actor *Actor) *GRPCServer {
+func NewGRPCHandler(serverCtx context.Context, actor *Actor) *GRPCHandler {
 	if actor == nil {
 		actor = NewActor()
 	}
-	return &GRPCServer{
+	return &GRPCHandler{
 		Actor:   actor,
 		serverCtx: serverCtx,
 	}
 }
 
 /// grpc.Server implements http.Actor
-func (self *GRPCServer) ServerHandler(opts ...grpc.ServerOption) *grpc.Server {
+func (self *GRPCHandler) ServerHandler(opts ...grpc.ServerOption) *grpc.Server {
 	opts = append(opts,
 		grpc.MaxConcurrentStreams(math.MaxUint32),
 		grpc.WriteBufferSize(1024000),
@@ -49,7 +49,7 @@ func (self *GRPCServer) ServerHandler(opts ...grpc.ServerOption) *grpc.Server {
 
 }
 
-func (self *GRPCServer) OpenStream(stream jsonzgrpc.JSONZ_OpenStreamServer) error {
+func (self *GRPCHandler) OpenStream(stream jsonzgrpc.JSONZ_OpenStreamServer) error {
 	session := &GRPCSession{
 		stream:      stream,
 		server:      self,
@@ -169,7 +169,7 @@ func (self *GRPCSession) sendLoop() {
 }
 
 // start grpc server
-func GRPCServe(rootCtx context.Context, bind string, server *GRPCServer, opts ...grpc.ServerOption) {
+func GRPCServe(rootCtx context.Context, bind string, server *GRPCHandler, opts ...grpc.ServerOption) {
 	lis, err := net.Listen("tcp", bind)
 	if err != nil {
 		log.Panicf("failed to listen: %v", err)
