@@ -5,8 +5,10 @@ import (
 	simplejson "github.com/bitly/go-simplejson"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -126,4 +128,48 @@ func DecodeInterface(input interface{}, output interface{}) error {
 		return err
 	}
 	return decoder.Decode(input)
+}
+
+/// Convert params to a struct field by field
+func DecodeParams(params []interface{}, outputPtr interface{}) error {
+	ptrType := reflect.TypeOf(outputPtr)
+	if ptrType.Kind() != reflect.Ptr {
+		return errors.New("output is not a pointer")
+	}
+	outputType := ptrType.Elem()
+	if outputType.Kind() != reflect.Struct {
+		return errors.New("output is not pointer of struct")
+	}
+
+	fields := reflect.VisibleFields(outputType)
+	ptrValue := reflect.ValueOf(outputPtr)
+	idx := 0
+	for _, field := range fields {
+		if !field.IsExported() {
+			continue
+		}
+		if len(params) <= idx {
+			continue
+		}
+		param := params[idx]
+		idx++
+		ov := reflect.Zero(field.Type).Interface()
+		config := &mapstructure.DecoderConfig{
+			Metadata: nil,
+			TagName:  "json",
+			Result:   &ov,
+		}
+		decoder, err := mapstructure.NewDecoder(config)
+		if err != nil {
+			return errors.Wrap(err, "NewDecoder")
+		}
+		err = decoder.Decode(param)
+		if err != nil {
+			return errors.Wrap(err, "mapstruct.Decode")
+		}
+
+		ptrValue.Elem().FieldByIndex(field.Index).Set(
+			reflect.ValueOf(ov))
+	}
+	return nil
 }

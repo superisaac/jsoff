@@ -130,7 +130,8 @@ func (self *Actor) On(method string, callback HandlerCallback, setters ...Handle
 }
 
 func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) error {
-	handler, err := wrapTyped(typedHandler)
+	firstArg := &RPCRequest{}
+	handler, err := wrapTyped(typedHandler, firstArg)
 	if err != nil {
 		return err
 	}

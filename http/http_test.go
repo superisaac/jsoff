@@ -101,7 +101,13 @@ func TestTypedServerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewH1Handler(nil)
-	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	err := server.Actor.OnTyped("wrongArg", func(a int, b int) (int, error) {
+		return a + b, nil
+	})
+	assert.NotNil(err)
+	assert.Equal("the first arg must be *jsonzhttp.RPCRequest", err.Error())
+
+	err = server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
 		return v, nil
 	})
 	assert.Nil(err)
@@ -187,9 +193,15 @@ func TestHandlerSchema(t *testing.T) {
 	server := NewH1Handler(nil)
 	server.Actor.VerifySchema = true
 	server.Actor.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
-		a := jsonz.ConvertInt(params[0])
-		b := jsonz.ConvertInt(params[1])
-		return a + b, nil
+		var tp struct {
+			A int
+			B int
+		}
+		err := jsonz.DecodeParams(params, &tp)
+		if err != nil {
+			return nil, err
+		}
+		return tp.A + tp.B, nil
 	}, WithSchemaJson(addSchema))
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28040", server)
