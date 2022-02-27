@@ -203,17 +203,14 @@ func GetUserSetting(username string, key string) (interface{}, bool) {
 	return nil, false
 }
 
-type NoUserSettings struct {
-}
-
-func (self NoUserSettings) Error() string {
-	return "no user settings"
-}
+var (
+	NoUserSettings = errors.New("no user settings")
+)
 
 // decode user settings using mapstruct
 func DecodeUserSettings(username string, output interface{}) error {
 	if settingsMap, ok := userSettings.Load(username); ok {
 		return jsonz.DecodeInterface(settingsMap, output)
 	}
-	return &NoUserSettings{}
+	return NoUserSettings
 }
