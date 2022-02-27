@@ -6,9 +6,15 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/superisaac/jsonz"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	userSettings sync.Map
 )
 
 type BasicAuthConfig struct {
@@ -35,6 +41,7 @@ type AuthConfig struct {
 
 type jwtClaims struct {
 	Username string
+	Settings map[string]interface{} `json:"settings,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -136,6 +143,9 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (string
 		}
 		if !fromCache {
 			self.jwtCache.Add(authHeader, claims)
+			if claims.Settings != nil && len(claims.Settings) > 0 {
+				userSettings.Store(claims.Username, claims.Settings)
+			}
 		}
 		return claims.Username, true
 	}
@@ -178,4 +188,32 @@ func (self *AuthConfig) ValidateValues() error {
 		return errors.New("jwt has no secret")
 	}
 	return nil
+}
+
+// get user settings settled by jwt auth
+func GetUserSetting(username string, key string) (interface{}, bool) {
+	if us, ok := userSettings.Load(username); ok {
+		settingsMap, ok := us.(map[string]interface{})
+		if !ok {
+			panic("user settings is not a map")
+		}
+		v, ok := settingsMap[key]
+		return v, ok
+	}
+	return nil, false
+}
+
+type NoUserSettings struct {
+}
+
+func (self NoUserSettings) Error() string {
+	return "no user settings"
+}
+
+// decode user settings using mapstruct
+func DecodeUserSettings(username string, output interface{}) error {
+	if settingsMap, ok := userSettings.Load(username); ok {
+		return jsonz.DecodeInterface(settingsMap, output)
+	}
+	return &NoUserSettings{}
 }
