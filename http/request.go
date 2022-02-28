@@ -102,7 +102,7 @@ func WithSchemaJson(jsonSchema string) HandlerSetter {
 }
 
 type Actor struct {
-	VerifySchema   bool
+	ValidateSchema bool
 	methodHandlers map[string]*MethodHandler
 	missingHandler MissingCallback
 	closeHandler   CloseCallback
@@ -188,7 +188,7 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 	// TODO: recover from panic
 	if handler, found := self.getHandler(msg.MustMethod()); found {
 		params := msg.MustParams()
-		if handler.schema != nil && self.VerifySchema {
+		if handler.schema != nil && self.ValidateSchema {
 			// validate the request
 			validator := schema.NewSchemaValidator()
 			errPos := validator.Validate(

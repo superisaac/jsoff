@@ -1,6 +1,6 @@
-// error defination https://www.jsonrpc.org/specification#error_object
 package jsonz
 
+// error defination https://www.jsonrpc.org/specification#error_object
 var (
 	ErrServerError = &RPCError{100, "server error", nil}
 	ErrNilId       = &RPCError{102, "nil message id", nil}

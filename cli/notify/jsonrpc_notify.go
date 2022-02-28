@@ -55,7 +55,7 @@ func main() {
 		headers = append(headers, h)
 	}
 
-	c, err := jsonzhttp.GetClient(serverUrl)
+	c, err := jsonzhttp.NewClient(serverUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fail to find jsonrpc client: %s\n", err)
 		os.Exit(1)

@@ -1,5 +1,7 @@
 package jsonz
 
+// implementations of message kinds
+
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
@@ -12,21 +14,20 @@ func (self *RPCError) WithData(data interface{}) *RPCError {
 	return &RPCError{self.Code, self.Message, data}
 }
 
-// String Representation of RPCError object
+// String representation of RPCError object
 func (self *RPCError) Error() string {
 	return fmt.Sprintf("code=%d, message=%s, data=%s", self.Code, self.Message, self.Data)
 }
 
-// Convert RPCError to ErrorMessage
-// reqmsg is the original RequestMessage instance, the ErrorMessage
-// will copy reqmsg's id property
+// Convert RPCError to ErrorMessage,  reqmsg is the original
+// RequestMessage instance, the ErrorMessage will copy reqmsg's id
+// property.
 func (self RPCError) ToMessage(reqmsg *RequestMessage) *ErrorMessage {
 	return RPCErrorMessage(reqmsg, self.Code, self.Message, self.Data)
 }
 
-// Convert RPCError to ErrorMessage
-// reqmsg is the original RequestMessage instance, the ErrorMessage
-// will copy reqmsg's id property
+// Convert RPCError to ErrorMessage, reqId and traceId can be used to
+// compose the result error message
 func (self RPCError) ToMessageFromId(reqId interface{}, traceId string) *ErrorMessage {
 	return RPCErrorMessageFromId(reqId, traceId, self.Code, self.Message, self.Data)
 }
@@ -58,12 +59,12 @@ func (self *BaseMessage) SetRaw(raw *simplejson.Json) {
 
 // IsRequest() returns if the message is a RequestMessage
 func (self BaseMessage) IsRequest() bool {
-	return self.messageType == MTRequest
+	return self.kind == MKRequest
 }
 
 // IsNotify() returns if the message is a NotifyMessage
 func (self BaseMessage) IsNotify() bool {
-	return self.messageType == MTNotify
+	return self.kind == MKNotify
 }
 
 // IsRequestOrNotify() returns if the message is a RequestMessage or
@@ -74,12 +75,12 @@ func (self BaseMessage) IsRequestOrNotify() bool {
 
 // IsResult() returns if the message is a ResultMessage
 func (self BaseMessage) IsResult() bool {
-	return self.messageType == MTResult
+	return self.kind == MKResult
 }
 
 // IsError() returns if the message is a ErrorMessage
 func (self BaseMessage) IsError() bool {
-	return self.messageType == MTError
+	return self.kind == MKError
 }
 
 // IsResultOrError() returns if the message is a ResultMessage or
@@ -318,7 +319,7 @@ func NewRequestMessage(id interface{}, method string, params []interface{}) *Req
 	}
 
 	msg := &RequestMessage{}
-	msg.messageType = MTRequest
+	msg.kind = MKRequest
 	msg.Id = id
 	msg.Method = method
 	msg.Params = params
@@ -342,7 +343,7 @@ func NewNotifyMessage(method string, params []interface{}) *NotifyMessage {
 	}
 
 	msg := &NotifyMessage{}
-	msg.messageType = MTNotify
+	msg.kind = MKNotify
 	msg.Method = method
 	msg.Params = params
 	msg.paramsAreList = true
@@ -351,7 +352,7 @@ func NewNotifyMessage(method string, params []interface{}) *NotifyMessage {
 
 func rawResultMessage(id interface{}, result interface{}) *ResultMessage {
 	msg := &ResultMessage{}
-	msg.messageType = MTResult
+	msg.kind = MKResult
 	msg.Id = id
 	msg.Result = result
 	return msg
@@ -377,7 +378,7 @@ func NewErrorMessageFromId(reqId interface{}, traceId string, errbody *RPCError)
 
 func rawErrorMessage(id interface{}, errbody *RPCError) *ErrorMessage {
 	msg := &ErrorMessage{}
-	msg.messageType = MTError
+	msg.kind = MKError
 	msg.Id = id
 	msg.Error = errbody
 	return msg

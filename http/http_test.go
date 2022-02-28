@@ -191,7 +191,7 @@ func TestHandlerSchema(t *testing.T) {
 	defer cancel()
 
 	server := NewH1Handler(nil)
-	server.Actor.VerifySchema = true
+	server.Actor.ValidateSchema = true
 	server.Actor.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		var tp struct {
 			A int
@@ -231,7 +231,7 @@ func TestPassingHeader(t *testing.T) {
 	defer cancel()
 
 	server := NewH1Handler(nil)
-	server.Actor.VerifySchema = true
+	server.Actor.ValidateSchema = true
 	server.Actor.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// echo the http reader X-Input back to client
 		r := req.HttpRequest()
