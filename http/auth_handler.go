@@ -6,16 +6,15 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonz"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
-var (
-	userSettings sync.Map
-)
+type AuthInfo struct {
+	Username string
+	Settings map[string]interface{}
+}
 
 type BasicAuthConfig struct {
 	Username string
@@ -64,14 +63,14 @@ func NewAuthHandler(authConfig *AuthConfig, next http.Handler) *AuthHandler {
 	}
 }
 
-func (self AuthHandler) TryAuth(r *http.Request) (string, bool) {
+func (self AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
 	if self.authConfig == nil {
-		return "", true
+		return nil, true
 	}
 
 	if self.authConfig.Jwt != nil && self.authConfig.Jwt.Secret != "" {
-		if username, ok := self.jwtAuth(self.authConfig.Jwt, r); ok {
-			return username, true
+		if authInfo, ok := self.jwtAuth(self.authConfig.Jwt, r); ok {
+			return authInfo, true
 		}
 	}
 
@@ -79,7 +78,7 @@ func (self AuthHandler) TryAuth(r *http.Request) (string, bool) {
 		if username, password, ok := r.BasicAuth(); ok {
 			for _, basicCfg := range self.authConfig.Basic {
 				if basicCfg.Username == username && basicCfg.Password == password {
-					return username, true
+					return &AuthInfo{Username: username}, true
 				}
 			}
 		}
@@ -94,19 +93,19 @@ func (self AuthHandler) TryAuth(r *http.Request) (string, bool) {
 				if username == "" {
 					username = bearCfg.Token
 				}
-				return username, true
+				return &AuthInfo{Username: username}, true
 			}
 		}
 	}
 
-	return "", false
+	return nil, false
 }
 
-func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (string, bool) {
+func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthInfo, bool) {
 	// refers to https://qvault.io/cryptography/jwts-in-golang/
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		return "", false
+		return nil, false
 	}
 	if arr := strings.SplitN(authHeader, " ", 2); len(arr) <= 2 && arr[0] == "Bearer" {
 		var claims *jwtClaims
@@ -126,11 +125,11 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (string
 			)
 			if err != nil {
 				Logger(r).Warnf("jwt auth error %s", err)
-				return "", false
+				return nil, false
 			}
 			claims, ok = token.Claims.(*jwtClaims)
 			if !ok {
-				return "", false
+				return nil, false
 			}
 		}
 		// check expiration
@@ -139,22 +138,21 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (string
 			if fromCache {
 				self.jwtCache.Remove(authHeader)
 			}
-			return "", false
+			return nil, false
 		}
 		if !fromCache {
 			self.jwtCache.Add(authHeader, claims)
-			if claims.Settings != nil && len(claims.Settings) > 0 {
-				userSettings.Store(claims.Username, claims.Settings)
-			}
 		}
-		return claims.Username, true
+		return &AuthInfo{
+			Username: claims.Username,
+			Settings: claims.Settings}, true
 	}
-	return "", false
+	return nil, false
 }
 
 func (self *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if username, ok := self.TryAuth(r); ok {
-		ctx := context.WithValue(r.Context(), "username", username)
+	if authInfo, ok := self.TryAuth(r); ok {
+		ctx := context.WithValue(r.Context(), "authInfo", authInfo)
 		self.next.ServeHTTP(w, r.WithContext(ctx))
 	} else {
 		w.WriteHeader(401)
@@ -188,29 +186,4 @@ func (self *AuthConfig) ValidateValues() error {
 		return errors.New("jwt has no secret")
 	}
 	return nil
-}
-
-// get user settings settled by jwt auth
-func GetUserSetting(username string, key string) (interface{}, bool) {
-	if us, ok := userSettings.Load(username); ok {
-		settingsMap, ok := us.(map[string]interface{})
-		if !ok {
-			panic("user settings is not a map")
-		}
-		v, ok := settingsMap[key]
-		return v, ok
-	}
-	return nil, false
-}
-
-var (
-	NoUserSettings = errors.New("no user settings")
-)
-
-// decode user settings using mapstruct
-func DecodeUserSettings(username string, output interface{}) error {
-	if settingsMap, ok := userSettings.Load(username); ok {
-		return jsonz.DecodeInterface(settingsMap, output)
-	}
-	return NoUserSettings
 }
