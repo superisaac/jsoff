@@ -42,7 +42,7 @@ type SchemaMixin struct {
 	description string
 }
 
-// schema sucblasses
+// schema subclasses
 type AnySchema struct {
 	SchemaMixin
 }

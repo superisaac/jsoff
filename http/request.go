@@ -114,6 +114,7 @@ func NewActor() *Actor {
 	}
 }
 
+// register a method handler
 func (self *Actor) On(method string, callback HandlerCallback, setters ...HandlerSetter) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
@@ -129,6 +130,7 @@ func (self *Actor) On(method string, callback HandlerCallback, setters ...Handle
 	return nil
 }
 
+// register a typed method handler
 func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) error {
 	firstArg := &RPCRequest{}
 	handler, err := wrapTyped(typedHandler, firstArg)
@@ -138,6 +140,13 @@ func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...H
 	return self.On(method, handler, setters...)
 }
 
+// Off unregister the method from handlers
+func (self *Actor) Off(method string) {
+	delete(self.methodHandlers, method)
+}
+
+// register a callback called when no hander to handle a request
+// message or non-request message met
 func (self *Actor) OnMissing(handler MissingCallback) error {
 	if self.missingHandler != nil {
 		return errors.New("missing handler already exist!")
@@ -146,6 +155,7 @@ func (self *Actor) OnMissing(handler MissingCallback) error {
 	return nil
 }
 
+// OnClose handler is called when the stream beneath the actor is closed
 func (self *Actor) OnClose(handler CloseCallback) error {
 	if self.closeHandler != nil {
 		return errors.New("close handler already exist!")
@@ -154,17 +164,20 @@ func (self *Actor) OnClose(handler CloseCallback) error {
 	return nil
 }
 
+// call the close handler if possible
 func (self *Actor) HandleClose(r *http.Request) {
 	if self.closeHandler != nil {
 		self.closeHandler(r)
 	}
 }
 
+// returns there is a handler for a method
 func (self Actor) HasHandler(method string) bool {
 	_, exist := self.methodHandlers[method]
 	return exist
 }
 
+// get the handler of a method
 func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 	if h, ok := self.methodHandlers[method]; ok {
 		return h, true
@@ -173,6 +186,7 @@ func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 	}
 }
 
+// give the actor a request message
 func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {

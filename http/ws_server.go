@@ -10,12 +10,6 @@ import (
 	"net/http"
 )
 
-const (
-	modeUnlimited = iota
-	modeActive
-	modePassive
-)
-
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  10240,
 	WriteBufferSize: 10240,
