@@ -17,3 +17,4 @@
 jsonrpc-call
 jsonrpc-notify
 jsonrpc-watch
+dump.rdb
