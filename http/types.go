@@ -5,6 +5,7 @@ package jsonzhttp
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/superisaac/jsonz"
 	"net/http"
@@ -43,4 +44,7 @@ type Client interface {
 	// Send a JSONRPC message(usually a notify) to server without
 	// expecting any result.
 	Send(ctx context.Context, msg jsonz.Message, headers ...http.Header) error
+
+	// Set the client tls config
+	SetClientTLSConfig(cfg *tls.Config)
 }

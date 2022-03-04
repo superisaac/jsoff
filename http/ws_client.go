@@ -17,11 +17,13 @@ type WSClient struct {
 
 type wsTransport struct {
 	ws *websocket.Conn
+
+	client *WSClient
 }
 
 func NewWSClient(serverUrl string) *WSClient {
 	c := &WSClient{}
-	transport := &wsTransport{}
+	transport := &wsTransport{client: c}
 	c.InitStreaming(serverUrl, transport)
 	return c
 }
@@ -60,7 +62,9 @@ func (self *wsTransport) mergeHeaders(headers []http.Header) http.Header {
 }
 
 func (self *wsTransport) Connect(rootCtx context.Context, serverUrl string, headers ...http.Header) error {
-	ws, _, err := websocket.DefaultDialer.Dial(serverUrl, MergeHeaders(headers))
+	dailer := websocket.DefaultDialer
+	dailer.TLSClientConfig = self.client.ClientTLSConfig()
+	ws, _, err := dailer.Dial(serverUrl, MergeHeaders(headers))
 	if err != nil {
 		return err
 	}

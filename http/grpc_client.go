@@ -9,6 +9,7 @@ import (
 	jsonzgrpc "github.com/superisaac/jsonz/grpc"
 	"google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,13 +25,14 @@ type GRPCClient struct {
 }
 
 type gRPCTransport struct {
+	client     *GRPCClient
 	grpcClient jsonzgrpc.JSONZClient
 	stream     jsonzgrpc.JSONZ_OpenStreamClient
 }
 
 func NewGRPCClient(serverUrl string) *GRPCClient {
 	c := &GRPCClient{}
-	transport := &gRPCTransport{}
+	transport := &gRPCTransport{client: c}
 	c.InitStreaming(serverUrl, transport)
 	return c
 }
@@ -58,6 +60,10 @@ func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl string, he
 	if u.Scheme == "h2c" {
 		opts = append(opts, grpc.WithInsecure())
 	} else if u.Scheme == "h2" {
+		if cTLS := self.client.ClientTLSConfig(); cTLS != nil {
+			creds := credentials.NewTLS(cTLS)
+			opts = append(opts, grpc.WithTransportCredentials(creds))
+		}
 		// TODO: credential settings
 	} else {
 		log.Panicf("invalid server url scheme %s", u.Scheme)

@@ -3,6 +3,7 @@ package jsonzhttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonz"
 	"io/ioutil"
@@ -16,6 +17,8 @@ type H1Client struct {
 	httpClient *http.Client
 
 	connectOnce sync.Once
+
+	clientTLS *tls.Config
 }
 
 func NewH1Client(serverUrl string) *H1Client {
@@ -29,11 +32,18 @@ func (self *H1Client) connect() {
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     30 * time.Second,
 		}
+		if self.clientTLS != nil {
+			tr.TLSClientConfig = self.clientTLS
+		}
 		self.httpClient = &http.Client{
 			Transport: tr,
 			Timeout:   5 * time.Second,
 		}
 	})
+}
+
+func (self *H1Client) SetClientTLSConfig(cfg *tls.Config) {
+	self.clientTLS = cfg
 }
 
 func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {

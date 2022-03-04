@@ -15,6 +15,7 @@ type SmartHandler struct {
 	h1Handler   *H1Handler
 	wsHandler   *WSHandler
 	grpcHandler *grpc.Server
+	Actor       *Actor
 }
 
 func NewSmartHandler(serverCtx context.Context, actor *Actor) *SmartHandler {
@@ -23,6 +24,7 @@ func NewSmartHandler(serverCtx context.Context, actor *Actor) *SmartHandler {
 	}
 	grpcServer := NewGRPCHandler(serverCtx, actor)
 	return &SmartHandler{
+		Actor:       actor,
 		h1Handler:   NewH1Handler(actor),
 		wsHandler:   NewWSHandler(serverCtx, actor),
 		grpcHandler: grpcServer.ServerHandler(),

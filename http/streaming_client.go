@@ -2,6 +2,7 @@ package jsonzhttp
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
@@ -47,6 +48,16 @@ type StreamingClient struct {
 
 	connectErr  error
 	connectOnce sync.Once
+
+	clientTLS *tls.Config
+}
+
+func (self *StreamingClient) SetClientTLSConfig(cfg *tls.Config) {
+	self.clientTLS = cfg
+}
+
+func (self *StreamingClient) ClientTLSConfig() *tls.Config {
+	return self.clientTLS
 }
 
 func (self *StreamingClient) InitStreaming(serverUrl string, transport Transport) {

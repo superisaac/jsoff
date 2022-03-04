@@ -2,6 +2,8 @@ package jsonzhttp
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -250,5 +252,70 @@ func TestPassingHeader(t *testing.T) {
 	resmsg, err := client.Call(rootCtx, reqmsg, http.Header{"X-Input": []string{"Hello"}})
 	assert.Nil(err)
 	assert.Equal("Hello", resmsg.MustResult())
+
+}
+
+func TestSmartHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tlsConfig := &TLSConfig{
+		Certfile: "testdata/localhost.crt",
+		Keyfile:  "testdata/localhost.key",
+	}
+
+	server := NewSmartHandler(rootCtx, nil)
+	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return "ok", nil
+		}
+	})
+
+	// client certificates using CA
+	cacert, err := ioutil.ReadFile("testdata/ca.crt")
+	assert.Nil(err)
+	certpool := x509.NewCertPool()
+	certpool.AppendCertsFromPEM(cacert)
+	clientTLS := &tls.Config{
+		RootCAs:            certpool,
+		InsecureSkipVerify: true,
+	}
+
+	go ListenAndServe(rootCtx, "0.0.0.0:28450", server, tlsConfig)
+	time.Sleep(10 * time.Millisecond)
+
+	// test http1 client
+	client := NewH1Client("https://localhost:28450")
+	client.SetClientTLSConfig(clientTLS)
+
+	reqmsg := jsonz.NewRequestMessage(
+		1, "echoAny", []interface{}{1991, 1992})
+	resmsg, err := client.Call(rootCtx, reqmsg)
+	assert.Nil(err)
+	assert.Equal(json.Number("1991"), resmsg.MustResult())
+
+	// test websocket
+	client1 := NewWSClient("wss://localhost:28450")
+	client1.SetClientTLSConfig(clientTLS)
+
+	reqmsg1 := jsonz.NewRequestMessage(
+		1001, "echoAny", []interface{}{8888})
+	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
+	assert.Nil(err1)
+	assert.Equal(json.Number("8888"), resmsg1.MustResult())
+
+	// test websocket
+	client2 := NewGRPCClient("h2://localhost:28450")
+	client2.SetClientTLSConfig(clientTLS)
+
+	reqmsg2 := jsonz.NewRequestMessage(
+		2002, "echoAny", []interface{}{8886})
+	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
+	assert.Nil(err2)
+	assert.Equal(json.Number("8886"), resmsg2.MustResult())
 
 }
