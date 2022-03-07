@@ -23,6 +23,7 @@ type GRPCSession struct {
 	rootCtx     context.Context
 	done        chan error
 	sendChannel chan jsonz.Message
+	streamId    string
 }
 
 func NewGRPCHandler(serverCtx context.Context, actor *Actor) *GRPCHandler {
@@ -56,6 +57,7 @@ func (self *GRPCHandler) OpenStream(stream jsonzgrpc.JSONZ_OpenStreamServer) err
 		rootCtx:     stream.Context(),
 		done:        make(chan error, 10),
 		sendChannel: make(chan jsonz.Message, 100),
+		streamId:    jsonz.NewUuid(),
 	}
 	defer func() {
 		session.server = nil
@@ -116,6 +118,8 @@ func (self *GRPCSession) msgReceived(msg jsonz.Message) {
 		TransportGRPC,
 		nil, // HttpRequest is nil
 		self)
+	req.streamId = self.streamId
+
 	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {
 		self.done <- errors.Wrap(err, "actor.Feed")

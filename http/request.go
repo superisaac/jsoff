@@ -22,6 +22,7 @@ type RPCRequest struct {
 	transportType string
 	r             *http.Request
 	data          interface{} // arbitrary data
+	streamId      string
 }
 
 func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string, r *http.Request, data interface{}) *RPCRequest {
@@ -36,6 +37,10 @@ func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string,
 
 func (self RPCRequest) Context() context.Context {
 	return self.context
+}
+
+func (self RPCRequest) StreamId() string {
+	return self.streamId
 }
 
 func (self RPCRequest) Msg() jsonz.Message {

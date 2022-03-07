@@ -100,9 +100,10 @@ func (self *StreamingClient) handleError(err error) {
 	if errors.As(err, &transClosed) {
 		log.Infof("transport closed")
 		self.transport.Close()
-		if self.closeHandler != nil {
-			self.closeHandler()
-		}
+	}
+	if self.closeHandler != nil {
+		self.closeHandler()
+		self.closeHandler = nil
 	}
 }
 

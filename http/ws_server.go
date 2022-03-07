@@ -29,6 +29,7 @@ type WSSession struct {
 	rootCtx     context.Context
 	done        chan error
 	sendChannel chan jsonz.Message
+	streamId    string
 }
 
 func NewWSHandler(serverCtx context.Context, actor *Actor) *WSHandler {
@@ -61,6 +62,7 @@ func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ws:          ws,
 		done:        make(chan error, 10),
 		sendChannel: make(chan jsonz.Message, 100),
+		streamId:    jsonz.NewUuid(),
 	}
 	session.wait()
 	session.server = nil
@@ -126,6 +128,7 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 		TransportWebsocket,
 		self.httpRequest,
 		self)
+	req.streamId = self.streamId
 
 	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {
