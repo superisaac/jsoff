@@ -72,19 +72,19 @@ type CloseCallback func(r *http.Request)
 // With method handler
 type MethodHandler struct {
 	callback HandlerCallback
-	schema   schema.Schema
+	schema   jsonzschema.Schema
 }
 
 type HandlerSetter func(h *MethodHandler)
 
-func WithSchema(s schema.Schema) HandlerSetter {
+func WithSchema(s jsonzschema.Schema) HandlerSetter {
 	return func(h *MethodHandler) {
 		h.schema = s
 	}
 }
 
 func WithSchemaYaml(yamlSchema string) HandlerSetter {
-	builder := schema.NewSchemaBuilder()
+	builder := jsonzschema.NewSchemaBuilder()
 	s, err := builder.BuildYamlBytes([]byte(yamlSchema))
 	if err != nil {
 		panic(err)
@@ -93,7 +93,7 @@ func WithSchemaYaml(yamlSchema string) HandlerSetter {
 }
 
 func WithSchemaJson(jsonSchema string) HandlerSetter {
-	builder := schema.NewSchemaBuilder()
+	builder := jsonzschema.NewSchemaBuilder()
 	s, err := builder.BuildBytes([]byte(jsonSchema))
 	if err != nil {
 		panic(err)
@@ -204,7 +204,7 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 		params := msg.MustParams()
 		if handler.schema != nil && self.ValidateSchema {
 			// validate the request
-			validator := schema.NewSchemaValidator()
+			validator := jsonzschema.NewSchemaValidator()
 			errPos := validator.Validate(
 				handler.schema,
 				jsonz.MessageInterface(msg))

@@ -1,4 +1,4 @@
-package schema
+package jsonzschema
 
 // Schema builder
 type SchemaBuildError struct {
