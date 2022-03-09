@@ -30,7 +30,7 @@ func TestGRPCHandlerClient(t *testing.T) {
 	go GRPCServe(rootCtx, "127.0.0.1:28200", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewGRPCClient("h2c://127.0.0.1:28200")
+	client := NewGRPCClient(urlParse("h2c://127.0.0.1:28200"))
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -72,7 +72,7 @@ func TestTypedGRPCHandlerClient(t *testing.T) {
 	go GRPCServe(rootCtx, "127.0.0.1:28201", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewGRPCClient("h2c://127.0.0.1:28201")
+	client := NewGRPCClient(urlParse("h2c://127.0.0.1:28201"))
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -147,7 +147,7 @@ func TestGRPCClose(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	closeCalled := make(map[int]bool)
-	client := NewGRPCClient("h2c://127.0.0.1:28223")
+	client := NewGRPCClient(urlParse("h2c://127.0.0.1:28223"))
 	client.OnClose(func() {
 		closeCalled[0] = true
 	})

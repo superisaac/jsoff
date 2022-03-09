@@ -5,15 +5,17 @@ import (
 	"context"
 	"crypto/tls"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
 
 type H1Client struct {
-	serverUrl  string
+	serverUrl  *url.URL
 	httpClient *http.Client
 
 	connectOnce sync.Once
@@ -21,8 +23,15 @@ type H1Client struct {
 	clientTLS *tls.Config
 }
 
-func NewH1Client(serverUrl string) *H1Client {
+func NewH1Client(serverUrl *url.URL) *H1Client {
+	if serverUrl.Scheme != "http" && serverUrl.Scheme != "https" {
+		log.Panicf("server url %s is not http", serverUrl)
+	}
 	return &H1Client{serverUrl: serverUrl}
+}
+
+func (self *H1Client) ServerURL() *url.URL {
+	return self.serverUrl
 }
 
 func (self *H1Client) connect() {
@@ -78,7 +87,7 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl, reader)
+	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl.String(), reader)
 	if err != nil {
 		return nil, errors.Wrap(err, "http.NewRequestWithContext")
 	}
@@ -135,7 +144,7 @@ func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message, headers .
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl, reader)
+	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl.String(), reader)
 	if err != nil {
 		return errors.Wrap(err, "http.NewRequestWithContext")
 	}

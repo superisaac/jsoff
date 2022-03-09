@@ -2,12 +2,14 @@ package jsonzhttp
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"io"
 	"net/http"
+	"net/url"
 	"reflect"
 )
 
@@ -21,11 +23,18 @@ type wsTransport struct {
 	client *WSClient
 }
 
-func NewWSClient(serverUrl string) *WSClient {
+func NewWSClient(serverUrl *url.URL) *WSClient {
+	if serverUrl.Scheme != "ws" && serverUrl.Scheme != "wss" {
+		log.Panicf("server url %s is not websocket", serverUrl)
+	}
 	c := &WSClient{}
 	transport := &wsTransport{client: c}
 	c.InitStreaming(serverUrl, transport)
 	return c
+}
+
+func (self *WSClient) String() string {
+	return fmt.Sprintf("websocket client %s", self.serverUrl)
 }
 
 func (self *WSClient) ActivateSession(ctx context.Context) error {
@@ -61,10 +70,10 @@ func (self *wsTransport) mergeHeaders(headers []http.Header) http.Header {
 	return merged
 }
 
-func (self *wsTransport) Connect(rootCtx context.Context, serverUrl string, headers ...http.Header) error {
+func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, headers ...http.Header) error {
 	dailer := websocket.DefaultDialer
 	dailer.TLSClientConfig = self.client.ClientTLSConfig()
-	ws, _, err := dailer.Dial(serverUrl, MergeHeaders(headers))
+	ws, _, err := dailer.Dial(serverUrl.String(), MergeHeaders(headers))
 	if err != nil {
 		return err
 	}

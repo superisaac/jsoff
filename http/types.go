@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/superisaac/jsonz"
 	"net/http"
+	"net/url"
 )
 
 // errors
@@ -33,6 +34,9 @@ func (self SimpleResponse) Error() string {
 
 // Client is an abstract interface a client type must implement
 type Client interface {
+	// Returns the server URL
+	ServerURL() *url.URL
+
 	// Call a Request message and expect a Result|Error message.
 	Call(ctx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error)
 

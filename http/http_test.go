@@ -11,11 +11,20 @@ import (
 	"github.com/superisaac/jsonz"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
+
+func urlParse(server string) *url.URL {
+	u, err := url.Parse(server)
+	if err != nil {
+		panic(err)
+	}
+	return u
+}
 
 func TestMain(m *testing.M) {
 	log.SetOutput(ioutil.Discard)
@@ -47,7 +56,7 @@ func TestServerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28000", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client("http://127.0.0.1:28000")
+	client := NewH1Client(urlParse("http://127.0.0.1:28000"))
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -87,7 +96,7 @@ func TestMissing(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28003", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client("http://127.0.0.1:28003")
+	client := NewH1Client(urlParse("http://127.0.0.1:28003"))
 	// right request
 	params := [](interface{}){"hello999"}
 	ntfmsg := jsonz.NewNotifyMessage("testnotify", params)
@@ -122,7 +131,7 @@ func TestTypedServerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28001", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client("http://127.0.0.1:28001")
+	client := NewH1Client(urlParse("http://127.0.0.1:28001"))
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -209,7 +218,7 @@ func TestHandlerSchema(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28040", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client("http://127.0.0.1:28040")
+	client := NewH1Client(urlParse("http://127.0.0.1:28040"))
 
 	// right request
 	reqmsg := jsonz.NewRequestMessage(
@@ -244,7 +253,7 @@ func TestPassingHeader(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28050", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client("http://127.0.0.1:28050")
+	client := NewH1Client(urlParse("http://127.0.0.1:28050"))
 
 	// right request
 	reqmsg := jsonz.NewRequestMessage(
@@ -289,7 +298,7 @@ func TestSmartHandler(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// test http1 client
-	client := NewH1Client("https://localhost:28450")
+	client := NewH1Client(urlParse("https://localhost:28450"))
 	client.SetClientTLSConfig(clientTLS)
 
 	reqmsg := jsonz.NewRequestMessage(
@@ -299,7 +308,7 @@ func TestSmartHandler(t *testing.T) {
 	assert.Equal(json.Number("1991"), resmsg.MustResult())
 
 	// test websocket
-	client1 := NewWSClient("wss://localhost:28450")
+	client1 := NewWSClient(urlParse("wss://localhost:28450"))
 	client1.SetClientTLSConfig(clientTLS)
 
 	reqmsg1 := jsonz.NewRequestMessage(
@@ -309,7 +318,7 @@ func TestSmartHandler(t *testing.T) {
 	assert.Equal(json.Number("8888"), resmsg1.MustResult())
 
 	// test websocket
-	client2 := NewGRPCClient("h2://localhost:28450")
+	client2 := NewGRPCClient(urlParse("h2://localhost:28450"))
 	client2.SetClientTLSConfig(clientTLS)
 
 	reqmsg2 := jsonz.NewRequestMessage(

@@ -2,6 +2,7 @@ package jsonzhttp
 
 import (
 	"context"
+	"fmt"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -30,11 +31,18 @@ type gRPCTransport struct {
 	stream     jsonzgrpc.JSONZ_OpenStreamClient
 }
 
-func NewGRPCClient(serverUrl string) *GRPCClient {
+func NewGRPCClient(serverUrl *url.URL) *GRPCClient {
+	if serverUrl.Scheme != "h2c" && serverUrl.Scheme != "h2" {
+		log.Panicf("server url %s is not grpc", serverUrl)
+	}
 	c := &GRPCClient{}
 	transport := &gRPCTransport{client: c}
 	c.InitStreaming(serverUrl, transport)
 	return c
+}
+
+func (self *GRPCClient) String() string {
+	return fmt.Sprintf("gRPC client %s", self.serverUrl)
 }
 
 // websocket transport methods
@@ -50,25 +58,21 @@ func (self gRPCTransport) Connected() bool {
 	return self.stream != nil
 }
 
-func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl string, headers ...http.Header) error {
+func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl *url.URL, headers ...http.Header) error {
 	// headers is not used
 	var opts []grpc.DialOption
-	u, err := url.Parse(serverUrl)
-	if err != nil {
-		return errors.Wrap(err, "url.Parse")
-	}
-	if u.Scheme == "h2c" {
+	if serverUrl.Scheme == "h2c" {
 		opts = append(opts, grpc.WithInsecure())
-	} else if u.Scheme == "h2" {
+	} else if serverUrl.Scheme == "h2" {
 		if cTLS := self.client.ClientTLSConfig(); cTLS != nil {
 			creds := credentials.NewTLS(cTLS)
 			opts = append(opts, grpc.WithTransportCredentials(creds))
 		}
 		// TODO: credential settings
 	} else {
-		log.Panicf("invalid server url scheme %s", u.Scheme)
+		log.Panicf("invalid server url scheme %s", serverUrl.Scheme)
 	}
-	conn, err := grpc.Dial(u.Host, opts...)
+	conn, err := grpc.Dial(serverUrl.Host, opts...)
 	if err != nil {
 		return errors.Wrap(err, "grpc.Dial()")
 	}

@@ -29,7 +29,7 @@ func TestWSHandlerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28100", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewWSClient("ws://127.0.0.1:28100")
+	client := NewWSClient(urlParse("ws://127.0.0.1:28100"))
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -71,7 +71,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28101", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewWSClient("ws://127.0.0.1:28101")
+	client := NewWSClient(urlParse("ws://127.0.0.1:28101"))
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -146,7 +146,7 @@ func TestWSClose(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	closeCalled := make(map[int]bool)
-	client := NewWSClient("ws://127.0.0.1:28123")
+	client := NewWSClient(urlParse("ws://127.0.0.1:28123"))
 	client.OnClose(func() {
 		closeCalled[0] = true
 	})

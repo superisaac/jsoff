@@ -19,13 +19,13 @@ func NewClient(serverUrl string) (Client, error) {
 	switch u.Scheme {
 	case "http", "https":
 		// HTTP/1.1 client
-		return NewH1Client(serverUrl), nil
+		return NewH1Client(u), nil
 	case "ws", "wss":
 		// Websocket client
-		return NewWSClient(serverUrl), nil
+		return NewWSClient(u), nil
 	case "h2", "h2c":
 		// gRPC client
-		return NewGRPCClient(serverUrl), nil
+		return NewGRPCClient(u), nil
 	default:
 		return nil, errors.New("url scheme not supported")
 	}
