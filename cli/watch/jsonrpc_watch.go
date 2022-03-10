@@ -76,7 +76,11 @@ func main() {
 	})
 
 	rootCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	//defer cancel()
+
+	sc.OnClose(func() {
+		cancel()
+	})
 
 	if err := sc.Connect(rootCtx, headers...); err != nil {
 		panic(err)
