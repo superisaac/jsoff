@@ -50,26 +50,10 @@ func (self wsTransport) Connected() bool {
 	return self.ws != nil
 }
 
-func (self *wsTransport) mergeHeaders(headers []http.Header) http.Header {
-	//merged := http.Header{}
-	var merged http.Header = nil
-	for _, h := range headers {
-		for k, vs := range h {
-			for _, v := range vs {
-				if merged == nil {
-					merged = make(http.Header)
-				}
-				merged.Add(k, v)
-			}
-		}
-	}
-	return merged
-}
-
-func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, headers ...http.Header) error {
+func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
 	dailer := websocket.DefaultDialer
 	dailer.TLSClientConfig = self.client.ClientTLSConfig()
-	ws, _, err := dailer.Dial(serverUrl.String(), MergeHeaders(headers))
+	ws, _, err := dailer.Dial(serverUrl.String(), header)
 	if err != nil {
 		var opErr *net.OpError
 		if errors.As(err, &opErr) {

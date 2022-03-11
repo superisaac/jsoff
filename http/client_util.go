@@ -29,18 +29,18 @@ func (self *HeaderFlags) Parse() (http.Header, error) {
 	return header, nil
 }
 
-// merge multiple http headers into one, may return nil
-func MergeHeaders(headers []http.Header) http.Header {
-	var merged http.Header = nil
-	for _, h := range headers {
-		for k, vs := range h {
-			for _, v := range vs {
-				if merged == nil {
-					merged = make(http.Header)
-				}
-				merged.Add(k, v)
-			}
-		}
-	}
-	return merged
-}
+// // merge multiple http headers into one, may return nil
+// func MergeHeaders(headers []http.Header) http.Header {
+// 	var merged http.Header = nil
+// 	for _, h := range headers {
+// 		for k, vs := range h {
+// 			for _, v := range vs {
+// 				if merged == nil {
+// 					merged = make(http.Header)
+// 				}
+// 				merged.Add(k, v)
+// 			}
+// 		}
+// 	}
+// 	return merged
+// }

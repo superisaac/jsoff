@@ -15,8 +15,9 @@ import (
 )
 
 type H1Client struct {
-	serverUrl  *url.URL
-	httpClient *http.Client
+	serverUrl   *url.URL
+	extraHeader http.Header
+	httpClient  *http.Client
 
 	connectOnce sync.Once
 
@@ -51,12 +52,15 @@ func (self *H1Client) connect() {
 	})
 }
 
+func (self *H1Client) SetExtraHeader(h http.Header) {
+	self.extraHeader = h
+}
 func (self *H1Client) SetClientTLSConfig(cfg *tls.Config) {
 	self.clientTLS = cfg
 }
 
-func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {
-	resmsg, err := self.Call(rootCtx, reqmsg, headers...)
+func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error {
+	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
 	}
@@ -71,7 +75,7 @@ func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestM
 	}
 }
 
-func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error) {
+func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
@@ -97,8 +101,8 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	for _, extheader := range headers {
-		for k, vs := range extheader {
+	if self.extraHeader != nil {
+		for k, vs := range self.extraHeader {
 			for _, v := range vs {
 				req.Header.Add(k, v)
 			}
@@ -129,7 +133,7 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	return respmsg, nil
 }
 
-func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message, headers ...http.Header) error {
+func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message) error {
 	self.connect()
 
 	traceId := msg.TraceId()
@@ -154,8 +158,8 @@ func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message, headers .
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	for _, extheader := range headers {
-		for k, vs := range extheader {
+	if self.extraHeader != nil {
+		for k, vs := range self.extraHeader {
 			for _, v := range vs {
 				req.Header.Add(k, v)
 			}

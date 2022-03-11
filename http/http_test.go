@@ -255,10 +255,11 @@ func TestPassingHeader(t *testing.T) {
 
 	client := NewH1Client(urlParse("http://127.0.0.1:28050"))
 
+	client.SetExtraHeader(http.Header{"X-Input": []string{"Hello"}})
 	// right request
 	reqmsg := jsonz.NewRequestMessage(
 		1, "echoHeader", nil)
-	resmsg, err := client.Call(rootCtx, reqmsg, http.Header{"X-Input": []string{"Hello"}})
+	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.Equal("Hello", resmsg.MustResult())
 

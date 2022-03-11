@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"github.com/superisaac/jsonz/http"
-	"net/http"
 	"os"
 	"time"
 )
@@ -34,14 +33,10 @@ func main() {
 	}
 
 	// parse http headers
-	headers := []http.Header{}
-	h, err := headerFlags.Parse()
+	header, err := headerFlags.Parse()
 	if err != nil {
 		log.Fatalf("err parse header flags %s", err)
 		os.Exit(1)
-	}
-	if len(h) > 0 {
-		headers = append(headers, h)
 	}
 
 	// parse method and params
@@ -66,6 +61,7 @@ func main() {
 		log.Fatalf("fail to find jsonrpc client: %s", err)
 		os.Exit(1)
 	}
+	c.SetExtraHeader(header)
 	sc, ok := c.(*jsonzhttp.WSClient)
 	if !ok {
 		log.Panicf("websocket client required, but found %s", c)
@@ -84,8 +80,8 @@ func main() {
 	retrytimes := 0
 
 	for {
-		if err := watchStreaming(sc, method, params, headers); err != nil {
-			if errors.Is(err, jsonzhttp.TransportConnectFailed) {
+		if err := connect(sc, method, params); err != nil {
+			if errors.Is(err, jsonzhttp.TransportConnectFailed) || errors.Is(err, jsonzhttp.TransportClosed) {
 				retrytimes++
 				log.Infof("connect refused %d times", retrytimes)
 				if retrytimes >= *pRetry {
@@ -100,23 +96,24 @@ func main() {
 				//panic(err)
 			}
 		} else {
-			retrytimes = 0
+			//retrytimes = 0
+			break
 		}
 	}
 }
 
-func watchStreaming(sc *jsonzhttp.WSClient, method string, params []interface{}, headers []http.Header) error {
-	ctx1, cancel := context.WithCancel(context.Background())
+func connect(sc *jsonzhttp.WSClient, method string, params []interface{}) error {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := sc.Connect(ctx1, headers...); err != nil {
+	if err := sc.Connect(ctx); err != nil {
 		return err
 	}
 
 	if method != "" {
 		reqId := jsonz.NewUuid()
 		reqmsg := jsonz.NewRequestMessage(reqId, method, params)
-		resmsg, err := sc.Call(ctx1, reqmsg, headers...)
+		resmsg, err := sc.Call(ctx, reqmsg)
 		if err != nil {
 			sc.Log().Panicf("rpc error: %s", err)
 			os.Exit(1)
@@ -128,11 +125,15 @@ func watchStreaming(sc *jsonzhttp.WSClient, method string, params []interface{},
 		fmt.Println(repr)
 	}
 	// wait loop
-	cerr := sc.Wait()
-	if cerr != nil {
-		sc.Log().Infof("client closed on error %s", cerr)
-	} else {
-		sc.Log().Debug("client closed")
-	}
-	return nil
+	return sc.Wait()
+	// ch := sc.CloseChannel()
+	// for {
+	// 	select {
+	// 	case <- time.After(5 * time.Second):
+	// 		sc.Close()
+	// 	case err := <- ch:
+	// 		return err
+	// 	}
+	// }
+	// return nil
 }

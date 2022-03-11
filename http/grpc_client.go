@@ -58,8 +58,8 @@ func (self gRPCTransport) Connected() bool {
 	return self.stream != nil
 }
 
-func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl *url.URL, headers ...http.Header) error {
-	// headers is not used
+func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
+	// header is not used
 	var opts []grpc.DialOption
 	if serverUrl.Scheme == "h2c" {
 		opts = append(opts, grpc.WithInsecure())

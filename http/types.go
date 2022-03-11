@@ -38,17 +38,20 @@ type Client interface {
 	ServerURL() *url.URL
 
 	// Call a Request message and expect a Result|Error message.
-	Call(ctx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error)
+	Call(ctx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error)
 
 	// Call a Request message and unwrap the result message into a
 	// given structure, when an Error message comes it is turned
 	// into a golang error object typed *jsonz.ErrorBody
-	UnwrapCall(ctx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error
+	UnwrapCall(ctx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error
 
 	// Send a JSONRPC message(usually a notify) to server without
 	// expecting any result.
-	Send(ctx context.Context, msg jsonz.Message, headers ...http.Header) error
+	Send(ctx context.Context, msg jsonz.Message) error
 
 	// Set the client tls config
 	SetClientTLSConfig(cfg *tls.Config)
+
+	// Set http header
+	SetExtraHeader(h http.Header)
 }

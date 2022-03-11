@@ -28,7 +28,7 @@ var TransportClosed = errors.New("streaming closed")
 // the underline transport, currently there are websocket and gRPC
 // implementations
 type Transport interface {
-	Connect(rootCtx context.Context, serverUrl *url.URL, headers ...http.Header) error
+	Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error
 	Close()
 	Connected() bool
 	ReadMessage() (msg jsonz.Message, readed bool, err error)
@@ -37,6 +37,7 @@ type Transport interface {
 
 type StreamingClient struct {
 	serverUrl       *url.URL
+	extraHeader     http.Header
 	pendingRequests sync.Map
 	messageHandler  MessageHandler
 	closeHandler    CloseHandler
@@ -45,12 +46,13 @@ type StreamingClient struct {
 
 	transport Transport
 
-	//	connectErr  error
-	//      connectOnce sync.Once
-
 	clientTLS *tls.Config
 
 	closeChannel chan error
+}
+
+func (self *StreamingClient) SetExtraHeader(h http.Header) {
+	self.extraHeader = h
 }
 
 func (self *StreamingClient) SetClientTLSConfig(cfg *tls.Config) {
@@ -93,18 +95,24 @@ func (self *StreamingClient) Wait() error {
 	}
 }
 
+func (self *StreamingClient) Close() {
+	if self.Connected() {
+		self.Reset(nil)
+	}
+}
+
 func (self *StreamingClient) Reset(err error) {
 	if self.cancelFunc != nil {
 		self.cancelFunc()
 		self.cancelFunc = nil
 	}
-	self.transport.Close()
-	self.sendChannel = nil
 
 	if self.closeChannel != nil {
 		self.closeChannel <- err
 		self.closeChannel = nil
 	}
+	self.transport.Close()
+	self.sendChannel = nil
 }
 
 func (self *StreamingClient) OnMessage(handler MessageHandler) error {
@@ -123,10 +131,9 @@ func (self *StreamingClient) OnClose(handler CloseHandler) error {
 	return nil
 }
 
-func (self *StreamingClient) Connect(rootCtx context.Context, headers ...http.Header) error {
+func (self *StreamingClient) Connect(rootCtx context.Context) error {
 	if !self.transport.Connected() {
-		err := self.transport.Connect(rootCtx, self.serverUrl, headers...)
-		if err != nil {
+		if err := self.transport.Connect(rootCtx, self.serverUrl, self.extraHeader); err != nil {
 			//self.connectErr = err
 			return err
 		}
@@ -137,7 +144,7 @@ func (self *StreamingClient) Connect(rootCtx context.Context, headers ...http.He
 		go self.sendLoop(connCtx)
 		go self.recvLoop()
 	} else {
-		self.Log().Warnf("client already closed")
+		self.Log().Debug("client already connected")
 	}
 	return nil
 }
@@ -259,8 +266,8 @@ func (self *StreamingClient) expire(k interface{}, after time.Duration) {
 	}
 }
 
-func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}, headers ...http.Header) error {
-	resmsg, err := self.Call(rootCtx, reqmsg, headers...)
+func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error {
+	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
 	}
@@ -275,8 +282,8 @@ func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.R
 	}
 }
 
-func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage, headers ...http.Header) (jsonz.Message, error) {
-	err := self.Connect(rootCtx, headers...)
+func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
+	err := self.Connect(rootCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +301,7 @@ func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.Request
 	}
 	self.pendingRequests.Store(sendmsg.Id, p)
 
-	err = self.Send(rootCtx, sendmsg, headers...)
+	err = self.Send(rootCtx, sendmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -307,8 +314,8 @@ func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsonz.Request
 	return resmsg, nil
 }
 
-func (self *StreamingClient) Send(rootCtx context.Context, msg jsonz.Message, headers ...http.Header) error {
-	err := self.Connect(rootCtx, headers...)
+func (self *StreamingClient) Send(rootCtx context.Context, msg jsonz.Message) error {
+	err := self.Connect(rootCtx)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/superisaac/jsonz"
 	"github.com/superisaac/jsonz/http"
-	"net/http"
 	"os"
 )
 
@@ -45,14 +44,10 @@ func main() {
 	}
 
 	// parse http headers
-	headers := []http.Header{}
-	h, err := headerFlags.Parse()
+	header, err := headerFlags.Parse()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "err parse header flags %s", err)
 		os.Exit(1)
-	}
-	if len(h) > 0 {
-		headers = append(headers, h)
 	}
 
 	c, err := jsonzhttp.NewClient(serverUrl)
@@ -61,8 +56,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	c.SetExtraHeader(header)
+
 	ntfmsg := jsonz.NewNotifyMessage(method, params)
-	err = c.Send(context.Background(), ntfmsg, headers...)
+	err = c.Send(context.Background(), ntfmsg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "rpc error: %s\n", err)
 		os.Exit(1)
