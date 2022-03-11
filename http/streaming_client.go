@@ -21,12 +21,9 @@ type pendingRequest struct {
 type MessageHandler func(msg jsonz.Message)
 type CloseHandler func()
 
-type TransportClosed struct {
-}
-
-func (self TransportClosed) Error() string {
-	return "streaming closed"
-}
+// errors
+var TransportConnectFailed = errors.New("connect refused")
+var TransportClosed = errors.New("streaming closed")
 
 // the underline transport, currently there are websocket and gRPC
 // implementations
@@ -44,13 +41,16 @@ type StreamingClient struct {
 	messageHandler  MessageHandler
 	closeHandler    CloseHandler
 	sendChannel     chan jsonz.Message
+	cancelFunc      func()
 
 	transport Transport
 
-	connectErr  error
-	connectOnce sync.Once
+	//	connectErr  error
+	//      connectOnce sync.Once
 
 	clientTLS *tls.Config
+
+	closeChannel chan error
 }
 
 func (self *StreamingClient) SetClientTLSConfig(cfg *tls.Config) {
@@ -61,6 +61,12 @@ func (self *StreamingClient) ClientTLSConfig() *tls.Config {
 	return self.clientTLS
 }
 
+func (self *StreamingClient) Log() *log.Entry {
+	return log.WithFields(log.Fields{
+		"server": self.serverUrl.String(),
+	})
+}
+
 func (self *StreamingClient) ServerURL() *url.URL {
 	return self.serverUrl
 }
@@ -68,7 +74,37 @@ func (self *StreamingClient) ServerURL() *url.URL {
 func (self *StreamingClient) InitStreaming(serverUrl *url.URL, transport Transport) {
 	self.serverUrl = serverUrl
 	self.transport = transport
-	self.sendChannel = make(chan jsonz.Message, 100)
+	self.sendChannel = nil
+	self.closeChannel = nil
+}
+
+func (self *StreamingClient) CloseChannel() chan error {
+	return self.closeChannel
+}
+
+// wait connection close and return error
+func (self *StreamingClient) Wait() error {
+	if self.closeChannel != nil {
+		err := <-self.closeChannel
+		return err
+	} else {
+		// client not connected, just return
+		return nil
+	}
+}
+
+func (self *StreamingClient) Reset(err error) {
+	if self.cancelFunc != nil {
+		self.cancelFunc()
+		self.cancelFunc = nil
+	}
+	self.transport.Close()
+	self.sendChannel = nil
+
+	if self.closeChannel != nil {
+		self.closeChannel <- err
+		self.closeChannel = nil
+	}
 }
 
 func (self *StreamingClient) OnMessage(handler MessageHandler) error {
@@ -88,24 +124,29 @@ func (self *StreamingClient) OnClose(handler CloseHandler) error {
 }
 
 func (self *StreamingClient) Connect(rootCtx context.Context, headers ...http.Header) error {
-	self.connectOnce.Do(func() {
+	if !self.transport.Connected() {
 		err := self.transport.Connect(rootCtx, self.serverUrl, headers...)
 		if err != nil {
-			self.connectErr = err
-			return
+			//self.connectErr = err
+			return err
 		}
-		go self.sendLoop()
+		connCtx, cancel := context.WithCancel(rootCtx)
+		self.cancelFunc = cancel
+		self.sendChannel = make(chan jsonz.Message, 100)
+		self.closeChannel = make(chan error, 10)
+		go self.sendLoop(connCtx)
 		go self.recvLoop()
-	})
-	return self.connectErr
+	} else {
+		self.Log().Warnf("client already closed")
+	}
+	return nil
 }
 
 func (self *StreamingClient) handleError(err error) {
-	var transClosed *TransportClosed
-	if errors.As(err, &transClosed) {
-		log.Infof("transport closed")
-		self.transport.Close()
+	if errors.Is(err, TransportClosed) {
+		self.Log().Infof("transport closed")
 	}
+	self.Reset(err)
 	if self.closeHandler != nil {
 		self.closeHandler()
 		self.closeHandler = nil
@@ -116,10 +157,22 @@ func (self *StreamingClient) Connected() bool {
 	return self.transport.Connected()
 }
 
-func (self *StreamingClient) sendLoop() {
-	defer self.transport.Close()
+func (self *StreamingClient) sendLoop(connCtx context.Context) {
+	//defer self.Reset(nil)
+	defer func() {
+		self.Log().Debug("sendLoop stop")
+	}()
+	ctx, cancel := context.WithCancel(connCtx)
+	defer cancel()
+
+	self.Log().Debug("sendLoop start")
 	for {
+		if !self.transport.Connected() {
+			return
+		}
 		select {
+		case <-ctx.Done():
+			return
 		case msg, ok := <-self.sendChannel:
 			if !ok {
 				return
@@ -130,7 +183,7 @@ func (self *StreamingClient) sendLoop() {
 
 			err := self.transport.WriteMessage(msg)
 			if err != nil {
-				log.Warnf("write msg error %s", err)
+				self.Log().Warnf("write msg error %s", err)
 				self.handleError(err)
 				return
 			}
@@ -139,6 +192,10 @@ func (self *StreamingClient) sendLoop() {
 }
 
 func (self *StreamingClient) recvLoop() {
+	self.Log().Debug("recvLoop start")
+	defer func() {
+		self.Log().Debug("recvLoop stop")
+	}()
 	for {
 		if !self.transport.Connected() {
 			return

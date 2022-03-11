@@ -89,7 +89,7 @@ func (self *gRPCTransport) Connect(rootCtx context.Context, serverUrl *url.URL, 
 func (self *gRPCTransport) handleGRPCError(err error) error {
 	if errors.Is(err, io.EOF) {
 		log.Infof("cannot connect stream")
-		return &TransportClosed{}
+		return TransportClosed
 	}
 	code := grpc.Code(err)
 	if code == codes.Unknown {
@@ -101,7 +101,7 @@ func (self *gRPCTransport) handleGRPCError(err error) error {
 	for _, safeCode := range safeCodes {
 		if code == safeCode {
 			log.Debugf("grpc connect code %d %s", code, code)
-			return &TransportClosed{}
+			return TransportClosed
 		}
 	}
 	log.Warnf("error on handle %+v", err)

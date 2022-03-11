@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -35,11 +36,6 @@ func NewWSClient(serverUrl *url.URL) *WSClient {
 
 func (self *WSClient) String() string {
 	return fmt.Sprintf("websocket client %s", self.serverUrl)
-}
-
-func (self *WSClient) ActivateSession(ctx context.Context) error {
-	ntf := jsonz.NewNotifyMessage("_session.activate", nil)
-	return self.Send(ctx, ntf)
 }
 
 // websocket transport methods
@@ -75,6 +71,11 @@ func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 	dailer.TLSClientConfig = self.client.ClientTLSConfig()
 	ws, _, err := dailer.Dial(serverUrl.String(), MergeHeaders(headers))
 	if err != nil {
+		var opErr *net.OpError
+		if errors.As(err, &opErr) {
+			self.client.Log().Infof("websocket operror %s", opErr)
+			return TransportConnectFailed
+		}
 		return err
 	}
 	self.ws = ws
@@ -82,15 +83,16 @@ func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 }
 
 func (self *wsTransport) handleWebsocketError(err error) error {
+	logger := self.client.Log()
 	var closeErr *websocket.CloseError
 	if errors.Is(err, io.EOF) {
-		log.Infof("websocket conn failed")
-		return &TransportClosed{}
+		logger.Infof("websocket conn failed")
+		return TransportClosed
 	} else if errors.As(err, &closeErr) {
-		log.Infof("websocket close error %d %s", closeErr.Code, closeErr.Text)
-		return &TransportClosed{}
+		logger.Infof("websocket close error %d %s", closeErr.Code, closeErr.Text)
+		return TransportClosed
 	} else {
-		log.Warnf("ws.ReadMessage error %s %s", reflect.TypeOf(err), err)
+		logger.Warnf("ws.ReadMessage error %s %s", reflect.TypeOf(err), err)
 	}
 	return err
 }
@@ -118,7 +120,7 @@ func (self *wsTransport) ReadMessage() (jsonz.Message, bool, error) {
 
 	msg, err := jsonz.ParseBytes(msgBytes)
 	if err != nil {
-		log.Warnf("bad jsonrpc message %s", msgBytes)
+		self.client.Log().Warnf("bad jsonrpc message %s", msgBytes)
 		return nil, false, err
 	}
 	return msg, true, nil
