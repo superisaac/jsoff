@@ -36,19 +36,40 @@ type Transport interface {
 }
 
 type StreamingClient struct {
-	serverUrl       *url.URL
-	extraHeader     http.Header
-	pendingRequests sync.Map
-	messageHandler  MessageHandler
-	closeHandler    CloseHandler
-	sendChannel     chan jsonz.Message
-	cancelFunc      func()
+	// the server url it connects to
+	serverUrl *url.URL
 
+	// extra http header taken to transports
+	extraHeader http.Header
+
+	// lock to prevent concurrent write
+	connectLock sync.Mutex
+
+	// jsonrpc request message pending for result
+	pendingRequests sync.Map
+
+	// on messsage handler
+	messageHandler MessageHandler
+
+	// on close handler
+	closeHandler CloseHandler
+
+	// func accompanied by context, this func is called when
+	// client want to deliberatly close the connection
+	cancelFunc func()
+
+	// send channel to write messsage sequencially
+	sendChannel chan jsonz.Message
+
+	// channel to wait until connection closed
+	closeChannel chan error
+
+	// the underline transport adaptor in charge of read/write
+	// bytes
 	transport Transport
 
+	// TLS settings
 	clientTLS *tls.Config
-
-	closeChannel chan error
 }
 
 func (self *StreamingClient) SetExtraHeader(h http.Header) {
@@ -132,6 +153,9 @@ func (self *StreamingClient) OnClose(handler CloseHandler) error {
 }
 
 func (self *StreamingClient) Connect(rootCtx context.Context) error {
+	self.connectLock.Lock()
+	defer self.connectLock.Unlock()
+
 	if !self.transport.Connected() {
 		if err := self.transport.Connect(rootCtx, self.serverUrl, self.extraHeader); err != nil {
 			//self.connectErr = err
@@ -187,7 +211,6 @@ func (self *StreamingClient) sendLoop(connCtx context.Context) {
 			if !self.transport.Connected() {
 				return
 			}
-
 			err := self.transport.WriteMessage(msg)
 			if err != nil {
 				self.Log().Warnf("write msg error %s", err)
