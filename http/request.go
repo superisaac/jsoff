@@ -11,7 +11,7 @@ import (
 
 const (
 	TransportHTTP      = "http"
-	TransportHTTP2     = "http2"	
+	TransportHTTP2     = "http2"
 	TransportWebsocket = "websocket"
 	TransportGRPC      = "grpc"
 )

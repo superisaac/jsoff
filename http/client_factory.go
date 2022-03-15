@@ -24,7 +24,7 @@ func NewClient(serverUrl string) (Client, error) {
 		return NewWSClient(u), nil
 	case "h2", "h2c":
 		// HTTP2 client
-		return NewH2Client(u), nil
+		return NewGRPCClient(u), nil
 	default:
 		return nil, errors.New("url scheme not supported")
 	}

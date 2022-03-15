@@ -1,15 +1,14 @@
 package jsonzhttp
 
 import (
-	//"fmt"
+	"bufio"
 	"context"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
+	"io"
 	"net/http"
-	"golang.org/x/net/http2"
 )
-
 
 type H2Handler struct {
 	Actor     *Actor
@@ -18,18 +17,15 @@ type H2Handler struct {
 	SpawnGoroutine bool
 }
 
-type h2MsgFrame struct {
-	Msg     jsonz.Message
-	Frame   *http2.DataFrame
-}
-
 type H2Session struct {
 	server      *H2Handler
-	framer      *http2.Framer
+	scanner     *bufio.Scanner
+	writer      io.Writer
+	flusher     http.Flusher
 	httpRequest *http.Request
 	rootCtx     context.Context
 	done        chan error
-	sendChannel chan h2MsgFrame
+	sendChannel chan jsonz.Message
 	streamId    string
 }
 
@@ -44,23 +40,42 @@ func NewH2Handler(serverCtx context.Context, actor *Actor) *H2Handler {
 }
 
 func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	framer := http2.NewFramer(w, r.Body)
+	if !r.ProtoAtLeast(2, 0) {
+		//return fmt.Errorf("HTTP2 not supported")
+		w.WriteHeader(400)
+		w.Write([]byte("http2 not supported"))
+		return
+	}
 
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		w.WriteHeader(400)
+		w.Write([]byte("http2 not supported"))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{\"method\":\"hello\",\"params\":[]}\n"))
+	flusher.Flush()
+
+	scanner := bufio.NewScanner(r.Body)
+	scanner.Split(bufio.ScanLines)
 	defer func() {
+		r.Body.Close()
 		self.Actor.HandleClose(r)
 	}()
-
 	session := &H2Session{
 		server:      self,
 		rootCtx:     r.Context(),
 		httpRequest: r,
-		framer:      framer,
+		writer:      w,
+		flusher:     flusher,
+		scanner:     scanner,
 		done:        make(chan error, 10),
-		sendChannel: make(chan h2MsgFrame, 100),
+		sendChannel: make(chan jsonz.Message, 100),
 		streamId:    jsonz.NewUuid(),
 	}
 	session.wait()
-	session.server = nil
 }
 
 // websocket session
@@ -90,41 +105,20 @@ func (self *H2Session) wait() {
 }
 
 func (self *H2Session) recvLoop() {
-	settings := map[http2.SettingID]uint32{}
-	for {
-		f, err1 := self.framer.ReadFrame()
-		if err1 != nil {
-			self.done <- errors.Wrap(err1, "framer.ReadFrame()")
-			return
-		}
-		var err error
-		switch ff := f.(type) {
-		case *http2.DataFrame:
-			if self.server.SpawnGoroutine {
-				go self.msgBytesReceived(ff.Data(), ff)
-			} else {
-				self.msgBytesReceived(ff.Data(), ff)
-			}
-		case *http2.SettingsFrame:
-			if !ff.IsAck() {
-				ff.ForeachSetting(func(setting http2.Setting) error {
-					settings[setting.ID] = setting.Val
-					return nil
-				})
-				err = self.framer.WriteSettingsAck()
-			}
-		default:
-			log.Infof("http2 frame type %+v", ff)
-		}
-
-		if err != nil {
-			self.done <- errors.Wrap(err, "data framer")
-			return
+	for self.scanner.Scan() {
+		data := self.scanner.Bytes()
+		if self.server.SpawnGoroutine {
+			go self.msgBytesReceived(data)
+		} else {
+			self.msgBytesReceived(data)
 		}
 	}
+	// end of scanning
+	self.done <- nil
+	return
 }
 
-func (self *H2Session) msgBytesReceived(msgBytes []byte, src *http2.DataFrame) {
+func (self *H2Session) msgBytesReceived(msgBytes []byte) {
 	msg, err := jsonz.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
@@ -146,9 +140,8 @@ func (self *H2Session) msgBytesReceived(msgBytes []byte, src *http2.DataFrame) {
 		return
 	}
 	if resmsg != nil {
-		frm := h2MsgFrame{Msg: resmsg, Frame: src}
 		if resmsg.IsResultOrError() {
-			self.sendChannel <- frm
+			self.sendChannel <- resmsg
 		} else {
 			self.Send(resmsg)
 		}
@@ -156,7 +149,7 @@ func (self *H2Session) msgBytesReceived(msgBytes []byte, src *http2.DataFrame) {
 }
 
 func (self *H2Session) Send(msg jsonz.Message) {
-	self.sendChannel <- h2MsgFrame{Msg: msg, Frame: nil}
+	self.sendChannel <- msg
 }
 
 func (self *H2Session) sendLoop() {
@@ -167,12 +160,11 @@ func (self *H2Session) sendLoop() {
 		select {
 		case <-ctx.Done():
 			return
-		case frm, ok := <-self.sendChannel:
+		case msg, ok := <-self.sendChannel:
 			if !ok {
 				return
 			}
-			msg := frm.Msg
-			if self.framer == nil {
+			if self.scanner == nil {
 				return
 			}
 			marshaled, err := jsonz.MessageBytes(msg)
@@ -181,14 +173,12 @@ func (self *H2Session) sendLoop() {
 				return
 			}
 
-			streamId := uint32(0)
-			if frm.Frame != nil {
-				streamId = frm.Frame.Header().StreamID
-			}
-			if err := self.framer.WriteData(streamId, true, marshaled); err != nil {
-				log.Warnf("h2 writedata warning message %s", err)
+			marshaled = append(marshaled, []byte("\n")...)
+			if _, err := self.writer.Write(marshaled); err != nil {
+				log.Warnf("h2 writedata warning message %s\n", err)
 				return
 			}
+			self.flusher.Flush()
 		}
 	}
 }
