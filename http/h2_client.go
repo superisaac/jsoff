@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"reflect"
 	"sync"
+	//"time"
 )
 
 type H2Client struct {
@@ -30,12 +31,21 @@ type h2Transport struct {
 }
 
 func NewH2Client(serverUrl *url.URL) *H2Client {
-	if serverUrl.Scheme != "https" && serverUrl.Scheme != "http" {
+	newUrl, err := url.Parse(serverUrl.String())
+	if err != nil {
+		log.Panicf("copy url error %s", err)
+	}
+	if newUrl.Scheme == "h2" {
+		newUrl.Scheme = "https"
+	} else if newUrl.Scheme == "h2c" {
+		newUrl.Scheme = "http"
+	}
+	if newUrl.Scheme != "https" && newUrl.Scheme != "http" {
 		log.Panicf("server url %s is not http2", serverUrl)
 	}
 	c := &H2Client{}
 	transport := &h2Transport{client: c}
-	c.InitStreaming(serverUrl, transport)
+	c.InitStreaming(newUrl, transport)
 	return c
 }
 
@@ -43,6 +53,8 @@ func (self *H2Client) HTTPClient() *http.Client {
 	self.clientOnce.Do(func() {
 		self.httpClient = &http.Client{
 			Transport: &http2.Transport{
+				AllowHTTP: true,
+				//WriteByteTimeout: time.Second * 15,
 				TLSClientConfig: self.ClientTLSConfig(),
 			},
 		}

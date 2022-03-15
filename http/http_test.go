@@ -301,11 +301,11 @@ func TestSmartHandler(t *testing.T) {
 			return "ok", nil
 		}
 	})
-	go ListenAndServe(rootCtx, "0.0.0.0:28450", server, serverTLS())
+	go ListenAndServe(rootCtx, "127.0.0.1:28450", server, serverTLS())
 	time.Sleep(10 * time.Millisecond)
 
 	// test http1 client
-	client := NewH1Client(urlParse("https://localhost:28450"))
+	client := NewH1Client(urlParse("https://127.0.0.1:28450"))
 	client.SetClientTLSConfig(clientTLS())
 
 	reqmsg := jsonz.NewRequestMessage(
@@ -315,7 +315,7 @@ func TestSmartHandler(t *testing.T) {
 	assert.Equal(json.Number("1991"), resmsg.MustResult())
 
 	// test websocket
-	client1 := NewWSClient(urlParse("wss://localhost:28450"))
+	client1 := NewWSClient(urlParse("wss://127.0.0.1:28450"))
 	client1.SetClientTLSConfig(clientTLS())
 
 	reqmsg1 := jsonz.NewRequestMessage(
@@ -325,7 +325,7 @@ func TestSmartHandler(t *testing.T) {
 	assert.Equal(json.Number("8888"), resmsg1.MustResult())
 
 	// test http2
-	client2 := NewGRPCClient(urlParse("h2://localhost:28450"))
+	client2 := NewH2Client(urlParse("h2://127.0.0.1:28450"))
 	client2.SetClientTLSConfig(clientTLS())
 
 	reqmsg2 := jsonz.NewRequestMessage(
@@ -334,5 +334,4 @@ func TestSmartHandler(t *testing.T) {
 	fmt.Printf("resmsg2 %+v err %s\n", resmsg2, err)
 	assert.Nil(err2)
 	assert.Equal(json.Number("8886"), resmsg2.MustResult())
-
 }

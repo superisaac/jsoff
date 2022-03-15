@@ -8,6 +8,7 @@ import (
 	"github.com/superisaac/jsonz"
 	"io"
 	"net/http"
+	"sync"
 )
 
 type H2Handler struct {
@@ -15,6 +16,9 @@ type H2Handler struct {
 	serverCtx context.Context
 	// options
 	SpawnGoroutine bool
+
+	fallbackHandler *H1Handler
+	fallbackOnce    sync.Once
 }
 
 type H2Session struct {
@@ -39,11 +43,19 @@ func NewH2Handler(serverCtx context.Context, actor *Actor) *H2Handler {
 	}
 }
 
+func (self *H2Handler) FallbackHandler() *H1Handler {
+	self.fallbackOnce.Do(func() {
+		self.fallbackHandler = NewH1Handler(self.Actor)
+	})
+	return self.fallbackHandler
+}
+
 func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !r.ProtoAtLeast(2, 0) {
 		//return fmt.Errorf("HTTP2 not supported")
-		w.WriteHeader(400)
-		w.Write([]byte("http2 not supported"))
+		//w.WriteHeader(400)
+		//w.Write([]byte("http2 not supported"))
+		self.FallbackHandler().ServeHTTP(w, r)
 		return
 	}
 

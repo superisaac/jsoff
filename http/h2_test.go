@@ -3,7 +3,7 @@ package jsonzhttp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	//"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
 	"strings"
@@ -27,28 +27,19 @@ func TestH2HandlerClient(t *testing.T) {
 	})
 
 	server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
-		fmt.Printf("missing %s\n", req.Msg())
 		return nil, nil
 	})
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28400", server, serverTLS())
+	go ListenAndServe(rootCtx, "127.0.0.1:28700", server, serverTLS())
 	time.Sleep(10 * time.Millisecond)
 
-	fmt.Printf("sssddd\n")
-
-	client := NewH2Client(urlParse("https://127.0.0.1:28400"))
+	client := NewH2Client(urlParse("h2://127.0.0.1:28700"))
 	client.SetClientTLSConfig(clientTLS())
-	client.OnMessage(func(msg jsonz.Message) {
-		fmt.Printf("client -> on message %+v\n", msg)
-	})
-
-	fmt.Printf("sssddd eee\n")
 	// right request
 	params := [](interface{}){"hello999"}
 	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
-	fmt.Printf("err %s\n", err)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
@@ -72,10 +63,10 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28401", server, serverTLS())
+	go ListenAndServe(rootCtx, "127.0.0.1:28701", server, serverTLS())
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH2Client(urlParse("https://127.0.0.1:28401"))
+	client := NewH2Client(urlParse("h2://127.0.0.1:28701"))
 	client.SetClientTLSConfig(clientTLS())
 
 	// right request
@@ -147,11 +138,11 @@ func TestH2Close(t *testing.T) {
 		}
 	})
 
-	go ListenAndServe(serverCtx, "127.0.0.1:28423", server, serverTLS())
+	go ListenAndServe(serverCtx, "127.0.0.1:28723", server, serverTLS())
 	time.Sleep(100 * time.Millisecond)
 
 	closeCalled := make(map[int]bool)
-	client := NewH2Client(urlParse("https://127.0.0.1:28423"))
+	client := NewH2Client(urlParse("h2://127.0.0.1:28723"))
 	client.SetClientTLSConfig(clientTLS())
 	client.OnClose(func() {
 		closeCalled[0] = true
