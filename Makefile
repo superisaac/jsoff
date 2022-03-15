@@ -25,10 +25,5 @@ jsonrpc-watch: ${gofiles}
 clean:
 	rm -rf jsonrpc-cli build dist
 
-compile-grpc: grpc/%.go
-
-grpc/%.go: grpc/jsonz.proto
-	protoc -I grpc/ --go_out=grpc --go-grpc_out=grpc $<
-
-.PHONY: test gofmt build-cli compile-grpc clean
+.PHONY: test gofmt build-cli clean
 .SECONDARY: $(buildarchdirs)

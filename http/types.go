@@ -1,5 +1,5 @@
 // interacting jsonrpc in http family specs, currently jsonzhttp
-// provides 3 mechanisms: the classical http/1.1, websocket and a gRPC
+// provides 3 mechanisms: the classical http/1.1, websocket and http/2
 // wire protocol.
 package jsonzhttp
 

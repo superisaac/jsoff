@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// shared handler serve http/websocket/grpc server over the same port
+// shared handler serve http1/http2/websocket server over the same port
 // using http protocol detection.
 //
 // NOTE: smart handler must work over TLS to serve h2
@@ -30,7 +30,7 @@ func NewSmartHandler(serverCtx context.Context, actor *Actor) *SmartHandler {
 
 func (self *SmartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.ProtoAtLeast(2, 0) {
-		// http2 and content type is grpc
+		// http2 check by proto
 		self.h2Handler.ServeHTTP(w, r)
 	} else if r.Header.Get("Sec-Websocket-Key") != "" {
 		// maybe websocket handler
