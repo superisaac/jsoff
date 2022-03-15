@@ -8,9 +8,8 @@ import (
 // NewClient returns an JSONRPC client whose type depends on the
 // server url it wants to connect to. Currently there are 3 types of
 // supported url schemes: the HTTP/1.1 client, the websocket based
-// client and the self defined gRPC protocol base client, the latter
-// two types are streaming clients which can accept server push
-// messages.
+// client and HTTP2 base client, the latter two types are streaming
+// clients which can accept server push messages.
 func NewClient(serverUrl string) (Client, error) {
 	u, err := url.Parse(serverUrl)
 	if err != nil {
@@ -24,8 +23,8 @@ func NewClient(serverUrl string) (Client, error) {
 		// Websocket client
 		return NewWSClient(u), nil
 	case "h2", "h2c":
-		// gRPC client
-		return NewGRPCClient(u), nil
+		// HTTP2 client
+		return NewH2Client(u), nil
 	default:
 		return nil, errors.New("url scheme not supported")
 	}
