@@ -1,8 +1,8 @@
 package jsonzhttp
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"reflect"
 	"sync"
-	//"time"
 )
 
 type H2Client struct {
@@ -25,7 +24,7 @@ type H2Client struct {
 type h2Transport struct {
 	client  *H2Client
 	resp    *http.Response
-	scanner *bufio.Scanner
+	decoder *json.Decoder
 	writer  io.Writer
 	flusher http.Flusher
 }
@@ -73,7 +72,7 @@ func (self *h2Transport) Close() {
 		self.resp = nil
 		self.writer = nil
 		self.flusher = nil
-		self.scanner = nil
+		self.decoder = nil
 	}
 }
 
@@ -97,8 +96,7 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 	}
 	self.writer = pipeWriter
 	self.resp = resp
-	self.scanner = bufio.NewScanner(resp.Body)
-	self.scanner.Split(bufio.ScanLines)
+	self.decoder = json.NewDecoder(resp.Body)
 	return nil
 }
 
@@ -127,14 +125,12 @@ func (self *h2Transport) WriteMessage(msg jsonz.Message) error {
 }
 
 func (self *h2Transport) ReadMessage() (jsonz.Message, bool, error) {
-	hasmore := self.scanner.Scan()
-	if !hasmore {
-		return nil, false, TransportClosed
-	}
-	msgBytes := self.scanner.Bytes()
-	msg, err := jsonz.ParseBytes(msgBytes)
+	msg, err := jsonz.DecodeMessage(self.decoder)
 	if err != nil {
-		self.client.Log().Warnf("bad jsonrpc message %s", msgBytes)
+		if errors.Is(err, io.EOF) {
+			return nil, false, TransportClosed
+		}
+		self.client.Log().Warnf("bad jsonrpc message at pos %d", self.decoder.InputOffset())
 		return nil, false, err
 	}
 	return msg, true, nil

@@ -1,5 +1,7 @@
 package jsonz
 
+import ()
+
 // error defination https://www.jsonrpc.org/specification#error_object
 var (
 	ErrServerError = &RPCError{100, "server error", nil}

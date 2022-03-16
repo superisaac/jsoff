@@ -1,8 +1,8 @@
 package jsonzhttp
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
@@ -23,7 +23,7 @@ type H2Handler struct {
 
 type H2Session struct {
 	server      *H2Handler
-	scanner     *bufio.Scanner
+	decoder     *json.Decoder
 	writer      io.Writer
 	flusher     http.Flusher
 	httpRequest *http.Request
@@ -70,8 +70,7 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"method\":\"hello\",\"params\":[]}\n"))
 	flusher.Flush()
 
-	scanner := bufio.NewScanner(r.Body)
-	scanner.Split(bufio.ScanLines)
+	decoder := json.NewDecoder(r.Body)
 	defer func() {
 		r.Body.Close()
 		self.Actor.HandleClose(r)
@@ -82,7 +81,7 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httpRequest: r,
 		writer:      w,
 		flusher:     flusher,
-		scanner:     scanner,
+		decoder:     decoder,
 		done:        make(chan error, 10),
 		sendChannel: make(chan jsonz.Message, 100),
 		streamId:    jsonz.NewUuid(),
@@ -117,12 +116,20 @@ func (self *H2Session) wait() {
 }
 
 func (self *H2Session) recvLoop() {
-	for self.scanner.Scan() {
-		data := self.scanner.Bytes()
+	for {
+		msg, err := jsonz.DecodeMessage(self.decoder)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			} else {
+				self.done <- err
+				return
+			}
+		}
 		if self.server.SpawnGoroutine {
-			go self.msgBytesReceived(data)
+			go self.msgReceived(msg)
 		} else {
-			self.msgBytesReceived(data)
+			self.msgReceived(msg)
 		}
 	}
 	// end of scanning
@@ -130,14 +137,7 @@ func (self *H2Session) recvLoop() {
 	return
 }
 
-func (self *H2Session) msgBytesReceived(msgBytes []byte) {
-	msg, err := jsonz.ParseBytes(msgBytes)
-	if err != nil {
-		log.Warnf("bad jsonrpc message %s", msgBytes)
-		self.done <- errors.New("bad jsonrpc message")
-		return
-	}
-
+func (self *H2Session) msgReceived(msg jsonz.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
@@ -176,7 +176,7 @@ func (self *H2Session) sendLoop() {
 			if !ok {
 				return
 			}
-			if self.scanner == nil {
+			if self.decoder == nil {
 				return
 			}
 			marshaled, err := jsonz.MessageBytes(msg)

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -331,7 +330,6 @@ func TestSmartHandler(t *testing.T) {
 	reqmsg2 := jsonz.NewRequestMessage(
 		2002, "echoAny", []interface{}{8886})
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
-	fmt.Printf("resmsg2 %+v err %s\n", resmsg2, err)
 	assert.Nil(err2)
 	assert.Equal(json.Number("8886"), resmsg2.MustResult())
 }

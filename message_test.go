@@ -1,14 +1,16 @@
 package jsonz
 
 import (
-	//"fmt"
 	json "encoding/json"
 	"github.com/bitly/go-simplejson"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -146,4 +148,76 @@ func TestGuessJson(t *testing.T) {
 	assert.Equal(3, len(v4))
 	assert.Equal(int64(5), v4[0])
 	assert.Equal("hahah", v4[1])
+}
+
+func TestDecodeMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	input := `
+{"id": 1, "method": "is_request", "params": ["hello", 2]}
+
+{"method": "is_notify",
+"params": {"name": "ok"}}
+
+{"error": {"code": -300, "message": "error message", "data": "bad message"}, "id": 3}
+
+{"result": 66.89, "id": 999}
+{"result": "result without id"}
+
+`
+	dec := json.NewDecoder(strings.NewReader(input))
+	dec.UseNumber()
+
+	msg1, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg1.IsRequest())
+	assert.Equal("is_request", msg1.MustMethod())
+	assert.Equal("hello", msg1.MustParams()[0])
+	assert.Equal(json.Number("2"), msg1.MustParams()[1])
+
+	msg2, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg2.IsNotify())
+	assert.Equal("is_notify", msg2.MustMethod())
+	assert.Equal(map[string](interface{}){"name": "ok"}, msg2.MustParams()[0])
+
+	msg3, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg3.IsError())
+	assert.Equal(-300, msg3.MustError().Code)
+	assert.Equal("error message", msg3.MustError().Message)
+	assert.Equal("bad message", msg3.MustError().Data)
+
+	msg4, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg4.IsResult())
+	assert.Equal(json.Number("66.89"), msg4.MustResult())
+
+	msg5, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg5.IsResult())
+	assert.Nil(msg5.MustId())
+
+	// EOF expected
+	_, err = DecodeMessage(dec)
+	assert.Equal(io.EOF, err)
+}
+
+func TestDecodePipeBytes(t *testing.T) {
+	assert := assert.New(t)
+
+	r, w := io.Pipe()
+	dec := json.NewDecoder(r)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		w.Write([]byte(`{"method": "hello",`))
+		time.Sleep(100 * time.Millisecond)
+		w.Write([]byte(`"params": [3.09]}`))
+	}()
+
+	msg, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg.IsNotify())
+	assert.Equal(json.Number("3.09"), msg.MustParams()[0])
 }
