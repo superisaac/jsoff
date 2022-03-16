@@ -11,19 +11,26 @@ govet:
 gofmt:
 	go fmt ./...
 
-build-cli: jsonrpc-call jsonrpc-notify jsonrpc-watch
+build: build-cli build-examples
 
-jsonrpc-call: ${gofiles}
+build-cli: bin/jsonrpc-call bin/jsonrpc-notify bin/jsonrpc-watch
+
+bin/jsonrpc-call: ${gofiles}
 	go build $(goflag) -o $@ cli/call/jsonrpc_call.go
 
-jsonrpc-notify: ${gofiles}
+bin/jsonrpc-notify: ${gofiles}
 	go build $(goflag) -o $@ cli/notify/jsonrpc_notify.go
 
-jsonrpc-watch: ${gofiles}
+bin/jsonrpc-watch: ${gofiles}
 	go build $(goflag) -o $@ cli/watch/jsonrpc_watch.go
 
 clean:
-	rm -rf jsonrpc-cli build dist
+	rm -rf build dist bin/*
+
+build-examples: bin/jsonz-example-fifo
+
+bin/jsonz-example-fifo: ${gofiles}
+	go build $(goflag) -o $@ examples/fifo/main.go
 
 .PHONY: test gofmt build-cli clean
 .SECONDARY: $(buildarchdirs)

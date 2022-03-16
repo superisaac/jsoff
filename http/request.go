@@ -15,6 +15,11 @@ const (
 	TransportHTTP2     = "http2"
 )
 
+type RPCSession interface {
+	Send(msg jsonz.Message)
+	SessionID() string
+}
+
 // http rpc quest structure
 type RPCRequest struct {
 	context       context.Context
@@ -22,7 +27,7 @@ type RPCRequest struct {
 	transportType string
 	r             *http.Request
 	data          interface{} // arbitrary data
-	streamId      string
+	session       RPCSession
 }
 
 func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string, r *http.Request, data interface{}) *RPCRequest {
@@ -39,12 +44,12 @@ func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) StreamId() string {
-	return self.streamId
-}
-
 func (self RPCRequest) Msg() jsonz.Message {
 	return self.msg
+}
+
+func (self RPCRequest) Session() RPCSession {
+	return self.session
 }
 
 func (self RPCRequest) HttpRequest() *http.Request {
@@ -72,7 +77,7 @@ func (self RPCRequest) Log() *log.Entry {
 // handler func
 type HandlerCallback func(req *RPCRequest, params []interface{}) (interface{}, error)
 type MissingCallback func(req *RPCRequest) (interface{}, error)
-type CloseCallback func(r *http.Request)
+type CloseCallback func(r *http.Request, session RPCSession)
 
 // With method handler
 type MethodHandler struct {
@@ -170,9 +175,9 @@ func (self *Actor) OnClose(handler CloseCallback) error {
 }
 
 // call the close handler if possible
-func (self *Actor) HandleClose(r *http.Request) {
+func (self *Actor) HandleClose(r *http.Request, session RPCSession) {
 	if self.closeHandler != nil {
-		self.closeHandler(r)
+		self.closeHandler(r, session)
 	}
 }
 

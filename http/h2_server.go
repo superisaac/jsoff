@@ -30,7 +30,7 @@ type H2Session struct {
 	rootCtx     context.Context
 	done        chan error
 	sendChannel chan jsonz.Message
-	streamId    string
+	sessionId   string
 }
 
 func NewH2Handler(serverCtx context.Context, actor *Actor) *H2Handler {
@@ -71,10 +71,6 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	decoder := json.NewDecoder(r.Body)
-	defer func() {
-		r.Body.Close()
-		self.Actor.HandleClose(r)
-	}()
 	session := &H2Session{
 		server:      self,
 		rootCtx:     r.Context(),
@@ -84,8 +80,12 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		decoder:     decoder,
 		done:        make(chan error, 10),
 		sendChannel: make(chan jsonz.Message, 100),
-		streamId:    jsonz.NewUuid(),
+		sessionId:   jsonz.NewUuid(),
 	}
+	defer func() {
+		r.Body.Close()
+		self.Actor.HandleClose(r, session)
+	}()
 	session.wait()
 }
 
@@ -143,8 +143,8 @@ func (self *H2Session) msgReceived(msg jsonz.Message) {
 		msg,
 		TransportHTTP2,
 		self.httpRequest,
-		self)
-	req.streamId = self.streamId
+		nil)
+	req.session = self
 
 	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {
@@ -162,6 +162,10 @@ func (self *H2Session) msgReceived(msg jsonz.Message) {
 
 func (self *H2Session) Send(msg jsonz.Message) {
 	self.sendChannel <- msg
+}
+
+func (self H2Session) SessionID() string {
+	return self.sessionId
 }
 
 func (self *H2Session) sendLoop() {
