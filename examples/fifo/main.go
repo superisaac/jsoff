@@ -18,7 +18,7 @@ func main() {
 
 	rootCtx := context.Background()
 
-	handler := jsonzhttp.NewSmartHandler(rootCtx, nil, true)
+	handler := jsonzhttp.NewGatewayHandler(rootCtx, nil, true)
 
 	fifo := make([]interface{}, 0)
 	subs := map[string]jsonzhttp.RPCSession{}

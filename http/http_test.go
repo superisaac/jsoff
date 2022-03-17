@@ -286,13 +286,13 @@ func TestPassingHeader(t *testing.T) {
 
 }
 
-func TestSmartHandler(t *testing.T) {
+func TestGatewayHandler(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewSmartHandler(rootCtx, nil, false)
+	server := NewGatewayHandler(rootCtx, nil, false)
 	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -335,13 +335,13 @@ func TestSmartHandler(t *testing.T) {
 
 }
 
-func TestInsecureSmartHandler(t *testing.T) {
+func TestInsecureGatewayHandler(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewSmartHandler(rootCtx, nil, true) // Insecure http
+	server := NewGatewayHandler(rootCtx, nil, true) // Insecure way
 	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil

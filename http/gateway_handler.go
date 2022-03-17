@@ -8,20 +8,20 @@ import (
 // shared handler serve http1/http2/websocket server over the same port
 // using http protocol detection.
 //
-// NOTE: smart handler must work over TLS to serve h2
-type SmartHandler struct {
+// NOTE: gateway handler must work over TLS to serve h2
+type GatewayHandler struct {
 	h1Handler http.Handler
 	wsHandler http.Handler
 	h2Handler http.Handler
 	Actor     *Actor
 }
 
-func NewSmartHandler(serverCtx context.Context, actor *Actor, Insecure bool) *SmartHandler {
+func NewGatewayHandler(serverCtx context.Context, actor *Actor, Insecure bool) *GatewayHandler {
 	if actor == nil {
 		actor = NewActor()
 	}
 
-	sh := &SmartHandler{
+	sh := &GatewayHandler{
 		Actor:     actor,
 		h1Handler: NewH1Handler(actor),
 		wsHandler: NewWSHandler(serverCtx, actor),
@@ -35,7 +35,7 @@ func NewSmartHandler(serverCtx context.Context, actor *Actor, Insecure bool) *Sm
 	return sh
 }
 
-func (self *SmartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (self *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.ProtoAtLeast(2, 0) {
 		// http2 check by proto
 		self.h2Handler.ServeHTTP(w, r)
