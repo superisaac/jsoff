@@ -42,7 +42,7 @@ func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := NewRPCRequest(r.Context(), msg, TransportHTTP, r, nil)
+	req := NewRPCRequest(r.Context(), msg, TransportHTTP, r)
 	resmsg, err := self.Actor.Feed(req)
 	if err != nil {
 		var simpleResp *SimpleResponse

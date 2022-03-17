@@ -8,13 +8,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsonz"
 	"github.com/superisaac/jsonz/http"
+	"io"
 	"os"
+	"reflect"
 	"time"
 )
 
 func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-watch", flag.ExitOnError)
-	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, wss? prefixed, can be in env JSONRPC_CONNECT, default is ws://127.0.0.1:9990")
+	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, wss?, h2c? prefixed, can be in env JSONRPC_CONNECT, default is ws://127.0.0.1:9990")
 	pRetry := cliFlags.Int("retry", 1, "retry times")
 	var headerFlags jsonzhttp.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
@@ -62,9 +64,11 @@ func main() {
 		os.Exit(1)
 	}
 	c.SetExtraHeader(header)
-	sc, ok := c.(*jsonzhttp.WSClient)
+
+	sc, ok := c.(jsonzhttp.Streamable)
+	//if !c.IsStreaming() {
 	if !ok {
-		log.Panicf("websocket client required, but found %s", c)
+		log.Panicf("streaming client required, but found %s", reflect.TypeOf(c))
 		os.Exit(1)
 	}
 
@@ -81,7 +85,10 @@ func main() {
 
 	for {
 		if err := connect(sc, method, params); err != nil {
-			if errors.Is(err, jsonzhttp.TransportConnectFailed) || errors.Is(err, jsonzhttp.TransportClosed) {
+			if errors.Is(err, jsonzhttp.TransportConnectFailed) ||
+				errors.Is(err, jsonzhttp.TransportClosed) ||
+				errors.Is(err, io.EOF) {
+
 				retrytimes++
 				log.Infof("connect refused %d times", retrytimes)
 				if retrytimes >= *pRetry {
@@ -91,7 +98,7 @@ func main() {
 					continue
 				}
 			} else {
-				log.Errorf("watch error %s", err)
+				log.Errorf("watch error %s, %s", reflect.TypeOf(err), err)
 				break
 				//panic(err)
 			}
@@ -102,7 +109,7 @@ func main() {
 	}
 }
 
-func connect(sc *jsonzhttp.WSClient, method string, params []interface{}) error {
+func connect(sc jsonzhttp.Streamable, method string, params []interface{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -115,12 +122,12 @@ func connect(sc *jsonzhttp.WSClient, method string, params []interface{}) error 
 		reqmsg := jsonz.NewRequestMessage(reqId, method, params)
 		resmsg, err := sc.Call(ctx, reqmsg)
 		if err != nil {
-			sc.Log().Panicf("rpc error: %s", err)
+			log.Panicf("rpc error: %s", err)
 			os.Exit(1)
 		}
 		repr, err := jsonz.EncodePretty(resmsg)
 		if err != nil {
-			sc.Log().Panicf("encode pretty error %s", err)
+			log.Panicf("encode pretty error %s", err)
 		}
 		fmt.Println(repr)
 	}

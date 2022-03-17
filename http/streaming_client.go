@@ -18,9 +18,6 @@ type pendingRequest struct {
 	expire        time.Time
 }
 
-type MessageHandler func(msg jsonz.Message)
-type CloseHandler func()
-
 // errors
 var TransportConnectFailed = errors.New("connect refused")
 var TransportClosed = errors.New("streaming closed")
@@ -74,6 +71,10 @@ type StreamingClient struct {
 
 func (self *StreamingClient) SetExtraHeader(h http.Header) {
 	self.extraHeader = h
+}
+
+func (self *StreamingClient) IsStreaming() bool {
+	return true
 }
 
 func (self *StreamingClient) SetClientTLSConfig(cfg *tls.Config) {

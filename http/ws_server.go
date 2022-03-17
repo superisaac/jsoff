@@ -126,8 +126,7 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 		self.rootCtx,
 		msg,
 		TransportWebsocket,
-		self.httpRequest,
-		nil)
+		self.httpRequest)
 	req.session = self
 
 	resmsg, err := self.server.Actor.Feed(req)

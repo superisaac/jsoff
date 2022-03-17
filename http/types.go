@@ -54,4 +54,19 @@ type Client interface {
 
 	// Set http header
 	SetExtraHeader(h http.Header)
+
+	// Is streaming
+	IsStreaming() bool
+}
+
+type MessageHandler func(msg jsonz.Message)
+type CloseHandler func()
+
+type Streamable interface {
+	Client
+
+	Connect(ctx context.Context) error
+	OnMessage(handler MessageHandler) error
+	OnClose(handler CloseHandler) error
+	Wait() error
 }

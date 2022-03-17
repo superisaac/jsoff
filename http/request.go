@@ -30,13 +30,12 @@ type RPCRequest struct {
 	session       RPCSession
 }
 
-func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string, r *http.Request, data interface{}) *RPCRequest {
+func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string, r *http.Request) *RPCRequest {
 	return &RPCRequest{
 		context:       ctx,
 		msg:           msg,
 		transportType: transportType,
 		r:             r,
-		data:          data,
 	}
 }
 

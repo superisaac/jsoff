@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/superisaac/jsonz"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"io"
 	"net/http"
 	"sync"
@@ -16,6 +19,7 @@ type H2Handler struct {
 	serverCtx context.Context
 	// options
 	SpawnGoroutine bool
+	UseH2C         bool
 
 	fallbackHandler *H1Handler
 	fallbackOnce    sync.Once
@@ -43,6 +47,12 @@ func NewH2Handler(serverCtx context.Context, actor *Actor) *H2Handler {
 	}
 }
 
+func (self *H2Handler) H2CHandler() http.Handler {
+	self.UseH2C = true
+	h2server := &http2.Server{}
+	return h2c.NewHandler(self, h2server)
+}
+
 func (self *H2Handler) FallbackHandler() *H1Handler {
 	self.fallbackOnce.Do(func() {
 		self.fallbackHandler = NewH1Handler(self.Actor)
@@ -51,7 +61,7 @@ func (self *H2Handler) FallbackHandler() *H1Handler {
 }
 
 func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !r.ProtoAtLeast(2, 0) {
+	if !self.UseH2C && !r.ProtoAtLeast(2, 0) {
 		//return fmt.Errorf("HTTP2 not supported")
 		//w.WriteHeader(400)
 		//w.Write([]byte("http2 not supported"))
@@ -142,8 +152,7 @@ func (self *H2Session) msgReceived(msg jsonz.Message) {
 		self.rootCtx,
 		msg,
 		TransportHTTP2,
-		self.httpRequest,
-		nil)
+		self.httpRequest)
 	req.session = self
 
 	resmsg, err := self.server.Actor.Feed(req)

@@ -2,6 +2,7 @@ package jsonzhttp
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -9,6 +10,7 @@ import (
 	"github.com/superisaac/jsonz"
 	"golang.org/x/net/http2"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -17,8 +19,12 @@ import (
 
 type H2Client struct {
 	StreamingClient
+
 	httpClient *http.Client
 	clientOnce sync.Once
+
+	// use h2c
+	UseH2C bool
 }
 
 type h2Transport struct {
@@ -31,6 +37,7 @@ type h2Transport struct {
 
 func NewH2Client(serverUrl *url.URL) *H2Client {
 	newUrl, err := url.Parse(serverUrl.String())
+	useh2c := false
 	if err != nil {
 		log.Panicf("copy url error %s", err)
 	}
@@ -38,11 +45,12 @@ func NewH2Client(serverUrl *url.URL) *H2Client {
 		newUrl.Scheme = "https"
 	} else if newUrl.Scheme == "h2c" {
 		newUrl.Scheme = "http"
+		useh2c = true
 	}
 	if newUrl.Scheme != "https" && newUrl.Scheme != "http" {
 		log.Panicf("server url %s is not http2", serverUrl)
 	}
-	c := &H2Client{}
+	c := &H2Client{UseH2C: useh2c}
 	transport := &h2Transport{client: c}
 	c.InitStreaming(newUrl, transport)
 	return c
@@ -50,12 +58,29 @@ func NewH2Client(serverUrl *url.URL) *H2Client {
 
 func (self *H2Client) HTTPClient() *http.Client {
 	self.clientOnce.Do(func() {
-		self.httpClient = &http.Client{
-			Transport: &http2.Transport{
+		if self.UseH2C {
+			// refer to https://www.mailgun.com/blog/http-2-cleartext-h2c-client-example-go/
+			trans := &http2.Transport{
+				AllowHTTP: true,
+				// Pretend we are dialing a TLS endpoint.
+				// Note, we ignore the passed tls.Config
+				DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+					return net.Dial(network, addr)
+				},
+			}
+			self.httpClient = &http.Client{
+				Transport: trans,
+			}
+		} else {
+			trans := &http2.Transport{
 				AllowHTTP: true,
 				//WriteByteTimeout: time.Second * 15,
 				TLSClientConfig: self.ClientTLSConfig(),
-			},
+			}
+
+			self.httpClient = &http.Client{
+				Transport: trans,
+			}
 		}
 	})
 	return self.httpClient

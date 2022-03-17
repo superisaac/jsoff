@@ -292,7 +292,7 @@ func TestSmartHandler(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewSmartHandler(rootCtx, nil)
+	server := NewSmartHandler(rootCtx, nil, false)
 	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -326,6 +326,52 @@ func TestSmartHandler(t *testing.T) {
 	// test http2
 	client2 := NewH2Client(urlParse("h2://127.0.0.1:28450"))
 	client2.SetClientTLSConfig(clientTLS())
+
+	reqmsg2 := jsonz.NewRequestMessage(
+		2002, "echoAny", []interface{}{8886})
+	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
+	assert.Nil(err2)
+	assert.Equal(json.Number("8886"), resmsg2.MustResult())
+
+}
+
+func TestInsecureSmartHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := NewSmartHandler(rootCtx, nil, true) // Insecure http
+	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return "ok", nil
+		}
+	})
+	go ListenAndServe(rootCtx, "127.0.0.1:28453", server)
+	time.Sleep(10 * time.Millisecond)
+
+	// test http1 client
+	client := NewH1Client(urlParse("http://127.0.0.1:28453"))
+
+	reqmsg := jsonz.NewRequestMessage(
+		1, "echoAny", []interface{}{1991, 1992})
+	resmsg, err := client.Call(rootCtx, reqmsg)
+	assert.Nil(err)
+	assert.Equal(json.Number("1991"), resmsg.MustResult())
+
+	// test websocket
+	client1 := NewWSClient(urlParse("ws://127.0.0.1:28453"))
+
+	reqmsg1 := jsonz.NewRequestMessage(
+		1001, "echoAny", []interface{}{8888})
+	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
+	assert.Nil(err1)
+	assert.Equal(json.Number("8888"), resmsg1.MustResult())
+
+	// test http2
+	client2 := NewH2Client(urlParse("h2c://127.0.0.1:28453"))
 
 	reqmsg2 := jsonz.NewRequestMessage(
 		2002, "echoAny", []interface{}{8886})

@@ -180,3 +180,7 @@ func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message) error {
 	}
 	return nil
 }
+
+func (self *H1Client) IsStreaming() bool {
+	return false
+}

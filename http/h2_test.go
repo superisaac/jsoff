@@ -46,6 +46,42 @@ func TestH2HandlerClient(t *testing.T) {
 	assert.Equal("hello999", res)
 }
 
+func TestH2CServerClient(t *testing.T) {
+	assert := assert.New(t)
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := NewH2Handler(rootCtx, nil)
+
+	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return nil, jsonz.ParamsError("no argument given")
+		}
+	})
+
+	server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
+		return nil, nil
+	})
+
+	go ListenAndServe(rootCtx, "127.0.0.1:28800", server.H2CHandler(), nil)
+	time.Sleep(10 * time.Millisecond)
+
+	client := NewH2Client(urlParse("h2c://127.0.0.1:28800"))
+	assert.True(client.UseH2C)
+	//client.SetClientTLSConfig(clientTLS())
+	// right request
+	params := [](interface{}){"hello1000"}
+	reqmsg := jsonz.NewRequestMessage(2, "echo", params)
+
+	resmsg, err := client.Call(rootCtx, reqmsg)
+	assert.Nil(err)
+	assert.True(resmsg.IsResult())
+	res := resmsg.MustResult()
+	assert.Equal("hello1000", res)
+}
+
 func TestTypedH2HandlerClient(t *testing.T) {
 	assert := assert.New(t)
 
