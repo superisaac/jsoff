@@ -74,7 +74,7 @@ func (self BaseMessage) IsResultOrError() bool {
 // Message methods
 func EncodePretty(msg Message) (string, error) {
 	v := msg.Interface()
-	bytes, err := json.MarshalIndent(v, ", ", "  ")
+	bytes, err := json.MarshalIndent(v, "", "  ")
 	//bytes, err := MessageJson(msg).EncodePretty()
 	if err != nil {
 		return "", errors.Wrap(err, "json.MarshalIndent")
