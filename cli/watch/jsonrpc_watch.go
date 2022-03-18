@@ -81,17 +81,35 @@ func main() {
 		fmt.Println(repr)
 	})
 
-	retrytimes := 0
+	watcher := &jsonrpcWatcher{
+		retrylimit: *pRetry,
+		sc:         sc,
+		method:     method,
+		params:     params,
+	}
 
+	watcher.run()
+
+}
+
+type jsonrpcWatcher struct {
+	sc           jsonzhttp.Streamable
+	method       string
+	params       []interface{}
+	retrylimit   int
+	connectretry int
+}
+
+func (self *jsonrpcWatcher) run() {
 	for {
-		if err := connect(sc, method, params); err != nil {
+		if err := self.connect(); err != nil {
 			if errors.Is(err, jsonzhttp.TransportConnectFailed) ||
 				errors.Is(err, jsonzhttp.TransportClosed) ||
 				errors.Is(err, io.EOF) {
 
-				retrytimes++
-				log.Infof("connect refused %d times", retrytimes)
-				if retrytimes >= *pRetry {
+				self.connectretry++
+				log.Infof("connect failed %d/%d times", self.connectretry, self.retrylimit)
+				if self.connectretry >= self.retrylimit {
 					break
 				} else {
 					time.Sleep(1 * time.Second)
@@ -100,27 +118,28 @@ func main() {
 			} else {
 				log.Errorf("watch error %s, %s", reflect.TypeOf(err), err)
 				break
-				//panic(err)
 			}
 		} else {
-			//retrytimes = 0
 			break
 		}
 	}
 }
 
-func connect(sc jsonzhttp.Streamable, method string, params []interface{}) error {
+func (self *jsonrpcWatcher) connect() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := sc.Connect(ctx); err != nil {
+	if err := self.sc.Connect(ctx); err != nil {
 		return err
 	}
 
-	if method != "" {
+	// reset connectretry after connected
+	self.connectretry = 0
+
+	if self.method != "" {
 		reqId := jsonz.NewUuid()
-		reqmsg := jsonz.NewRequestMessage(reqId, method, params)
-		resmsg, err := sc.Call(ctx, reqmsg)
+		reqmsg := jsonz.NewRequestMessage(reqId, self.method, self.params)
+		resmsg, err := self.sc.Call(ctx, reqmsg)
 		if err != nil {
 			log.Panicf("rpc error: %s", err)
 			os.Exit(1)
@@ -132,15 +151,5 @@ func connect(sc jsonzhttp.Streamable, method string, params []interface{}) error
 		fmt.Println(repr)
 	}
 	// wait loop
-	return sc.Wait()
-	// ch := sc.CloseChannel()
-	// for {
-	// 	select {
-	// 	case <- time.After(5 * time.Second):
-	// 		sc.Close()
-	// 	case err := <- ch:
-	// 		return err
-	// 	}
-	// }
-	// return nil
+	return self.sc.Wait()
 }

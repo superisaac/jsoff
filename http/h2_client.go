@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -117,7 +118,7 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 
 	resp, err := self.client.HTTPClient().Do(req)
 	if err != nil {
-		return err
+		return self.handleTransportError(err)
 	}
 	self.writer = pipeWriter
 	self.resp = resp
@@ -127,8 +128,12 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 
 func (self *h2Transport) handleTransportError(err error) error {
 	logger := self.client.Log()
+	var urlErr *url.Error
 	if errors.Is(err, io.EOF) {
-		logger.Infof("websocket conn failed")
+		logger.Debugf("h2 conn failed")
+		return TransportClosed
+	} else if errors.As(err, &urlErr) {
+		logger.Debugf("h2 conn url.Error")
 		return TransportClosed
 	} else {
 		logger.Warnf("transport error %s %s", reflect.TypeOf(err), err)
@@ -154,8 +159,12 @@ func (self *h2Transport) ReadMessage() (jsonz.Message, bool, error) {
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, false, TransportClosed
+		} else if strings.Contains(err.Error(), "read/write on closed pipe") {
+			return nil, false, TransportClosed
 		}
-		self.client.Log().Warnf("bad jsonrpc message at pos %d", self.decoder.InputOffset())
+		self.client.Log().Warnf(
+			"bad jsonrpc message %s %s, at pos %d",
+			reflect.TypeOf(err), err, self.decoder.InputOffset())
 		return nil, false, err
 	}
 	return msg, true, nil
