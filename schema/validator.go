@@ -1,8 +1,9 @@
 package jsonzschema
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	simplejson "github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsonz"
 	"strings"
@@ -37,12 +38,15 @@ func (self *SchemaValidator) NewErrorPos(hint string) *ErrorPos {
 	return &ErrorPos{paths: newPaths, hint: hint}
 }
 
-func (self *SchemaValidator) ValidateBytes(schema Schema, bytes []byte) *ErrorPos {
-	data, err := simplejson.NewJson(bytes)
+func (self *SchemaValidator) ValidateBytes(schema Schema, data []byte) *ErrorPos {
+	var v interface{}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	err := dec.Decode(&v)
 	if err != nil {
 		panic(err)
 	}
-	return self.Scan(schema, "", data.Interface())
+	return self.Scan(schema, "", v)
 }
 
 func (self *SchemaValidator) Validate(schema Schema, data interface{}) *ErrorPos {

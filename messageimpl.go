@@ -3,8 +3,8 @@ package jsonz
 // implementations of message kinds
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/bitly/go-simplejson"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,29 +32,11 @@ func (self RPCError) ToMessageFromId(reqId interface{}, traceId string) *ErrorMe
 	return RPCErrorMessageFromId(reqId, traceId, self.Code, self.Message, self.Data)
 }
 
-// Generate json represent of ErrorMessage.body
-// refer to https://www.jsonrpc.org/specification#error_object
-func (self RPCError) ToJson() *simplejson.Json {
-	json := simplejson.New()
-	json.Set("code", self.Code)
-	json.Set("message", self.Message)
-	if self.Data != nil {
-		json.Set("data", self.Data)
-	}
-	return json
-}
-
 // Create a new instance of ErrMessageType
 // additional is the information to help identify error details
 func NewErrMsgType(additional string) *RPCError {
 	r := fmt.Sprintf("wrong message type %s", additional)
 	return &RPCError{ErrMessageType.Code, r, false}
-}
-
-// Set raw Json object to skip generating the same raw
-// a little tip
-func (self *BaseMessage) SetRaw(raw *simplejson.Json) {
-	self.raw = raw
 }
 
 // IsRequest() returns if the message is a RequestMessage
@@ -91,24 +73,13 @@ func (self BaseMessage) IsResultOrError() bool {
 
 // Message methods
 func EncodePretty(msg Message) (string, error) {
-	bytes, err := MessageJson(msg).EncodePretty()
+	v := msg.Interface()
+	bytes, err := json.MarshalIndent(v, ", ", "  ")
+	//bytes, err := MessageJson(msg).EncodePretty()
 	if err != nil {
-		return "", errors.Wrap(err, "simplejson.Json.EncodePretty()")
+		return "", errors.Wrap(err, "json.MarshalIndent")
 	}
 	return string(bytes), nil
-}
-
-// A Message object to Json object for further trans
-func MessageJson(msg Message) *simplejson.Json {
-	jsonObj := msg.GetJson()
-	if traceId := msg.TraceId(); traceId != "" {
-		jsonObj.Set("traceid", traceId)
-	}
-	return jsonObj
-}
-
-func MessageInterface(msg Message) interface{} {
-	return MessageJson(msg).Interface()
 }
 
 func MessageString(msg Message) string {
@@ -120,7 +91,19 @@ func MessageString(msg Message) string {
 }
 
 func MessageBytes(msg Message) ([]byte, error) {
-	return MessageJson(msg).MarshalJSON()
+	v := msg.Interface()
+	return json.Marshal(v)
+}
+
+func MessageMap(msg Message) (map[string]interface{}, error) {
+	v := msg.Interface()
+	m := map[string]interface{}{}
+	err := DecodeInterface(v, &m)
+	if err != nil {
+		return nil, err
+	} else {
+		return m, nil
+	}
 }
 
 func (self *BaseMessage) SetTraceId(traceId string) {
@@ -256,54 +239,54 @@ func (self ErrorMessage) MustError() *RPCError {
 	return self.Error
 }
 
-// Get Json
-func (self *RequestMessage) GetJson() *simplejson.Json {
-	if self.raw == nil {
-		self.raw = simplejson.New()
-		self.raw.Set("jsonrpc", "2.0")
-		self.raw.Set("id", self.Id)
-		self.raw.Set("method", self.Method)
-		if self.paramsAreList || len(self.Params) == 0 {
-			self.raw.Set("params", self.Params)
-		} else {
-			self.raw.Set("params", self.Params[0])
-		}
+// Interface
+func (self *RequestMessage) Interface() interface{} {
+	tmp := &templateRequest{
+		Jsonrpc: "2.0",
+		TraceId: self.TraceId(),
+		Method:  self.Method,
+		Id:      self.Id,
 	}
-	return self.raw
+	if self.paramsAreList || len(self.Params) == 0 {
+		tmp.Params = self.Params
+	} else {
+		tmp.Params = self.Params[0]
+	}
+	return tmp
 }
 
-func (self *NotifyMessage) GetJson() *simplejson.Json {
-	if self.raw == nil {
-		self.raw = simplejson.New()
-		self.raw.Set("jsonrpc", "2.0")
-		self.raw.Set("method", self.Method)
-		if self.paramsAreList || len(self.Params) == 0 {
-			self.raw.Set("params", self.Params)
-		} else {
-			self.raw.Set("params", self.Params[0])
-		}
+func (self *NotifyMessage) Interface() interface{} {
+	tmp := &templateNotify{
+		Jsonrpc: "2.0",
+		TraceId: self.TraceId(),
+		Method:  self.Method,
 	}
-	return self.raw
+	if self.paramsAreList || len(self.Params) == 0 {
+		tmp.Params = self.Params
+	} else {
+		tmp.Params = self.Params[0]
+	}
+	return tmp
 }
 
-func (self *ResultMessage) GetJson() *simplejson.Json {
-	if self.raw == nil {
-		self.raw = simplejson.New()
-		self.raw.Set("jsonrpc", "2.0")
-		self.raw.Set("id", self.Id)
-		self.raw.Set("result", self.Result)
+func (self *ResultMessage) Interface() interface{} {
+	tmp := &templateResult{
+		Jsonrpc: "2.0",
+		TraceId: self.TraceId(),
+		Id:      self.Id,
+		Result:  self.Result,
 	}
-	return self.raw
+	return tmp
 }
 
-func (self *ErrorMessage) GetJson() *simplejson.Json {
-	if self.raw == nil {
-		self.raw = simplejson.New()
-		self.raw.Set("jsonrpc", "2.0")
-		self.raw.Set("id", self.Id)
-		self.raw.Set("error", self.Error.ToJson())
+func (self *ErrorMessage) Interface() interface{} {
+	tmp := &templateError{
+		Jsonrpc: "2.0",
+		TraceId: self.TraceId(),
+		Id:      self.Id,
+		Error:   self.Error,
 	}
-	return self.raw
+	return tmp
 }
 
 func NewRequestMessage(id interface{}, method string, params []interface{}) *RequestMessage {

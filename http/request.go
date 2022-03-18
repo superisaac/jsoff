@@ -214,9 +214,11 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 		if handler.schema != nil && self.ValidateSchema {
 			// validate the request
 			validator := jsonzschema.NewSchemaValidator()
-			errPos := validator.Validate(
-				handler.schema,
-				jsonz.MessageInterface(msg))
+			m, err := jsonz.MessageMap(msg)
+			if err != nil {
+				return nil, err
+			}
+			errPos := validator.Validate(handler.schema, m)
 			if errPos != nil {
 				if reqmsg, ok := msg.(*jsonz.RequestMessage); ok {
 					return errPos.ToMessage(reqmsg), nil

@@ -1,10 +1,9 @@
 package jsonzschema
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	//"reflect"
-	//"errors"
-	simplejson "github.com/bitly/go-simplejson"
 	yaml "gopkg.in/yaml.v2"
 	"strings"
 )
@@ -31,12 +30,16 @@ func NewSchemaBuilder() *SchemaBuilder {
 	return &SchemaBuilder{}
 }
 
-func (self *SchemaBuilder) BuildBytes(bytes []byte) (Schema, error) {
-	js, err := simplejson.NewJson(bytes)
+func (self *SchemaBuilder) BuildBytes(data []byte) (Schema, error) {
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var v interface{}
+	err := dec.Decode(&v)
 	if err != nil {
 		return nil, err
 	}
-	return self.Build(js.Interface())
+	return self.Build(v)
 }
 
 func (self *SchemaBuilder) Build(data interface{}) (Schema, error) {

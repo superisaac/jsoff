@@ -1,8 +1,7 @@
 package jsonz
 
 import (
-	json "encoding/json"
-	"github.com/bitly/go-simplejson"
+	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -35,8 +34,7 @@ func TestParseParams(t *testing.T) {
 "method": "abc::def",
 "params": {"what": "hello"}
 }`
-	js, _ := simplejson.NewJson([]byte(j1))
-	msg, err := Parse(js)
+	msg, err := ParseBytes([]byte(j1))
 	assert.Nil(err)
 
 	params := msg.MustParams()
@@ -51,10 +49,10 @@ func TestParseParams(t *testing.T) {
 "id": 99,
 "method": "abc::def"
 }`
-	js2, _ := simplejson.NewJson([]byte(j2))
-	_, err = Parse(js2)
+
+	_, err = ParseBytes([]byte(j2))
 	assert.NotNil(err)
-	assert.Equal("params is neither array nor map", err.Error())
+	assert.Equal("error decode: no params field", err.Error())
 }
 
 func TestRequestMsg(t *testing.T) {
@@ -66,12 +64,7 @@ func TestRequestMsg(t *testing.T) {
   "params": [3, 4, 5]
   }`
 
-	js, _ := simplejson.NewJson([]byte(j1))
-
-	assert.Equal(js.Get("id").MustInt(), 100)
-	assert.Equal(js.Get("id").MustString(), "")
-
-	msg, err := Parse(js)
+	msg, err := ParseBytes([]byte(j1))
 	assert.Nil(err)
 
 	assert.True(msg.IsRequest())
@@ -91,12 +84,7 @@ func TestNotifyMsg(t *testing.T) {
   "params": [13, 4, "hello"]
   }`
 
-	js, _ := simplejson.NewJson([]byte(j1))
-
-	assert.Equal(js.Get("id").MustInt(), 0)
-	assert.Equal(js.Get("id").MustString(), "")
-
-	msg, err := Parse(js)
+	msg, err := ParseBytes([]byte(j1))
 	assert.Nil(err)
 
 	assert.Equal("abc::add", msg.MustMethod())
@@ -148,6 +136,12 @@ func TestGuessJson(t *testing.T) {
 	assert.Equal(3, len(v4))
 	assert.Equal(int64(5), v4[0])
 	assert.Equal("hahah", v4[1])
+
+	v5, err := GuessJson(`["abc", 666.99, {"kic": 5}]`)
+	arr5 := v5.([]interface{})
+	assert.Equal(3, len(arr5))
+	assert.Equal("abc", arr5[0])
+	assert.Equal(json.Number("666.99"), arr5[1])
 }
 
 func TestDecodeMessage(t *testing.T) {

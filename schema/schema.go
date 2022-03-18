@@ -4,7 +4,6 @@ import (
 	"fmt"
 	//"reflect"
 	json "encoding/json"
-	simplejson "github.com/bitly/go-simplejson"
 )
 
 // SchemaMixin
@@ -461,11 +460,9 @@ func (self *ObjectSchema) Scan(validator *SchemaValidator, data interface{}) *Er
 
 func SchemaToString(schema Schema) string {
 	structData := schema.RebuildType()
-	schemaJson := simplejson.New()
-	schemaJson.SetPath(nil, structData)
-	schemaBytes, err := schemaJson.MarshalJSON()
+	data, err := json.Marshal(structData)
 	if err != nil {
 		panic(err)
 	}
-	return string(schemaBytes)
+	return string(data)
 }

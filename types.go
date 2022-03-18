@@ -2,7 +2,6 @@
 package jsonz
 
 import (
-	"github.com/bitly/go-simplejson"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,9 +17,9 @@ const (
 
 // RPC error object
 type RPCError struct {
-	Code    int
-	Message string
-	Data    interface{}
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 // The abstract interface of JSONRPC message. refer to
@@ -45,8 +44,9 @@ type Message interface {
 	SetTraceId(traceId string)
 	TraceId() string
 
-	//
-	GetJson() *simplejson.Json
+	// Returns template structures, this structure can be used to
+	// marshal and turn into map
+	Interface() interface{}
 
 	// MustXX are convenience methods to make code cleaner by
 	// avoiding frequent type casting, Note that there will be
@@ -84,7 +84,6 @@ type Message interface {
 // The base class of JSONRPC types
 type BaseMessage struct {
 	kind    int
-	raw     *simplejson.Json
 	traceId string
 }
 
@@ -119,4 +118,34 @@ type ErrorMessage struct {
 	BaseMessage
 	Id    interface{}
 	Error *RPCError
+}
+
+// marshaling templates
+type templateRequest struct {
+	Jsonrpc string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Id      interface{} `json:"id"`
+	Params  interface{} `json:"params"`
+	TraceId string      `json:"traceid,omitempty"`
+}
+
+type templateNotify struct {
+	Jsonrpc string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params"`
+	TraceId string      `json:"traceid,omitempty"`
+}
+
+type templateResult struct {
+	Jsonrpc string      `json:"jsonrpc"`
+	Id      interface{} `json:"id"`
+	Result  interface{} `json:"result"`
+	TraceId string      `json:"traceid,omitempty"`
+}
+
+type templateError struct {
+	Jsonrpc string      `json:"jsonrpc"`
+	Id      interface{} `json:"id"`
+	Error   *RPCError   `json:"error"`
+	TraceId string      `json:"traceid,omitempty"`
 }

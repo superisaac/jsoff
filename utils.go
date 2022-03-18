@@ -2,7 +2,6 @@ package jsonz
 
 import (
 	"encoding/json"
-	simplejson "github.com/bitly/go-simplejson"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -14,13 +13,11 @@ import (
 )
 
 func MarshalJson(data interface{}) (string, error) {
-	jsondata := simplejson.New()
-	jsondata.SetPath(nil, data)
-	bytes, err := jsondata.MarshalJSON()
+	marshaled, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}
-	return string(bytes), nil
+	return string(marshaled), nil
 }
 
 func GuessJson(input string) (interface{}, error) {
@@ -45,17 +42,23 @@ func GuessJson(input string) (interface{}, error) {
 
 	fc := input[0]
 	if fc == '[' {
-		parsed, err := simplejson.NewJson([]byte(input))
+		var arr []interface{}
+		dec := json.NewDecoder(strings.NewReader(input))
+		dec.UseNumber()
+		err := dec.Decode(&arr)
 		if err != nil {
 			return nil, err
 		}
-		return parsed.MustArray(), nil
+		return arr, nil
 	} else if fc == '{' {
-		parsed, err := simplejson.NewJson([]byte(input))
+		var m map[string]interface{}
+		dec := json.NewDecoder(strings.NewReader(input))
+		dec.UseNumber()
+		err := dec.Decode(&m)
 		if err != nil {
 			return nil, err
 		}
-		return parsed.MustMap(), nil
+		return m, nil
 	} else {
 		return input, nil
 	}
