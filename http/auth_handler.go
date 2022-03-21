@@ -17,19 +17,19 @@ type AuthInfo struct {
 }
 
 type BasicAuthConfig struct {
-	Username string
-	Password string
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
 }
 
 type BearerAuthConfig struct {
-	Token string
+	Token string `yaml:"token" json:"token"`
 
 	// username attached to request when token authorized
 	Username string `yaml:"username,omitempty" json:"username,omitempty"`
 }
 
 type JwtAuthConfig struct {
-	Secret string
+	Secret string `yaml:"secret" json:"secret"`
 }
 
 type AuthConfig struct {

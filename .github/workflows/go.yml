@@ -18,12 +18,9 @@ jobs:
       with:
         go-version: 1.17
 
-    - name: Go fmt
-      run: make gofmt
+    - name: Go lint
+      run: make golint
     
-    - name: Go vet
-      run: make govet
-
     - name: Build cli and examples
       run: make build
 

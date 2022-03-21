@@ -37,8 +37,9 @@ func NewWSHandler(serverCtx context.Context, actor *Actor) *WSHandler {
 		actor = NewActor()
 	}
 	return &WSHandler{
-		serverCtx: serverCtx,
-		Actor:     actor,
+		serverCtx:      serverCtx,
+		Actor:          actor,
+		SpawnGoroutine: true,
 	}
 }
 

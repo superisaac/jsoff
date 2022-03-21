@@ -42,8 +42,9 @@ func NewH2Handler(serverCtx context.Context, actor *Actor) *H2Handler {
 		actor = NewActor()
 	}
 	return &H2Handler{
-		serverCtx: serverCtx,
-		Actor:     actor,
+		serverCtx:      serverCtx,
+		Actor:          actor,
+		SpawnGoroutine: true,
 	}
 }
 
