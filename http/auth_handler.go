@@ -17,15 +17,17 @@ type AuthInfo struct {
 }
 
 type BasicAuthConfig struct {
-	Username string `yaml:"username" json:"username"`
-	Password string `yaml:"password" json:"password"`
+	Username string                 `yaml:"username" json:"username"`
+	Password string                 `yaml:"password" json:"password"`
+	Settings map[string]interface{} `yaml:"settings,omitempty" json:"settings.omitempty"`
 }
 
 type BearerAuthConfig struct {
 	Token string `yaml:"token" json:"token"`
 
 	// username attached to request when token authorized
-	Username string `yaml:"username,omitempty" json:"username,omitempty"`
+	Username string                 `yaml:"username,omitempty" json:"username,omitempty"`
+	Settings map[string]interface{} `yaml:"settings,omitempty" json:"settings.omitempty"`
 }
 
 type JwtAuthConfig struct {
@@ -78,7 +80,9 @@ func (self AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
 		if username, password, ok := r.BasicAuth(); ok {
 			for _, basicCfg := range self.authConfig.Basic {
 				if basicCfg.Username == username && basicCfg.Password == password {
-					return &AuthInfo{Username: username}, true
+					return &AuthInfo{
+						Username: username,
+						Settings: basicCfg.Settings}, true
 				}
 			}
 		}
@@ -86,14 +90,16 @@ func (self AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
 
 	if self.authConfig.Bearer != nil && len(self.authConfig.Bearer) > 0 {
 		authHeader := r.Header.Get("Authorization")
-		for _, bearCfg := range self.authConfig.Bearer {
-			expect := fmt.Sprintf("Bearer %s", bearCfg.Token)
+		for _, bearerCfg := range self.authConfig.Bearer {
+			expect := fmt.Sprintf("Bearer %s", bearerCfg.Token)
 			if authHeader == expect {
-				username := bearCfg.Username
+				username := bearerCfg.Username
 				if username == "" {
-					username = bearCfg.Token
+					username = bearerCfg.Token
 				}
-				return &AuthInfo{Username: username}, true
+				return &AuthInfo{
+					Username: username,
+					Settings: bearerCfg.Settings}, true
 			}
 		}
 	}
@@ -167,8 +173,8 @@ func (self *AuthConfig) ValidateValues() error {
 	}
 
 	if self.Bearer != nil && len(self.Bearer) > 0 {
-		for _, bearCfg := range self.Bearer {
-			if bearCfg.Token == "" {
+		for _, bearerCfg := range self.Bearer {
+			if bearerCfg.Token == "" {
 				return errors.New("bearer token cannot be empty")
 			}
 		}
