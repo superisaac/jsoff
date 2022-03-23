@@ -445,6 +445,7 @@ func TestMethodValidator(t *testing.T) {
     "requires": ["aaa"]
   }
 ],
+"additionalParams": "string",
 "returns": {"type": "string"}
 }`)
 	builder = NewSchemaBuilder()
@@ -488,6 +489,18 @@ func TestMethodValidator(t *testing.T) {
 	data = []byte(`{"params": [5, "hello", {"aaa": "a string"}]}`)
 	errPos = validator.ValidateBytes(s, data)
 	assert.Nil(errPos)
+
+	validator = NewSchemaValidator()
+	data = []byte(`{"params": [5, "hello", {"aaa": "a string"}, "add1", "add2"]}`)
+	errPos = validator.ValidateBytes(s, data)
+	assert.Nil(errPos)
+
+	validator = NewSchemaValidator()
+	data = []byte(`{"params": [5, "hello", {"aaa": "a string"}, "add1", 3]}`)
+	errPos = validator.ValidateBytes(s, data)
+	assert.NotNil(errPos)
+	assert.Equal("data is not string", errPos.hint)
+	assert.Equal(".params[4]", errPos.Path())
 
 	validator = NewSchemaValidator()
 	data = []byte(`{"result": 8}`)

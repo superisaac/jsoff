@@ -119,6 +119,7 @@ type Actor struct {
 
 func NewActor() *Actor {
 	return &Actor{
+		ValidateSchema: true,
 		methodHandlers: make(map[string]*MethodHandler),
 	}
 }
@@ -181,9 +182,17 @@ func (self *Actor) HandleClose(r *http.Request, session RPCSession) {
 }
 
 // returns there is a handler for a method
-func (self Actor) HasHandler(method string) bool {
+func (self Actor) Has(method string) bool {
 	_, exist := self.methodHandlers[method]
 	return exist
+}
+
+// get the schema of a method
+func (self Actor) GetSchema(method string) (jsonzschema.Schema, bool) {
+	if h, ok := self.getHandler(method); ok && h.schema != nil {
+		return h.schema, true
+	}
+	return nil, false
 }
 
 // get the handler of a method

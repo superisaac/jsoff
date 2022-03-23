@@ -360,6 +360,9 @@ func (self MethodSchema) RebuildType() map[string]interface{} {
 	if self.Returns != nil {
 		tp["returns"] = self.Returns.RebuildType()
 	}
+	if self.AdditionalSchema != nil {
+		tp["additionalParams"] = self.AdditionalSchema.RebuildType()
+	}
 	return tp
 }
 
@@ -389,13 +392,25 @@ func (self *MethodSchema) ScanParams(validator *SchemaValidator, params []interf
 	validator.pushPath(".params")
 	defer validator.popPath(".params")
 
-	if len(params) != len(self.Params) {
+	if len(params) < len(self.Params) {
 		return validator.NewErrorPos("length of params mismatch")
 	}
+
 	for i, paramSchema := range self.Params {
 		errPos := validator.Scan(paramSchema, fmt.Sprintf("[%d]", i), params[i])
 		if errPos != nil {
 			return errPos
+		}
+	}
+	if len(params) > len(self.Params) {
+		if self.AdditionalSchema == nil {
+			return validator.NewErrorPos("length of params mismatch")
+		}
+		for i := len(self.Params); i < len(params); i++ {
+			errPos := validator.Scan(self.AdditionalSchema, fmt.Sprintf("[%d]", i), params[i])
+			if errPos != nil {
+				return errPos
+			}
 		}
 	}
 	return nil

@@ -109,6 +109,7 @@ type ObjectSchema struct {
 
 type MethodSchema struct {
 	SchemaMixin
-	Params  []Schema
-	Returns Schema
+	Params           []Schema
+	Returns          Schema
+	AdditionalSchema Schema
 }

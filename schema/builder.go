@@ -292,6 +292,16 @@ func (self *SchemaBuilder) buildMethodSchema(node map[string](interface{}), path
 		return nil, NewBuildError("params is not a list of objects", paths)
 	}
 
+	// additional items
+	if additional, ok := node["additionalParams"]; ok {
+		newPaths := append(paths, ".additionalParams")
+		addSchema, err := self.buildNode(additional, newPaths...)
+		if err != nil {
+			return nil, err
+		}
+		schema.AdditionalSchema = addSchema
+	}
+
 	if resultNode, ok := convertAttrMap(node, "returns", true); ok {
 		if _, ok := resultNode["type"]; !ok {
 			resultNode["type"] = "any"
