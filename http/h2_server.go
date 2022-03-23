@@ -78,7 +78,7 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("{\"method\":\"hello\",\"params\":[]}\n"))
+	//w.Write([]byte("{\"method\":\"hello\",\"params\":[]}\n"))
 	flusher.Flush()
 
 	decoder := json.NewDecoder(r.Body)

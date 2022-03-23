@@ -289,7 +289,7 @@ func (self *ErrorMessage) Interface() interface{} {
 	return tmp
 }
 
-func NewRequestMessage(id interface{}, method string, params []interface{}) *RequestMessage {
+func NewRequestMessage(id interface{}, method string, params interface{}) *RequestMessage {
 	if id == nil {
 		panic(ErrNilId)
 	}
@@ -297,16 +297,20 @@ func NewRequestMessage(id interface{}, method string, params []interface{}) *Req
 		panic(ErrEmptyMethod)
 	}
 
-	if params == nil {
-		params = [](interface{}){}
-	}
-
 	msg := &RequestMessage{}
 	msg.kind = MKRequest
 	msg.Id = id
 	msg.Method = method
-	msg.Params = params
 	msg.paramsAreList = true
+
+	if params == nil {
+		msg.Params = [](interface{}){}
+	} else if arr, ok := params.([]interface{}); ok {
+		msg.Params = arr
+	} else {
+		msg.Params = []interface{}{params}
+		msg.paramsAreList = false
+	}
 	return msg
 }
 
@@ -316,20 +320,24 @@ func (self RequestMessage) Clone(newId interface{}) *RequestMessage {
 	return newReq
 }
 
-func NewNotifyMessage(method string, params []interface{}) *NotifyMessage {
+func NewNotifyMessage(method string, params interface{}) *NotifyMessage {
 	if method == "" {
 		panic(ErrEmptyMethod)
-	}
-
-	if params == nil {
-		params = [](interface{}){}
 	}
 
 	msg := &NotifyMessage{}
 	msg.kind = MKNotify
 	msg.Method = method
-	msg.Params = params
 	msg.paramsAreList = true
+
+	if params == nil {
+		msg.Params = [](interface{}){}
+	} else if arr, ok := params.([]interface{}); ok {
+		msg.Params = arr
+	} else {
+		msg.Params = []interface{}{params}
+		msg.paramsAreList = false
+	}
 	return msg
 }
 
