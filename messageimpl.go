@@ -304,8 +304,11 @@ func NewRequestMessage(id interface{}, method string, params interface{}) *Reque
 	msg.paramsAreList = true
 
 	if params == nil {
-		msg.Params = [](interface{}){}
+		msg.Params = []interface{}{}
 	} else if arr, ok := params.([]interface{}); ok {
+		if arr == nil {
+			arr = []interface{}{}
+		}
 		msg.Params = arr
 	} else {
 		msg.Params = []interface{}{params}
@@ -331,8 +334,11 @@ func NewNotifyMessage(method string, params interface{}) *NotifyMessage {
 	msg.paramsAreList = true
 
 	if params == nil {
-		msg.Params = [](interface{}){}
+		msg.Params = []interface{}{}
 	} else if arr, ok := params.([]interface{}); ok {
+		if arr == nil {
+			arr = []interface{}{}
+		}
 		msg.Params = arr
 	} else {
 		msg.Params = []interface{}{params}

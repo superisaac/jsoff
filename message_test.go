@@ -53,6 +53,17 @@ func TestParseParams(t *testing.T) {
 	_, err = ParseBytes([]byte(j2))
 	assert.NotNil(err)
 	assert.Equal("error decode: no params field", err.Error())
+
+	// empty
+	j3 := `{
+"id": 99,
+"method": "abc::def",
+"params": []
+}`
+	reqmsg3, err := ParseBytes([]byte(j3))
+	assert.Nil(err)
+	assert.True(reqmsg3.IsRequest())
+	assert.Equal(0, len(reqmsg3.MustParams()))
 }
 
 func TestRequestMsg(t *testing.T) {
