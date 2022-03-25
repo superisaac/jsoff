@@ -187,6 +187,14 @@ func (self Actor) Has(method string) bool {
 	return exist
 }
 
+func (self Actor) MethodList() []string {
+	methods := []string{}
+	for mname, _ := range self.methodHandlers {
+		methods = append(methods, mname)
+	}
+	return methods
+}
+
 // get the schema of a method
 func (self Actor) GetSchema(method string) (jsonzschema.Schema, bool) {
 	if h, ok := self.getHandler(method); ok && h.schema != nil {
