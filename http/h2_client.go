@@ -118,7 +118,7 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 
 	resp, err := self.client.HTTPClient().Do(req)
 	if err != nil {
-		return self.handleTransportError(err)
+		return self.handleHttp2Error(err)
 	}
 	self.writer = pipeWriter
 	self.resp = resp
@@ -126,7 +126,7 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 	return nil
 }
 
-func (self *h2Transport) handleTransportError(err error) error {
+func (self *h2Transport) handleHttp2Error(err error) error {
 	logger := self.client.Log()
 	var urlErr *url.Error
 	if errors.Is(err, io.EOF) {
@@ -138,7 +138,7 @@ func (self *h2Transport) handleTransportError(err error) error {
 	} else {
 		logger.Warnf("transport error %s %s", reflect.TypeOf(err), err)
 	}
-	return err
+	return errors.Wrap(err, "h2transport.handleHttp2Error")
 }
 
 func (self *h2Transport) WriteMessage(msg jsonz.Message) error {
@@ -149,7 +149,7 @@ func (self *h2Transport) WriteMessage(msg jsonz.Message) error {
 
 	marshaled = append(marshaled, []byte("\n")...)
 	if _, err := self.writer.Write(marshaled); err != nil {
-		return self.handleTransportError(err)
+		return self.handleHttp2Error(err)
 	}
 	return nil
 }

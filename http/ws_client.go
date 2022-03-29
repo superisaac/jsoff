@@ -60,7 +60,7 @@ func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 			self.client.Log().Infof("websocket operror %s", opErr)
 			return TransportConnectFailed
 		}
-		return err
+		return errors.Wrap(err, "wstransport.connect")
 	}
 	self.ws = ws
 	return nil
@@ -78,7 +78,7 @@ func (self *wsTransport) handleWebsocketError(err error) error {
 	} else {
 		logger.Warnf("ws.ReadMessage error %s %s", reflect.TypeOf(err), err)
 	}
-	return err
+	return errors.Wrap(err, "handleWebsocketError")
 }
 
 func (self *wsTransport) WriteMessage(msg jsonz.Message) error {

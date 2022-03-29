@@ -128,7 +128,7 @@ func DecodeInterface(input interface{}, output interface{}) error {
 	}
 	decoder, err := mapstructure.NewDecoder(config)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "decode interface")
 	}
 	return decoder.Decode(input)
 }

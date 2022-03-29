@@ -2,7 +2,7 @@ package jsonzhttp
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
@@ -55,7 +55,7 @@ func ListenAndServe(rootCtx context.Context, bind string, handler http.Handler, 
 			tlsConfig.Keyfile)
 	} else {
 		err := server.Serve(listener)
-		return err
+		return errors.Wrap(err, "server.Serve")
 	}
 }
 
