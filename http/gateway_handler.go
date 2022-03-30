@@ -14,9 +14,10 @@ type GatewayHandler struct {
 	wsHandler http.Handler
 	h2Handler http.Handler
 	Actor     *Actor
+	insecure  bool
 }
 
-func NewGatewayHandler(serverCtx context.Context, actor *Actor, Insecure bool) *GatewayHandler {
+func NewGatewayHandler(serverCtx context.Context, actor *Actor, insecure bool) *GatewayHandler {
 	if actor == nil {
 		actor = NewActor()
 	}
@@ -25,9 +26,10 @@ func NewGatewayHandler(serverCtx context.Context, actor *Actor, Insecure bool) *
 		Actor:     actor,
 		h1Handler: NewH1Handler(actor),
 		wsHandler: NewWSHandler(serverCtx, actor),
+		insecure:  insecure,
 	}
 
-	if Insecure {
+	if insecure {
 		sh.h2Handler = NewH2Handler(serverCtx, actor).H2CHandler()
 	} else {
 		sh.h2Handler = NewH2Handler(serverCtx, actor)
@@ -39,14 +41,24 @@ func (self *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.ProtoAtLeast(2, 0) {
 		// http2 check by proto
 		self.h2Handler.ServeHTTP(w, r)
-	} else if r.Header.Get("Upgrade") == "h2c" {
-		// h2c upgrade
-		self.h2Handler.ServeHTTP(w, r)
-	} else if r.Header.Get("Upgrade") == "websocket" {
+		return
+	}
+
+	upgradeHeader := r.Header.Get("Upgrade")
+	if upgradeHeader == "websocket" {
 		// maybe websocket handler
 		self.wsHandler.ServeHTTP(w, r)
-	} else {
-		// fail over to http1 handler
-		self.h1Handler.ServeHTTP(w, r)
+		return
 	}
+
+	if upgradeHeader == "h2c" {
+		// maybe http2c handler
+		self.h2Handler.ServeHTTP(w, r)
+		return
+	}
+
+	// fail over to http1 handler
+	self.h1Handler.ServeHTTP(w, r)
+	return
+
 }

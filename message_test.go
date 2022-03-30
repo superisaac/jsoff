@@ -29,6 +29,13 @@ func TestValidators(t *testing.T) {
 
 func TestParseParams(t *testing.T) {
 	assert := assert.New(t)
+
+	j0 := `
+{"text": "what"}
+`
+	_, err := ParseBytes([]byte(j0))
+	assert.Equal("error decode: not a jsonrpc message", err.Error())
+
 	j1 := `{
 "id": 99,
 "method": "abc::def",
@@ -46,7 +53,7 @@ func TestParseParams(t *testing.T) {
 	assert.False(reqmsg.paramsAreList)
 
 	j2 := `{
-"id": 99,
+"id": "stringid",
 "method": "abc::def"
 }`
 
@@ -56,13 +63,14 @@ func TestParseParams(t *testing.T) {
 
 	// empty
 	j3 := `{
-"id": 99,
+"id": "stringid",
 "method": "abc::def",
 "params": []
 }`
 	reqmsg3, err := ParseBytes([]byte(j3))
 	assert.Nil(err)
 	assert.True(reqmsg3.IsRequest())
+	assert.Equal("stringid", reqmsg3.MustId())
 	assert.Equal(0, len(reqmsg3.MustParams()))
 }
 
@@ -85,6 +93,10 @@ func TestRequestMsg(t *testing.T) {
 
 	assert.Equal(100, msg.MustId())
 	assert.Equal("abc::add", msg.MustMethod())
+
+	rpcErr := ParamsError("user issued")
+	assert.Equal(-32602, rpcErr.Code)
+	assert.Equal("user issued", rpcErr.Message)
 }
 
 func TestNotifyMsg(t *testing.T) {
@@ -123,8 +135,12 @@ func TestNotifyMsg(t *testing.T) {
 func TestGuessJson(t *testing.T) {
 	assert := assert.New(t)
 
-	v1, err := GuessJson("5")
-	assert.Equal(int64(5), v1)
+	v1, err := GuessJson("")
+	assert.Nil(err)
+	assert.Equal("", v1)
+
+	v1_0, err := GuessJson("5")
+	assert.Equal(int64(5), v1_0)
 
 	v1_1, err := GuessJson("-5")
 	assert.Equal(int64(-5), v1_1)
@@ -136,6 +152,9 @@ func TestGuessJson(t *testing.T) {
 	assert.Equal(false, v2)
 
 	_, err = GuessJson("[aaa")
+	assert.Contains(err.Error(), "invalid character")
+
+	_, err = GuessJson("{aaa")
 	assert.Contains(err.Error(), "invalid character")
 
 	v3, err := GuessJson(`{"abc": 5}`)

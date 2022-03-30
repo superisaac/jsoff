@@ -3,7 +3,7 @@ package jsonzhttp
 import (
 	"context"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"net/http"
@@ -14,6 +14,14 @@ import (
 type AuthInfo struct {
 	Username string
 	Settings map[string]interface{}
+}
+
+func AuthInfoFromContext(ctx context.Context) (*AuthInfo, bool) {
+	if v := ctx.Value("authInfo"); v != nil {
+		authinfo, ok := v.(*AuthInfo)
+		return authinfo, ok
+	}
+	return nil, false
 }
 
 type BasicAuthConfig struct {
@@ -41,7 +49,7 @@ type AuthConfig struct {
 }
 
 type jwtClaims struct {
-	Username string
+	Username string                 `json:"username"`
 	Settings map[string]interface{} `json:"settings,omitempty"`
 	jwt.StandardClaims
 }
@@ -129,6 +137,7 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthI
 					return []byte(jwtCfg.Secret), nil
 				},
 			)
+
 			if err != nil {
 				Logger(r).Warnf("jwt auth error %s", err)
 				return nil, false
@@ -175,7 +184,7 @@ func (self *AuthConfig) ValidateValues() error {
 	if self.Bearer != nil && len(self.Bearer) > 0 {
 		for _, bearerCfg := range self.Bearer {
 			if bearerCfg.Token == "" {
-				return errors.New("bearer token cannot be empty")
+				return errors.New("bearer token is empty")
 			}
 		}
 	}
@@ -183,12 +192,12 @@ func (self *AuthConfig) ValidateValues() error {
 	if self.Basic != nil && len(self.Basic) > 0 {
 		for _, basicCfg := range self.Basic {
 			if basicCfg.Username == "" || basicCfg.Password == "" {
-				return errors.New("basic username and password cannot be empty")
+				return errors.New("basic username or password are empty")
 			}
 		}
 	}
 
-	if self.Jwt != nil && self.Jwt.Secret != "" {
+	if self.Jwt != nil && self.Jwt.Secret == "" {
 		return errors.New("jwt has no secret")
 	}
 	return nil

@@ -110,7 +110,7 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 	pipeReader, pipeWriter := io.Pipe()
 
 	req := &http.Request{
-		Method: "POST",
+		Method: "PRI",
 		URL:    serverUrl,
 		Header: header,
 		Body:   pipeReader,

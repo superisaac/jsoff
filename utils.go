@@ -25,10 +25,7 @@ func GuessJson(input string) (interface{}, error) {
 		return "", nil
 	}
 	if input == "true" || input == "false" {
-		bv, err := strconv.ParseBool(input)
-		if err != nil {
-			return nil, err
-		}
+		bv, _ := strconv.ParseBool(input)
 		return bv, nil
 	}
 	iv, err := strconv.ParseInt(input, 10, 64)
@@ -74,40 +71,6 @@ func GuessJsonArray(inputArr []string) ([]interface{}, error) {
 		arr = append(arr, v)
 	}
 	return arr, nil
-}
-
-func ConvertString(v interface{}) string {
-	if strv, ok := v.(string); ok {
-		return strv
-	}
-	panic("cannot convert to string")
-	//log.Fatalf("cannot convert %s to string", v)
-	//return ""
-}
-
-func ConvertStringList(v interface{}) []string {
-	if arr, ok := v.([]interface{}); ok {
-		strarr := make([]string, 0)
-		for _, a := range arr {
-			s := ConvertString(a)
-			strarr = append(strarr, s)
-		}
-		return strarr
-	}
-	panic("cannot convert to string array")
-}
-
-func ConvertInt(v interface{}) int {
-	if intv, ok := v.(int); ok {
-		return intv
-	} else if nv, ok := v.(json.Number); ok {
-		i64v, err := nv.Int64()
-		if err != nil {
-			panic(err)
-		}
-		return int(i64v)
-	}
-	panic("cannot convert to int")
 }
 
 func ErrorResponse(w http.ResponseWriter, r *http.Request, err error, status int, message string) {

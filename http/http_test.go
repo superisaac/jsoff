@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
+	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -76,6 +78,12 @@ func TestServerClient(t *testing.T) {
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28000", server)
 	time.Sleep(10 * time.Millisecond)
+
+	// request a GET method
+	resp, err := http.Get("http://127.0.0.1:28000")
+	assert.Equal(http.StatusMethodNotAllowed, resp.StatusCode)
+	respData, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal("Method not allowed", string(respData))
 
 	client := NewH1Client(urlParse("http://127.0.0.1:28000"))
 
@@ -352,8 +360,15 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28453", server)
 	time.Sleep(10 * time.Millisecond)
 
+	_, errbadproto := NewClient("badproto")
+	assert.Equal("url scheme not supported", errbadproto.Error())
+
 	// test http1 client
-	client := NewH1Client(urlParse("http://127.0.0.1:28453"))
+	client, err := NewClient("http://127.0.0.1:28453")
+	assert.Nil(err)
+	// client is H1Client
+	_, ok := client.(*H1Client)
+	assert.True(ok)
 
 	reqmsg := jsonz.NewRequestMessage(
 		1, "echoAny", []interface{}{1991, 1992})
@@ -362,7 +377,11 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	assert.Equal(json.Number("1991"), resmsg.MustResult())
 
 	// test websocket
-	client1 := NewWSClient(urlParse("ws://127.0.0.1:28453"))
+	//client1 := NewWSClient(urlParse("ws://127.0.0.1:28453"))
+	client1, err := NewClient("ws://127.0.0.1:28453")
+	assert.Nil(err)
+	_, ok1 := client1.(*WSClient)
+	assert.True(ok1)
 
 	reqmsg1 := jsonz.NewRequestMessage(
 		1001, "echoAny", []interface{}{8888})
@@ -371,11 +390,164 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	assert.Equal(json.Number("8888"), resmsg1.MustResult())
 
 	// test http2
-	client2 := NewH2Client(urlParse("h2c://127.0.0.1:28453"))
+
+	//client2 := NewH2Client(urlParse("h2c://127.0.0.1:28453"))
+	client2, err := NewClient("h2c://127.0.0.1:28453")
+	assert.Nil(err)
+	_, ok2 := client2.(*H2Client)
+	assert.True(ok2)
 
 	reqmsg2 := jsonz.NewRequestMessage(
 		2002, "echoAny", []interface{}{8886})
+
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.Equal(json.Number("8886"), resmsg2.MustResult())
+}
+
+func TestAuthorization(t *testing.T) {
+	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, ok := AuthInfoFromContext(rootCtx)
+	assert.False(ok)
+
+	server := NewH1Handler(nil)
+	server.Actor.On("greeting", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
+			return fmt.Sprintf("hello: %s", authInfo.Username), nil
+		} else {
+			return "anonymous", nil
+		}
+
+	})
+
+	wrongauthcfg := &AuthConfig{
+		Basic: []BasicAuthConfig{
+			BasicAuthConfig{},
+		},
+	}
+
+	erremptyuserpass := wrongauthcfg.ValidateValues()
+	assert.Equal("basic username or password are empty", erremptyuserpass.Error())
+
+	wrongbearercfg := &AuthConfig{
+		Bearer: []BearerAuthConfig{
+			BearerAuthConfig{},
+		},
+	}
+	erremptybearer := wrongbearercfg.ValidateValues()
+	assert.Equal("bearer token is empty", erremptybearer.Error())
+
+	authcfg := &AuthConfig{
+		Basic: []BasicAuthConfig{
+			BasicAuthConfig{
+				Username: "monkey",
+				Password: "banana",
+			},
+			BasicAuthConfig{
+				Username: "donkey",
+				Password: "grass",
+			},
+		},
+
+		Bearer: []BearerAuthConfig{
+			BearerAuthConfig{
+				Token:    "bearbear",
+				Username: "a_bear",
+			},
+		},
+	}
+	err0 := authcfg.ValidateValues()
+	assert.Nil(err0)
+
+	auth := NewAuthHandler(authcfg, server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28007", auth)
+	time.Sleep(10 * time.Millisecond)
+
+	client1 := NewH1Client(urlParse("http://127.0.0.1:28007"))
+	reqmsg1 := jsonz.NewRequestMessage(jsonz.NewUuid(), "greeting", nil)
+
+	_, err1 := client1.Call(rootCtx, reqmsg1)
+	assert.NotNil(err1)
+	var wrapped *WrappedResponse
+	converted := errors.As(err1, &wrapped)
+	assert.True(converted)
+	assert.Equal(401, wrapped.Response.StatusCode)
+
+	// client with correct user/pass
+	client2 := NewH1Client(urlParse("http://donkey:grass@127.0.0.1:28007"))
+	reqmsg2 := jsonz.NewRequestMessage(jsonz.NewUuid(), "greeting", nil)
+	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
+	assert.Nil(err2)
+	assert.Equal("hello: donkey", resmsg2.MustResult())
+
+	// client with correct bearer token
+	client3 := NewH1Client(urlParse("http://127.0.0.1:28007"))
+	client3.SetExtraHeader(http.Header{
+		"Authorization": []string{"Bearer bearbear"},
+	})
+	reqmsg3 := jsonz.NewRequestMessage(jsonz.NewUuid(), "greeting", nil)
+	resmsg3, err3 := client3.Call(rootCtx, reqmsg3)
+	assert.Nil(err3)
+	assert.Equal("hello: a_bear", resmsg3.MustResult())
+}
+
+func TestJwtAuthorization(t *testing.T) {
+	assert := assert.New(t)
+
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := NewH1Handler(nil)
+	server.Actor.OnTyped("greeting", func(req *RPCRequest) (*AuthInfo, error) {
+		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
+			return authInfo, nil
+		} else {
+			return nil, nil
+		}
+
+	})
+
+	authcfg := &AuthConfig{
+		Jwt: &JwtAuthConfig{Secret: "JwtIsUniversal"},
+	}
+	err0 := authcfg.ValidateValues()
+	assert.Nil(err0)
+
+	auth := NewAuthHandler(authcfg, server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28009", auth)
+
+	// jwt auth
+	claims := jwtClaims{
+		Username: "jake",
+		Settings: map[string]interface{}{"namespace": "jail"},
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			Issuer:    "jsonz.com",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenStr, err4 := token.SignedString([]byte("JwtIsUniversal"))
+	assert.Nil(err4)
+
+	client1 := NewH1Client(urlParse("http://127.0.0.1:28009"))
+	client1.SetExtraHeader(http.Header{
+		"Authorization": []string{fmt.Sprintf("Bearer %s", tokenStr)},
+	})
+	reqmsg1 := jsonz.NewRequestMessage(jsonz.NewUuid(), "greeting", nil)
+	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
+	assert.Nil(err1)
+
+	var authinfo1 *AuthInfo
+	errdecode := jsonz.DecodeInterface(resmsg1.MustResult(), &authinfo1)
+	assert.Nil(errdecode)
+	assert.NotNil(authinfo1)
+	assert.Equal("jake", authinfo1.Username)
+	ns, ok := authinfo1.Settings["namespace"]
+	assert.True(ok)
+	assert.Equal("jail", ns)
 }

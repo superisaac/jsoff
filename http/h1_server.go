@@ -24,7 +24,7 @@ func NewH1Handler(actor *Actor) *H1Handler {
 func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only support POST
 	if r.Method != "POST" {
-		jsonz.ErrorResponse(w, r, errors.New("method not allowed"), 405, "Method not allowed")
+		jsonz.ErrorResponse(w, r, errors.New("method not allowed"), http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 

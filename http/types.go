@@ -6,31 +6,10 @@ package jsonzhttp
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"github.com/superisaac/jsonz"
 	"net/http"
 	"net/url"
 )
-
-// errors
-// non standard Response returned by endpoints
-type WrappedResponse struct {
-	Response *http.Response
-}
-
-func (self WrappedResponse) Error() string {
-	return fmt.Sprintf("upstream response %d", self.Response.StatusCode)
-}
-
-// Simple HTTP response to instant return
-type SimpleResponse struct {
-	Code int
-	Body []byte
-}
-
-func (self SimpleResponse) Error() string {
-	return fmt.Sprintf("%d/%s", self.Code, self.Body)
-}
 
 // Client is an abstract interface a client type must implement
 type Client interface {

@@ -3,10 +3,8 @@ package jsonzhttp
 import (
 	"context"
 	"encoding/json"
-	//"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
-	"strings"
 	"testing"
 	"time"
 )
@@ -124,7 +122,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	assert.True(resmsg1.IsError())
 	errbody1 := resmsg1.MustError()
 	assert.Equal(-32602, errbody1.Code) // params error
-	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
+	assert.Contains(errbody1.Message, "got unconvertible type")
 	// test params size
 	params2 := [](interface{}){"hello", 2}
 	reqmsg2 := jsonz.NewRequestMessage(2, "echoTyped", params2)
@@ -153,7 +151,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	assert.True(resmsg4.IsError())
 	errbody4 := resmsg4.MustError()
 	assert.Equal(-32602, errbody4.Code)
-	assert.True(strings.Contains(errbody4.Message, "got unconvertible type"))
+	assert.Contains(errbody4.Message, "got unconvertible type")
 }
 
 func TestH2Close(t *testing.T) {
