@@ -115,13 +115,19 @@ type Actor struct {
 	methodHandlers map[string]*MethodHandler
 	missingHandler MissingCallback
 	closeHandler   CloseCallback
+	children       []*Actor
 }
 
 func NewActor() *Actor {
 	return &Actor{
 		ValidateSchema: true,
 		methodHandlers: make(map[string]*MethodHandler),
+		children:       make([]*Actor, 0),
 	}
+}
+
+func (self *Actor) AddChild(child *Actor) {
+	self.children = append(self.children, child)
 }
 
 // register a method handler
@@ -176,6 +182,11 @@ func (self *Actor) OnClose(handler CloseCallback) error {
 
 // call the close handler if possible
 func (self *Actor) HandleClose(r *http.Request, session RPCSession) {
+	// each child have to be called
+	for _, child := range self.children {
+		child.HandleClose(r, session)
+	}
+
 	if self.closeHandler != nil {
 		self.closeHandler(r, session)
 	}
@@ -183,14 +194,24 @@ func (self *Actor) HandleClose(r *http.Request, session RPCSession) {
 
 // returns there is a handler for a method
 func (self Actor) Has(method string) bool {
-	_, exist := self.methodHandlers[method]
-	return exist
+	if _, exist := self.methodHandlers[method]; !exist {
+		for _, child := range self.children {
+			if child.Has(method) {
+				return true
+			}
+		}
+	}
+	return true
 }
 
 func (self Actor) MethodList() []string {
 	methods := []string{}
 	for mname, _ := range self.methodHandlers {
 		methods = append(methods, mname)
+	}
+	for _, child := range self.children {
+		childMethods := child.MethodList()
+		methods = append(methods, childMethods...)
 	}
 	return methods
 }
@@ -199,6 +220,11 @@ func (self Actor) MethodList() []string {
 func (self Actor) GetSchema(method string) (jsonzschema.Schema, bool) {
 	if h, ok := self.getHandler(method); ok && h.schema != nil {
 		return h.schema, true
+	}
+	for _, child := range self.children {
+		if s, ok := child.GetSchema(method); ok {
+			return s, ok
+		}
 	}
 	return nil, false
 }
@@ -246,14 +272,21 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 		res, err := handler.callback(req, params)
 		resmsg, err := self.wrapResult(res, err, msg)
 		return resmsg, err
-	} else if self.missingHandler != nil {
-		res, err := self.missingHandler(req)
-		resmsg, err := self.wrapResult(res, err, msg)
-		return resmsg, err
 	} else {
-		if msg.IsRequest() {
-			return jsonz.ErrMethodNotFound.ToMessageFromId(
-				msg.MustId(), msg.TraceId()), nil
+		for _, child := range self.children {
+			if child.Has(msg.MustMethod()) {
+				return child.Feed(req)
+			}
+		}
+		if self.missingHandler != nil {
+			res, err := self.missingHandler(req)
+			resmsg, err := self.wrapResult(res, err, msg)
+			return resmsg, err
+		} else {
+			if msg.IsRequest() {
+				return jsonz.ErrMethodNotFound.ToMessageFromId(
+					msg.MustId(), msg.TraceId()), nil
+			}
 		}
 	}
 	return nil, nil
