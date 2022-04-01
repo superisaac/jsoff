@@ -519,6 +519,7 @@ func TestJwtAuthorization(t *testing.T) {
 
 	auth := NewAuthHandler(authcfg, server)
 	go ListenAndServe(rootCtx, "127.0.0.1:28009", auth)
+	time.Sleep(time.Millisecond * 100)
 
 	// jwt auth
 	claims := jwtClaims{
