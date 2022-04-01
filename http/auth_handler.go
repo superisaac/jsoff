@@ -167,8 +167,12 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthI
 
 func (self *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if authInfo, ok := self.TryAuth(r); ok {
-		ctx := context.WithValue(r.Context(), "authInfo", authInfo)
-		self.next.ServeHTTP(w, r.WithContext(ctx))
+		if authInfo != nil {
+			ctx := context.WithValue(r.Context(), "authInfo", authInfo)
+			self.next.ServeHTTP(w, r.WithContext(ctx))
+		} else {
+			self.next.ServeHTTP(w, r)
+		}
 	} else {
 		w.WriteHeader(401)
 		w.Write([]byte("auth failed!\n"))

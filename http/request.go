@@ -194,14 +194,16 @@ func (self *Actor) HandleClose(r *http.Request, session RPCSession) {
 
 // returns there is a handler for a method
 func (self Actor) Has(method string) bool {
-	if _, exist := self.methodHandlers[method]; !exist {
-		for _, child := range self.children {
-			if child.Has(method) {
-				return true
-			}
+	if _, exist := self.methodHandlers[method]; exist {
+		return true
+	}
+
+	for _, child := range self.children {
+		if child.Has(method) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func (self Actor) MethodList() []string {

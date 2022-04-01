@@ -6,6 +6,7 @@ import (
 	//log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsonz"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -25,11 +26,23 @@ func TestWSHandlerClient(t *testing.T) {
 			return nil, jsonz.ParamsError("no argument given")
 		}
 	})
-
-	go ListenAndServe(rootCtx, "127.0.0.1:28100", server)
+	// an auth handler with nil configs
+	auth := NewAuthHandler(nil, server)
+	go ListenAndServe(rootCtx, "127.0.0.1:28100", auth)
 	time.Sleep(10 * time.Millisecond)
 
 	client := NewWSClient(urlParse("ws://127.0.0.1:28100"))
+	client.SetExtraHeader(http.Header{"X-Input": []string{"hello"}})
+	assert.Equal("ws", client.ServerURL().Scheme)
+
+	erronmessage := client.OnMessage(func(msg jsonz.Message) {
+	})
+	assert.Nil(erronmessage)
+
+	erronmessage = client.OnMessage(func(msg jsonz.Message) {
+	})
+	assert.NotNil(erronmessage)
+	assert.Contains(erronmessage.Error(), "message handler already exist!")
 
 	// right request
 	params := [](interface{}){"hello999"}
@@ -47,8 +60,16 @@ func TestWSHandlerClient(t *testing.T) {
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
-	errbody := resmsg1.MustError()
-	assert.Equal(jsonz.ErrMethodNotFound.Code, errbody.Code)
+	errbody1 := resmsg1.MustError()
+	assert.Equal(jsonz.ErrMethodNotFound.Code, errbody1.Code)
+
+	// unwrap call
+	params2 := [](interface{}){"hello966"}
+	reqmsg2 := jsonz.NewRequestMessage(777, "echo", params2)
+	var res2 string
+	err2 := client.UnwrapCall(rootCtx, reqmsg2, &res2)
+	assert.Nil(err2)
+	assert.Equal("hello966", res2)
 }
 
 func TestTypedWSHandlerClient(t *testing.T) {

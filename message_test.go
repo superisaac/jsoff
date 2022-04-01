@@ -245,3 +245,72 @@ func TestDecodePipeBytes(t *testing.T) {
 	assert.True(msg.IsNotify())
 	assert.Equal(json.Number("3.09"), msg.MustParams()[0])
 }
+
+func TestMessages(t *testing.T) {
+	assert := assert.New(t)
+
+	reqmsg := NewRequestMessage(101, "queryMethod", []interface{}{"p1", "p2"})
+	assert.Equal(101, reqmsg.Id)
+	assert.Equal("queryMethod", reqmsg.Method)
+	assert.Equal(2, len(reqmsg.Params))
+
+	msgtype, _ := reqmsg.Log().Data["msgtype"]
+	assert.Equal("request", msgtype)
+
+	reqmap, _ := MessageMap(reqmsg)
+	m1, _ := reqmap["method"]
+	assert.Equal("queryMethod", m1)
+
+	reqmsg1 := reqmsg.ReplaceId(102)
+	assert.True(reqmsg1.IsRequestOrNotify())
+	assert.False(reqmsg1.IsResultOrError())
+
+	assert.Equal(101, reqmsg.Id)
+	assert.Equal(102, reqmsg1.MustId())
+	assert.Equal("p1", reqmsg1.MustParams()[0])
+	assert.Equal("p2", reqmsg1.MustParams()[1])
+	reqmsg.Params = append(reqmsg.Params, "p3")
+	assert.Equal(2, len(reqmsg1.MustParams()))
+	assert.Equal(3, len(reqmsg.Params))
+
+	resmsg := NewResultMessage(reqmsg, "p1p2")
+	assert.Equal(101, resmsg.Id)
+	resmap, _ := MessageMap(resmsg)
+	resid, _ := resmap["id"]
+	assert.Equal(101, resid)
+	resmsg1 := resmsg.ReplaceId(104)
+	assert.True(resmsg1.IsResult())
+	assert.Equal(104, resmsg1.MustId())
+
+	msgtype, _ = resmsg.Log().Data["msgtype"]
+	assert.Equal("result", msgtype)
+
+	errmsg := NewErrorMessage(reqmsg, ParamsError("p error"))
+	assert.Equal(101, errmsg.Id)
+	errmap, _ := MessageMap(errmsg)
+	errid, _ := errmap["id"]
+	assert.Equal(101, errid)
+	errmsg1 := errmsg.ReplaceId(103)
+	assert.True(errmsg1.IsError())
+	assert.Equal(103, errmsg1.MustId())
+
+	msgtype, _ = errmsg.Log().Data["msgtype"]
+	assert.Equal("error", msgtype)
+
+	ntfmsg := NewNotifyMessage("queryReceived", nil)
+	assert.Equal("queryReceived", ntfmsg.Method)
+
+	msgtype, _ = ntfmsg.Log().Data["msgtype"]
+	assert.Equal("notify", msgtype)
+
+	ntfmap, _ := MessageMap(ntfmsg)
+	m2, _ := ntfmap["method"]
+	assert.Equal("queryReceived", m2)
+
+	assert.False(NewRequestMessage(800, "aaa", map[string]interface{}{}).paramsAreList)
+	assert.True(NewRequestMessage(800, "aaa", nil).paramsAreList)
+
+	assert.False(NewNotifyMessage("aaa", map[string]interface{}{"aa": "bb"}).paramsAreList)
+	assert.True(NewNotifyMessage("aaa", nil).paramsAreList)
+
+}

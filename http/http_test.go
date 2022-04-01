@@ -38,6 +38,14 @@ const (
   "type": "method",
   "params": ["integer", {"type": "integer"}]
 }`
+
+	addSchemaYaml = `
+---
+type: method
+params:
+  - integer
+  - type: integer
+`
 )
 
 func serverTLS() *TLSConfig {
@@ -222,6 +230,14 @@ func TestTypedServerClient(t *testing.T) {
 	assert.True(errors.As(err5, &errbody5))
 	assert.Equal(-32602, errbody5.Code)
 	assert.True(strings.Contains(errbody5.Message, "got unconvertible type"))
+
+	// correct unwrapcall
+	params6 := [](interface{}){8, 99}
+	reqmsg6 := jsonz.NewRequestMessage(6, "add", params6)
+	var res6 int
+	err6 := client.UnwrapCall(rootCtx, reqmsg6, &res6)
+	assert.Nil(err6)
+	assert.Equal(107, res6)
 }
 
 func TestHandlerSchema(t *testing.T) {
@@ -551,4 +567,46 @@ func TestJwtAuthorization(t *testing.T) {
 	ns, ok := authinfo1.Settings["namespace"]
 	assert.True(ok)
 	assert.Equal("jail", ns)
+}
+
+func TestActors(t *testing.T) {
+	assert := assert.New(t)
+
+	main_actor := NewActor()
+	actor1 := NewActor()
+	main_actor.AddChild(actor1)
+
+	actor1.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		var tp struct {
+			A int
+			B int
+		}
+		err := jsonz.DecodeParams(params, &tp)
+		if err != nil {
+			return nil, err
+		}
+		return tp.A + tp.B, nil
+	}, WithSchemaYaml(addSchemaYaml))
+
+	main_actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return nil, jsonz.ParamsError("no argument given")
+		}
+	})
+
+	assert.True(main_actor.Has("echo"))
+	assert.True(main_actor.Has("add2num"))
+
+	assert.Equal([]string{"echo", "add2num"}, main_actor.MethodList())
+
+	_, ok := main_actor.GetSchema("echo")
+	assert.False(ok)
+
+	_, ok = main_actor.GetSchema("add2num")
+	assert.True(ok)
+
+	actor1.Off("add2num")
+	assert.False(main_actor.Has("add2num"))
 }
