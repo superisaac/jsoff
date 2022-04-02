@@ -98,7 +98,7 @@ func (self *h2Transport) Close() {
 		self.resp = nil
 		self.writer = nil
 		self.flusher = nil
-		self.decoder = nil
+		//self.decoder = nil
 	}
 }
 

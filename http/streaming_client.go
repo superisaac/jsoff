@@ -176,7 +176,7 @@ func (self *StreamingClient) Connect(rootCtx context.Context) error {
 
 func (self *StreamingClient) handleError(err error) {
 	if errors.Is(err, TransportClosed) {
-		self.Log().Infof("transport closed")
+		self.Log().Debug("transport closed")
 	}
 	self.Reset(err)
 	if self.closeHandler != nil {
@@ -204,6 +204,8 @@ func (self *StreamingClient) sendLoop(connCtx context.Context) {
 		}
 		select {
 		case <-ctx.Done():
+			self.Log().Debug("ctx Done")
+			self.Close()
 			return
 		case msg, ok := <-self.sendChannel:
 			if !ok {
@@ -245,7 +247,7 @@ func (self *StreamingClient) recvLoop() {
 			if self.messageHandler != nil {
 				self.messageHandler(msg)
 			} else {
-				msg.Log().Debugf("no message handler found")
+				msg.Log().Debug("no message handler found")
 			}
 		} else {
 			self.handleResult(msg)
