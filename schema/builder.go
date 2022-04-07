@@ -1,4 +1,4 @@
-package jsonzschema
+package jlibschema
 
 import (
 	"bytes"

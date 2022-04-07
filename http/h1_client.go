@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -59,13 +59,13 @@ func (self *H1Client) SetClientTLSConfig(cfg *tls.Config) {
 	self.clientTLS = cfg
 }
 
-func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestMessage, output interface{}) error {
+func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jlib.RequestMessage, output interface{}) error {
 	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
 	}
 	if resmsg.IsResult() {
-		err := jsonz.DecodeInterface(resmsg.MustResult(), output)
+		err := jlib.DecodeInterface(resmsg.MustResult(), output)
 		if err != nil {
 			return err
 		}
@@ -75,14 +75,14 @@ func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsonz.RequestM
 	}
 }
 
-func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage) (jsonz.Message, error) {
+func (self *H1Client) Call(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
 
 	reqmsg.SetTraceId("")
 
-	marshaled, err := jsonz.MessageBytes(reqmsg)
+	marshaled, err := jlib.MessageBytes(reqmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil.ReadAll")
 	}
-	respmsg, err := jsonz.ParseBytes(respBody)
+	respmsg, err := jlib.ParseBytes(respBody)
 	if err != nil {
 		return nil, err
 	}
@@ -133,13 +133,13 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsonz.RequestMessage
 	return respmsg, nil
 }
 
-func (self *H1Client) Send(rootCtx context.Context, msg jsonz.Message) error {
+func (self *H1Client) Send(rootCtx context.Context, msg jlib.Message) error {
 	self.connect()
 
 	traceId := msg.TraceId()
 	msg.SetTraceId("")
 
-	marshaled, err := jsonz.MessageBytes(msg)
+	marshaled, err := jlib.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

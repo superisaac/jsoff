@@ -1,5 +1,5 @@
-// jsonz is JSONRPC 2.0 libaray in golang
-package jsonz
+// jlib is JSONRPC 2.0 libaray in golang
+package jlib
 
 import (
 	log "github.com/sirupsen/logrus"

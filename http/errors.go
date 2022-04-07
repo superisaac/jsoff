@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"fmt"

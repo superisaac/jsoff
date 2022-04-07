@@ -4,15 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/superisaac/jsonz"
-	"github.com/superisaac/jsonz/http"
+	"github.com/superisaac/jlib"
+	"github.com/superisaac/jlib/http"
 	"os"
 )
 
 func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-notify", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, https? or wss? prefixed, can be in env JSONRPC_CONNECT, default is http://127.0.0.1:9990")
-	var headerFlags jsonzhttp.HeaderFlags
+	var headerFlags jlibhttp.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 
 	cliFlags.Parse(os.Args[1:])
@@ -27,7 +27,7 @@ func main() {
 	method := args[0]
 	clParams := args[1:len(args)]
 
-	params, err := jsonz.GuessJsonArray(clParams)
+	params, err := jlib.GuessJsonArray(clParams)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "params error: %s\n", err)
 		os.Exit(1)
@@ -50,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	c, err := jsonzhttp.NewClient(serverUrl)
+	c, err := jlibhttp.NewClient(serverUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fail to find jsonrpc client: %s\n", err)
 		os.Exit(1)
@@ -58,7 +58,7 @@ func main() {
 
 	c.SetExtraHeader(header)
 
-	ntfmsg := jsonz.NewNotifyMessage(method, params)
+	ntfmsg := jlib.NewNotifyMessage(method, params)
 	err = c.Send(context.Background(), ntfmsg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "rpc error: %s\n", err)

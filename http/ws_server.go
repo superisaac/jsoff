@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	//"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"net/http"
 )
 
@@ -28,7 +28,7 @@ type WSSession struct {
 	httpRequest *http.Request
 	rootCtx     context.Context
 	done        chan error
-	sendChannel chan jsonz.Message
+	sendChannel chan jlib.Message
 	sessionId   string
 }
 
@@ -59,8 +59,8 @@ func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httpRequest: r,
 		ws:          ws,
 		done:        make(chan error, 10),
-		sendChannel: make(chan jsonz.Message, 100),
-		sessionId:   jsonz.NewUuid(),
+		sendChannel: make(chan jlib.Message, 100),
+		sessionId:   jlib.NewUuid(),
 	}
 	defer func() {
 		self.Actor.HandleClose(r, session)
@@ -116,7 +116,7 @@ func (self *WSSession) recvLoop() {
 }
 
 func (self *WSSession) msgBytesReceived(msgBytes []byte) {
-	msg, err := jsonz.ParseBytes(msgBytes)
+	msg, err := jlib.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
 		self.done <- errors.New("bad jsonrpc message")
@@ -144,7 +144,7 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 	}
 }
 
-func (self *WSSession) Send(msg jsonz.Message) {
+func (self *WSSession) Send(msg jlib.Message) {
 	self.sendChannel <- msg
 }
 
@@ -167,7 +167,7 @@ func (self *WSSession) sendLoop() {
 			if self.ws == nil {
 				return
 			}
-			marshaled, err := jsonz.MessageBytes(msg)
+			marshaled, err := jlib.MessageBytes(msg)
 			if err != nil {
 				log.Warnf("marshal msg error %s", err)
 				return

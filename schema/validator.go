@@ -1,11 +1,11 @@
-package jsonzschema
+package jlibschema
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"strings"
 )
 
@@ -18,9 +18,9 @@ func (self ErrorPos) Error() string {
 	return fmt.Sprintf("Validation Error: %s %s", self.Path(), self.hint)
 }
 
-func (self ErrorPos) ToMessage(reqmsg *jsonz.RequestMessage) *jsonz.ErrorMessage {
-	err := &jsonz.RPCError{
-		Code:    jsonz.ErrInvalidSchema.Code,
+func (self ErrorPos) ToMessage(reqmsg *jlib.RequestMessage) *jlib.ErrorMessage {
+	err := &jlib.RPCError{
+		Code:    jlib.ErrInvalidSchema.Code,
 		Message: self.Error(),
 		Data:    nil}
 	return err.ToMessage(reqmsg)

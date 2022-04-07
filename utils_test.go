@@ -1,4 +1,4 @@
-package jsonz
+package jlib
 
 import (
 	"github.com/stretchr/testify/assert"

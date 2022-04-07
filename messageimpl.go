@@ -1,4 +1,4 @@
-package jsonz
+package jlib
 
 // implementations of message kinds
 

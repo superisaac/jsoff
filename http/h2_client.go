@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"golang.org/x/net/http2"
 	"io"
 	"net"
@@ -141,8 +141,8 @@ func (self *h2Transport) handleHttp2Error(err error) error {
 	return errors.Wrap(err, "h2transport.handleHttp2Error")
 }
 
-func (self *h2Transport) WriteMessage(msg jsonz.Message) error {
-	marshaled, err := jsonz.MessageBytes(msg)
+func (self *h2Transport) WriteMessage(msg jlib.Message) error {
+	marshaled, err := jlib.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
@@ -154,8 +154,8 @@ func (self *h2Transport) WriteMessage(msg jsonz.Message) error {
 	return nil
 }
 
-func (self *h2Transport) ReadMessage() (jsonz.Message, bool, error) {
-	msg, err := jsonz.DecodeMessage(self.decoder)
+func (self *h2Transport) ReadMessage() (jlib.Message, bool, error) {
+	msg, err := jlib.DecodeMessage(self.decoder)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, false, TransportClosed

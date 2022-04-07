@@ -1,11 +1,11 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"context"
 	"encoding/json"
 	//log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"net/http"
 	"strings"
 	"testing"
@@ -23,7 +23,7 @@ func TestWSHandlerClient(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jsonz.ParamsError("no argument given")
+			return nil, jlib.ParamsError("no argument given")
 		}
 	})
 	// an auth handler with nil configs
@@ -35,18 +35,18 @@ func TestWSHandlerClient(t *testing.T) {
 	client.SetExtraHeader(http.Header{"X-Input": []string{"hello"}})
 	assert.Equal("ws", client.ServerURL().Scheme)
 
-	erronmessage := client.OnMessage(func(msg jsonz.Message) {
+	erronmessage := client.OnMessage(func(msg jlib.Message) {
 	})
 	assert.Nil(erronmessage)
 
-	erronmessage = client.OnMessage(func(msg jsonz.Message) {
+	erronmessage = client.OnMessage(func(msg jlib.Message) {
 	})
 	assert.NotNil(erronmessage)
 	assert.Contains(erronmessage.Error(), "message handler already exist!")
 
 	// right request
 	params := [](interface{}){"hello999"}
-	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
+	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -56,16 +56,16 @@ func TestWSHandlerClient(t *testing.T) {
 
 	// method not found
 	params1 := [](interface{}){"hello999"}
-	reqmsg1 := jsonz.NewRequestMessage(666, "echoxxx", params1)
+	reqmsg1 := jlib.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
 	errbody1 := resmsg1.MustError()
-	assert.Equal(jsonz.ErrMethodNotFound.Code, errbody1.Code)
+	assert.Equal(jlib.ErrMethodNotFound.Code, errbody1.Code)
 
 	// unwrap call
 	params2 := [](interface{}){"hello966"}
-	reqmsg2 := jsonz.NewRequestMessage(777, "echo", params2)
+	reqmsg2 := jlib.NewRequestMessage(777, "echo", params2)
 	var res2 string
 	err2 := client.UnwrapCall(rootCtx, reqmsg2, &res2)
 	assert.Nil(err2)
@@ -96,7 +96,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 
 	// right request
 	params := [](interface{}){"hello999"}
-	reqmsg := jsonz.NewRequestMessage(1, "echoTyped", params)
+	reqmsg := jlib.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -106,7 +106,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 
 	// type mismatch
 	params1 := [](interface{}){true}
-	reqmsg1 := jsonz.NewRequestMessage(1, "echoTyped", params1)
+	reqmsg1 := jlib.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
@@ -116,7 +116,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
 	// test params size
 	params2 := [](interface{}){"hello", 2}
-	reqmsg2 := jsonz.NewRequestMessage(2, "echoTyped", params2)
+	reqmsg2 := jlib.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
@@ -127,7 +127,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
-	reqmsg3 := jsonz.NewRequestMessage(3, "add", params3)
+	reqmsg3 := jlib.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
 	assert.True(resmsg3.IsResult())
@@ -136,7 +136,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 
 	// test add 2 numbers with typing mismatch
 	params4 := [](interface{}){"6", 4}
-	reqmsg4 := jsonz.NewRequestMessage(4, "add", params4)
+	reqmsg4 := jlib.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
 	assert.True(resmsg4.IsError())
@@ -159,7 +159,7 @@ func TestWSClose(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jsonz.ParamsError("no argument given")
+			return nil, jlib.ParamsError("no argument given")
 		}
 	})
 
@@ -173,7 +173,7 @@ func TestWSClose(t *testing.T) {
 	})
 	// right request
 	params := [](interface{}){"hello999"}
-	reqmsg := jsonz.NewRequestMessage(1, "echo", params)
+	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(clientCtx, reqmsg)
 	assert.Nil(err)

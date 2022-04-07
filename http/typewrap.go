@@ -1,10 +1,10 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"reflect"
 )
 
@@ -88,7 +88,7 @@ func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (HandlerCallback, er
 	handler := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// check inputs
 		if funcType.NumIn() != len(params)+1 {
-			return nil, jsonz.ParamsError("different params size")
+			return nil, jlib.ParamsError("different params size")
 		}
 
 		// params -> []reflect.Value
@@ -98,7 +98,7 @@ func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (HandlerCallback, er
 			//fmt.Printf("i %d, interface type %s from %#v\n", i, argType, param)
 			argValue, err := interfaceToValue(param, argType)
 			if err != nil {
-				return nil, jsonz.ParamsError(
+				return nil, jlib.ParamsError(
 					fmt.Sprintf("params %d %s", i+1, err))
 			}
 			fnArgs = append(fnArgs, argValue)

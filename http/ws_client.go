@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"io"
 	"net"
 	"net/http"
@@ -81,8 +81,8 @@ func (self *wsTransport) handleWebsocketError(err error) error {
 	return errors.Wrap(err, "handleWebsocketError")
 }
 
-func (self *wsTransport) WriteMessage(msg jsonz.Message) error {
-	marshaled, err := jsonz.MessageBytes(msg)
+func (self *wsTransport) WriteMessage(msg jlib.Message) error {
+	marshaled, err := jlib.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (self *wsTransport) WriteMessage(msg jsonz.Message) error {
 	return nil
 }
 
-func (self *wsTransport) ReadMessage() (jsonz.Message, bool, error) {
+func (self *wsTransport) ReadMessage() (jlib.Message, bool, error) {
 	messageType, msgBytes, err := self.ws.ReadMessage()
 	if err != nil {
 		return nil, false, self.handleWebsocketError(err)
@@ -102,7 +102,7 @@ func (self *wsTransport) ReadMessage() (jsonz.Message, bool, error) {
 		return nil, false, nil
 	}
 
-	msg, err := jsonz.ParseBytes(msgBytes)
+	msg, err := jlib.ParseBytes(msgBytes)
 	if err != nil {
 		self.client.Log().Warnf("bad jsonrpc message %s", msgBytes)
 		return nil, false, err

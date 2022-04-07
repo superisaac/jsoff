@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"github.com/pkg/errors"

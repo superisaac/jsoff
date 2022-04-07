@@ -30,9 +30,9 @@ bin/jsonrpc-watch: ${gofiles}
 clean:
 	rm -rf build dist bin/*
 
-build-examples: bin/jsonz-example-fifo
+build-examples: bin/jlib-example-fifo
 
-bin/jsonz-example-fifo: ${gofiles}
+bin/jlib-example-fifo: ${gofiles}
 	go build $(goflag) -o $@ examples/fifo/main.go
 
 .PHONY: test gofmt build-cli clean

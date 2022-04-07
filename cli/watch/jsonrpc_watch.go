@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonz"
-	"github.com/superisaac/jsonz/http"
+	"github.com/superisaac/jlib"
+	"github.com/superisaac/jlib/http"
 	"io"
 	"os"
 	"reflect"
@@ -18,7 +18,7 @@ func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-watch", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, wss?, h2c? prefixed, can be in env JSONRPC_CONNECT, default is ws://127.0.0.1:9990")
 	pRetry := cliFlags.Int("retry", 1, "retry times")
-	var headerFlags jsonzhttp.HeaderFlags
+	var headerFlags jlibhttp.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 	cliFlags.Parse(os.Args[1:])
 
@@ -49,7 +49,7 @@ func main() {
 		method = args[0]
 		clParams := args[1:len(args)]
 
-		p1, err := jsonz.GuessJsonArray(clParams)
+		p1, err := jlib.GuessJsonArray(clParams)
 		if err != nil {
 			log.Fatalf("params error: %s", err)
 			os.Exit(1)
@@ -57,23 +57,23 @@ func main() {
 		params = p1
 	}
 
-	// jsonz client
-	c, err := jsonzhttp.NewClient(serverUrl)
+	// jlib client
+	c, err := jlibhttp.NewClient(serverUrl)
 	if err != nil {
 		log.Fatalf("fail to find jsonrpc client: %s", err)
 		os.Exit(1)
 	}
 	c.SetExtraHeader(header)
 
-	sc, ok := c.(jsonzhttp.Streamable)
+	sc, ok := c.(jlibhttp.Streamable)
 	//if !c.IsStreaming() {
 	if !ok {
 		log.Panicf("streaming client required, but found %s", reflect.TypeOf(c))
 		os.Exit(1)
 	}
 
-	sc.OnMessage(func(msg jsonz.Message) {
-		repr, err := jsonz.EncodePretty(msg)
+	sc.OnMessage(func(msg jlib.Message) {
+		repr, err := jlib.EncodePretty(msg)
 		if err != nil {
 			//panic(err)
 			log.Panicf("on message %s", err)
@@ -93,7 +93,7 @@ func main() {
 }
 
 type jsonrpcWatcher struct {
-	sc           jsonzhttp.Streamable
+	sc           jlibhttp.Streamable
 	method       string
 	params       []interface{}
 	retrylimit   int
@@ -103,8 +103,8 @@ type jsonrpcWatcher struct {
 func (self *jsonrpcWatcher) run() {
 	for {
 		if err := self.connect(); err != nil {
-			if errors.Is(err, jsonzhttp.TransportConnectFailed) ||
-				errors.Is(err, jsonzhttp.TransportClosed) ||
+			if errors.Is(err, jlibhttp.TransportConnectFailed) ||
+				errors.Is(err, jlibhttp.TransportClosed) ||
 				errors.Is(err, io.EOF) {
 
 				self.connectretry++
@@ -137,14 +137,14 @@ func (self *jsonrpcWatcher) connect() error {
 	self.connectretry = 0
 
 	if self.method != "" {
-		reqId := jsonz.NewUuid()
-		reqmsg := jsonz.NewRequestMessage(reqId, self.method, self.params)
+		reqId := jlib.NewUuid()
+		reqmsg := jlib.NewRequestMessage(reqId, self.method, self.params)
 		resmsg, err := self.sc.Call(ctx, reqmsg)
 		if err != nil {
 			log.Panicf("rpc error: %s", err)
 			os.Exit(1)
 		}
-		repr, err := jsonz.EncodePretty(resmsg)
+		repr, err := jlib.EncodePretty(resmsg)
 		if err != nil {
 			log.Panicf("encode pretty error %s", err)
 		}

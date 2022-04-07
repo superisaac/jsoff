@@ -1,11 +1,11 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"context"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsonz"
-	"github.com/superisaac/jsonz/schema"
+	"github.com/superisaac/jlib"
+	"github.com/superisaac/jlib/schema"
 	"net/http"
 )
 
@@ -16,21 +16,21 @@ const (
 )
 
 type RPCSession interface {
-	Send(msg jsonz.Message)
+	Send(msg jlib.Message)
 	SessionID() string
 }
 
 // http rpc quest structure
 type RPCRequest struct {
 	context       context.Context
-	msg           jsonz.Message
+	msg           jlib.Message
 	transportType string
 	r             *http.Request
 	data          interface{} // arbitrary data
 	session       RPCSession
 }
 
-func NewRPCRequest(ctx context.Context, msg jsonz.Message, transportType string, r *http.Request) *RPCRequest {
+func NewRPCRequest(ctx context.Context, msg jlib.Message, transportType string, r *http.Request) *RPCRequest {
 	return &RPCRequest{
 		context:       ctx,
 		msg:           msg,
@@ -43,7 +43,7 @@ func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) Msg() jsonz.Message {
+func (self RPCRequest) Msg() jlib.Message {
 	return self.msg
 }
 
@@ -81,19 +81,19 @@ type CloseCallback func(r *http.Request, session RPCSession)
 // With method handler
 type MethodHandler struct {
 	callback HandlerCallback
-	schema   jsonzschema.Schema
+	schema   jlibschema.Schema
 }
 
 type HandlerSetter func(h *MethodHandler)
 
-func WithSchema(s jsonzschema.Schema) HandlerSetter {
+func WithSchema(s jlibschema.Schema) HandlerSetter {
 	return func(h *MethodHandler) {
 		h.schema = s
 	}
 }
 
 func WithSchemaYaml(yamlSchema string) HandlerSetter {
-	builder := jsonzschema.NewSchemaBuilder()
+	builder := jlibschema.NewSchemaBuilder()
 	s, err := builder.BuildYamlBytes([]byte(yamlSchema))
 	if err != nil {
 		panic(err)
@@ -102,7 +102,7 @@ func WithSchemaYaml(yamlSchema string) HandlerSetter {
 }
 
 func WithSchemaJson(jsonSchema string) HandlerSetter {
-	builder := jsonzschema.NewSchemaBuilder()
+	builder := jlibschema.NewSchemaBuilder()
 	s, err := builder.BuildBytes([]byte(jsonSchema))
 	if err != nil {
 		panic(err)
@@ -219,7 +219,7 @@ func (self Actor) MethodList() []string {
 }
 
 // get the schema of a method
-func (self Actor) GetSchema(method string) (jsonzschema.Schema, bool) {
+func (self Actor) GetSchema(method string) (jlibschema.Schema, bool) {
 	if h, ok := self.getHandler(method); ok && h.schema != nil {
 		return h.schema, true
 	}
@@ -241,7 +241,7 @@ func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 }
 
 // give the actor a request message
-func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
+func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -258,14 +258,14 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 		params := msg.MustParams()
 		if handler.schema != nil && self.ValidateSchema {
 			// validate the request
-			validator := jsonzschema.NewSchemaValidator()
-			m, err := jsonz.MessageMap(msg)
+			validator := jlibschema.NewSchemaValidator()
+			m, err := jlib.MessageMap(msg)
 			if err != nil {
 				return nil, err
 			}
 			errPos := validator.Validate(handler.schema, m)
 			if errPos != nil {
-				if reqmsg, ok := msg.(*jsonz.RequestMessage); ok {
+				if reqmsg, ok := msg.(*jlib.RequestMessage); ok {
 					return errPos.ToMessage(reqmsg), nil
 				}
 				return nil, errPos
@@ -286,7 +286,7 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 			return resmsg, err
 		} else {
 			if msg.IsRequest() {
-				return jsonz.ErrMethodNotFound.ToMessageFromId(
+				return jlib.ErrMethodNotFound.ToMessageFromId(
 					msg.MustId(), msg.TraceId()), nil
 			}
 		}
@@ -294,7 +294,7 @@ func (self *Actor) Feed(req *RPCRequest) (jsonz.Message, error) {
 	return nil, nil
 }
 
-func (self Actor) wrapResult(res interface{}, err error, msg jsonz.Message) (jsonz.Message, error) {
+func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Warnf("error %s", err)
@@ -302,23 +302,23 @@ func (self Actor) wrapResult(res interface{}, err error, msg jsonz.Message) (jso
 		return nil, err
 	}
 
-	reqmsg, ok := msg.(*jsonz.RequestMessage)
+	reqmsg, ok := msg.(*jlib.RequestMessage)
 	if !ok {
 		msg.Log().Panicf("convert to request message failed")
 		return nil, err
 	}
 
 	if err != nil {
-		var rpcErr *jsonz.RPCError
+		var rpcErr *jlib.RPCError
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
-			return jsonz.ErrInternalError.ToMessage(reqmsg), nil
+			return jlib.ErrInternalError.ToMessage(reqmsg), nil
 		}
-	} else if resmsg1, ok := res.(jsonz.Message); ok {
+	} else if resmsg1, ok := res.(jlib.Message); ok {
 		// normal response
 		return resmsg1, nil
 	} else {
-		return jsonz.NewResultMessage(reqmsg, res), nil
+		return jlib.NewResultMessage(reqmsg, res), nil
 	}
 }

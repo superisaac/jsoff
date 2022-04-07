@@ -1,4 +1,4 @@
-package jsonzhttp
+package jlibhttp
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/superisaac/jsonz"
+	"github.com/superisaac/jlib"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"io"
@@ -33,7 +33,7 @@ type H2Session struct {
 	httpRequest *http.Request
 	rootCtx     context.Context
 	done        chan error
-	sendChannel chan jsonz.Message
+	sendChannel chan jlib.Message
 	sessionId   string
 }
 
@@ -90,8 +90,8 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		flusher:     flusher,
 		decoder:     decoder,
 		done:        make(chan error, 10),
-		sendChannel: make(chan jsonz.Message, 100),
-		sessionId:   jsonz.NewUuid(),
+		sendChannel: make(chan jlib.Message, 100),
+		sessionId:   jlib.NewUuid(),
 	}
 	defer func() {
 		r.Body.Close()
@@ -128,7 +128,7 @@ func (self *H2Session) wait() {
 
 func (self *H2Session) recvLoop() {
 	for {
-		msg, err := jsonz.DecodeMessage(self.decoder)
+		msg, err := jlib.DecodeMessage(self.decoder)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -148,7 +148,7 @@ func (self *H2Session) recvLoop() {
 	return
 }
 
-func (self *H2Session) msgReceived(msg jsonz.Message) {
+func (self *H2Session) msgReceived(msg jlib.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
@@ -170,7 +170,7 @@ func (self *H2Session) msgReceived(msg jsonz.Message) {
 	}
 }
 
-func (self *H2Session) Send(msg jsonz.Message) {
+func (self *H2Session) Send(msg jlib.Message) {
 	self.sendChannel <- msg
 }
 
@@ -193,7 +193,7 @@ func (self *H2Session) sendLoop() {
 			if self.decoder == nil {
 				return
 			}
-			marshaled, err := jsonz.MessageBytes(msg)
+			marshaled, err := jlib.MessageBytes(msg)
 			if err != nil {
 				log.Warnf("marshal msg error %s", err)
 				return
