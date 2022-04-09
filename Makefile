@@ -16,16 +16,19 @@ golint:
 
 build: build-cli build-examples
 
-build-cli: bin/jsonrpc-call bin/jsonrpc-notify bin/jsonrpc-watch
+build-cli: bin/jsonrpc-call bin/jsonrpc-notify bin/jsonrpc-watch bin/jsonrpc-benchmark
 
 bin/jsonrpc-call: ${gofiles}
-	go build $(goflag) -o $@ cli/call/jsonrpc_call.go
+	go build $(goflag) -o $@ cli/call/main.go
 
 bin/jsonrpc-notify: ${gofiles}
-	go build $(goflag) -o $@ cli/notify/jsonrpc_notify.go
+	go build $(goflag) -o $@ cli/notify/main.go
 
 bin/jsonrpc-watch: ${gofiles}
-	go build $(goflag) -o $@ cli/watch/jsonrpc_watch.go
+	go build $(goflag) -o $@ cli/watch/main.go
+
+bin/jsonrpc-benchmark: ${gofiles}
+	go build $(goflag) -o $@ cli/benchmark/main.go
 
 clean:
 	rm -rf build dist bin/*

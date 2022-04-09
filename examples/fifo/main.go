@@ -26,6 +26,14 @@ func main() {
 
 	subs := map[string]jlibhttp.RPCSession{}
 
+	handler.Actor.On("fifo_echo", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
+		if len(params) > 0 {
+			return params[0], nil
+		} else {
+			return "", nil
+		}
+	})
+
 	handler.Actor.On("fifo_push", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
 		lock.Lock()
 		defer lock.Unlock()
