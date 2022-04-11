@@ -178,6 +178,11 @@ func TestH2Close(t *testing.T) {
 	closeCalled := make(map[int]bool)
 	client := NewH2Client(urlParse("h2://127.0.0.1:28723"))
 	client.SetClientTLSConfig(clientTLS())
+
+	connectedCalled := map[int]bool{}
+	client.OnConnected(func() {
+		connectedCalled[0] = true
+	})
 	client.OnClose(func() {
 		closeCalled[0] = true
 	})
@@ -190,6 +195,7 @@ func TestH2Close(t *testing.T) {
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
 	assert.Equal("hello999", res)
+	assert.True(connectedCalled[0])
 
 	// cancel root
 	cancelServer()

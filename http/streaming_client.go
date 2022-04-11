@@ -48,6 +48,9 @@ type StreamingClient struct {
 	// on messsage handler
 	messageHandler MessageHandler
 
+	// on connected handler
+	connectedHandler ConnectedHandler
+
 	// on close handler
 	closeHandler CloseHandler
 
@@ -145,6 +148,14 @@ func (self *StreamingClient) OnMessage(handler MessageHandler) error {
 	return nil
 }
 
+func (self *StreamingClient) OnConnected(handler ConnectedHandler) error {
+	if self.connectedHandler != nil {
+		return errors.New("connected handler already exist!")
+	}
+	self.connectedHandler = handler
+	return nil
+}
+
 func (self *StreamingClient) OnClose(handler CloseHandler) error {
 	if self.closeHandler != nil {
 		return errors.New("close handler already exist!")
@@ -161,6 +172,9 @@ func (self *StreamingClient) Connect(rootCtx context.Context) error {
 		if err := self.transport.Connect(rootCtx, self.serverUrl, self.extraHeader); err != nil {
 			//self.connectErr = err
 			return err
+		}
+		if self.connectedHandler != nil {
+			self.connectedHandler()
 		}
 		connCtx, cancel := context.WithCancel(rootCtx)
 		self.cancelFunc = cancel

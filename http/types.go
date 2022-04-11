@@ -39,12 +39,14 @@ type Client interface {
 }
 
 type MessageHandler func(msg jlib.Message)
+type ConnectedHandler func()
 type CloseHandler func()
 
 type Streamable interface {
 	Client
 
 	Connect(ctx context.Context) error
+	OnConnected(handler ConnectedHandler) error
 	OnMessage(handler MessageHandler) error
 	OnClose(handler CloseHandler) error
 	Wait() error
