@@ -29,7 +29,7 @@ type ErrorPos struct {
 type Schema interface {
 	// returns the generated
 	Type() string
-	RebuildType() map[string]interface{}
+	Map() map[string]interface{}
 	Scan(validator *SchemaValidator, data interface{}) *ErrorPos
 	SetName(name string)
 	GetName() string

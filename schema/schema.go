@@ -40,7 +40,7 @@ func (self SchemaMixin) rebuildType(nType string) map[string]interface{} {
 func (self AnySchema) Type() string {
 	return "any"
 }
-func (self AnySchema) RebuildType() map[string]interface{} {
+func (self AnySchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
@@ -52,7 +52,7 @@ func (self *AnySchema) Scan(validator *SchemaValidator, data interface{}) *Error
 func (self NullSchema) Type() string {
 	return "null"
 }
-func (self NullSchema) RebuildType() map[string]interface{} {
+func (self NullSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
@@ -67,7 +67,7 @@ func (self *NullSchema) Scan(validator *SchemaValidator, data interface{}) *Erro
 func (self BoolSchema) Type() string {
 	return "bool"
 }
-func (self BoolSchema) RebuildType() map[string]interface{} {
+func (self BoolSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
@@ -86,7 +86,7 @@ func NewNumberSchema() *NumberSchema {
 func (self NumberSchema) Type() string {
 	return "number"
 }
-func (self NumberSchema) RebuildType() map[string]interface{} {
+func (self NumberSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
@@ -123,7 +123,7 @@ func NewIntegerSchema() *IntegerSchema {
 func (self IntegerSchema) Type() string {
 	return "integer"
 }
-func (self IntegerSchema) RebuildType() map[string]interface{} {
+func (self IntegerSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
@@ -159,7 +159,7 @@ func NewStringSchema() *StringSchema {
 func (self StringSchema) Type() string {
 	return "string"
 }
-func (self StringSchema) RebuildType() map[string]interface{} {
+func (self StringSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
@@ -182,11 +182,11 @@ func NewAnyOfSchema() *AnyOfSchema {
 	return &AnyOfSchema{Choices: make([]Schema, 0)}
 }
 
-func (self AnyOfSchema) RebuildType() map[string]interface{} {
+func (self AnyOfSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	arr := make([](map[string]interface{}), 0)
 	for _, choice := range self.Choices {
-		arr = append(arr, choice.RebuildType())
+		arr = append(arr, choice.Map())
 	}
 	tp["anyOf"] = arr
 	return tp
@@ -209,11 +209,11 @@ func NewAllOfSchema() *AllOfSchema {
 	return &AllOfSchema{Choices: make([]Schema, 0)}
 }
 
-func (self AllOfSchema) RebuildType() map[string]interface{} {
+func (self AllOfSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	arr := make([](map[string]interface{}), 0)
 	for _, choice := range self.Choices {
-		arr = append(arr, choice.RebuildType())
+		arr = append(arr, choice.Map())
 	}
 	tp["allOf"] = arr
 	return tp
@@ -236,9 +236,9 @@ func NewNotSchema() *NotSchema {
 	return &NotSchema{}
 }
 
-func (self NotSchema) RebuildType() map[string]interface{} {
+func (self NotSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
-	tp["not"] = self.Child.RebuildType()
+	tp["not"] = self.Child.Map()
 	return tp
 }
 
@@ -263,9 +263,9 @@ func NewListSchema() *ListSchema {
 func (self ListSchema) Type() string {
 	return "list"
 }
-func (self ListSchema) RebuildType() map[string]interface{} {
+func (self ListSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
-	tp["items"] = self.Item.RebuildType()
+	tp["items"] = self.Item.Map()
 	return tp
 }
 
@@ -300,11 +300,11 @@ func (self TupleSchema) Type() string {
 	return "list"
 }
 
-func (self TupleSchema) RebuildType() map[string]interface{} {
+func (self TupleSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	arr := make([](map[string]interface{}), 0)
 	for _, child := range self.Children {
-		arr = append(arr, child.RebuildType())
+		arr = append(arr, child.Map())
 	}
 	tp["items"] = arr
 	return tp
@@ -350,18 +350,18 @@ func (self MethodSchema) Type() string {
 	return "method"
 }
 
-func (self MethodSchema) RebuildType() map[string]interface{} {
+func (self MethodSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	arr := make([](map[string]interface{}), 0)
 	for _, p := range self.Params {
-		arr = append(arr, p.RebuildType())
+		arr = append(arr, p.Map())
 	}
 	tp["params"] = arr
 	if self.Returns != nil {
-		tp["returns"] = self.Returns.RebuildType()
+		tp["returns"] = self.Returns.Map()
 	}
 	if self.AdditionalSchema != nil {
-		tp["additionalParams"] = self.AdditionalSchema.RebuildType()
+		tp["additionalParams"] = self.AdditionalSchema.Map()
 	}
 	return tp
 }
@@ -435,11 +435,11 @@ func (self ObjectSchema) Type() string {
 	return "object"
 }
 
-func (self ObjectSchema) RebuildType() map[string]interface{} {
+func (self ObjectSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	props := make(map[string]interface{})
 	for name, p := range self.Properties {
-		props[name] = p.RebuildType()
+		props[name] = p.Map()
 	}
 	arr := make([]string, 0)
 	for name, _ := range self.Requires {
@@ -474,7 +474,7 @@ func (self *ObjectSchema) Scan(validator *SchemaValidator, data interface{}) *Er
 }
 
 func SchemaToString(schema Schema) string {
-	structData := schema.RebuildType()
+	structData := schema.Map()
 	data, err := json.Marshal(structData)
 	if err != nil {
 		panic(err)
