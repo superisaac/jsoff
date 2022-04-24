@@ -2,10 +2,12 @@ package jlib
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"math/big"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -138,4 +140,36 @@ func DecodeParams(params []interface{}, outputPtr interface{}) error {
 			reflect.ValueOf(ov))
 	}
 	return nil
+}
+
+type Bigint big.Int
+
+func (self Bigint) MarshalJSON() ([]byte, error) {
+	bi := big.Int(self)
+	return []byte(fmt.Sprintf(`"%s"`, bi.String())), nil
+}
+
+func (self *Bigint) UnmarshalJSON(data []byte) error {
+	sd := string(data)
+	bi := (*big.Int)(self)
+
+	if strings.HasPrefix(sd, `"`) {
+		// string repr
+		bi.SetString(sd[1:len(sd)-1], 10)
+	} else {
+		bi.SetString(sd, 10)
+	}
+	return nil
+}
+
+func (self *Bigint) Value() *big.Int {
+	return (*big.Int)(self)
+}
+
+func (self *Bigint) String() string {
+	return self.Value().String()
+}
+
+func (self *Bigint) Load(repr string) {
+	self.Value().SetString(repr, 10)
 }
