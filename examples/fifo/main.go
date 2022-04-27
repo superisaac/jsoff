@@ -26,7 +26,7 @@ func main() {
 
 	subs := map[string]jlibhttp.RPCSession{}
 
-	handler.Actor.On("fifo_echo", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
+	handler.Actor.On("fifo_echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -34,7 +34,7 @@ func main() {
 		}
 	})
 
-	handler.Actor.On("fifo_push", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
+	handler.Actor.On("fifo_push", func(params []interface{}) (interface{}, error) {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -55,7 +55,7 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.On("fifo_pop", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
+	handler.Actor.On("fifo_pop", func(params []interface{}) (interface{}, error) {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -67,7 +67,7 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.On("fifo_list", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
+	handler.Actor.On("fifo_list", func(params []interface{}) (interface{}, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -75,7 +75,7 @@ func main() {
 		return fifo, nil
 	})
 
-	handler.Actor.OnTyped("fifo_get", func(req *jlibhttp.RPCRequest, at int) (interface{}, error) {
+	handler.Actor.OnTyped("fifo_get", func(at int) (interface{}, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -86,7 +86,7 @@ func main() {
 		return fifo[at], nil
 	})
 
-	handler.Actor.On("fifo_subscribe", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
+	handler.Actor.OnRequest("fifo_subscribe", func(req *jlibhttp.RPCRequest, params []interface{}) (interface{}, error) {
 		session := req.Session()
 		if session == nil {
 			return "no sesion", nil

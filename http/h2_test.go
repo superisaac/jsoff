@@ -16,7 +16,7 @@ func TestH2HandlerClient(t *testing.T) {
 
 	server := NewH2Handler(rootCtx, nil)
 
-	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -34,14 +34,14 @@ func TestH2HandlerClient(t *testing.T) {
 	client := NewH2Client(urlParse("h2://127.0.0.1:28700"))
 	client.SetClientTLSConfig(clientTLS())
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello1003"}
 	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello1003", res)
 }
 
 func TestH2CServerClient(t *testing.T) {
@@ -51,7 +51,7 @@ func TestH2CServerClient(t *testing.T) {
 
 	server := NewH2Handler(rootCtx, nil)
 
-	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -87,15 +87,13 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewH2Handler(rootCtx, nil)
-	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server.Actor.OnTyped("echoTyped", func(v string) (string, error) {
 		return v, nil
 	})
-	assert.Nil(err)
 
-	err = server.Actor.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	server.Actor.OnTyped("add", func(a, b int) (int, error) {
 		return a + b, nil
 	})
-	assert.Nil(err)
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28701", server, serverTLS())
 	time.Sleep(10 * time.Millisecond)
@@ -104,14 +102,14 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	client.SetClientTLSConfig(clientTLS())
 
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello1001"}
 	reqmsg := jlib.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello1001", res)
 
 	// type mismatch
 	params1 := [](interface{}){true}
@@ -164,7 +162,7 @@ func TestH2Close(t *testing.T) {
 	defer cancelClient()
 
 	server := NewH2Handler(serverCtx, nil)
-	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -187,14 +185,14 @@ func TestH2Close(t *testing.T) {
 		closeCalled[0] = true
 	})
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello1002"}
 	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(clientCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello1002", res)
 	assert.True(connectedCalled[0])
 
 	// cancel root

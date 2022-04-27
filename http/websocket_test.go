@@ -19,7 +19,7 @@ func TestWSHandlerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewWSHandler(rootCtx, nil)
-	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -45,17 +45,17 @@ func TestWSHandlerClient(t *testing.T) {
 	assert.Contains(erronmessage.Error(), "message handler already exist!")
 
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello2002"}
 	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello2002", res)
 
 	// method not found
-	params1 := [](interface{}){"hello999"}
+	params1 := [](interface{}){"hello2003"}
 	reqmsg1 := jlib.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
@@ -64,12 +64,12 @@ func TestWSHandlerClient(t *testing.T) {
 	assert.Equal(jlib.ErrMethodNotFound.Code, errbody1.Code)
 
 	// unwrap call
-	params2 := [](interface{}){"hello966"}
+	params2 := [](interface{}){"hello2004"}
 	reqmsg2 := jlib.NewRequestMessage(777, "echo", params2)
 	var res2 string
 	err2 := client.UnwrapCall(rootCtx, reqmsg2, &res2)
 	assert.Nil(err2)
-	assert.Equal("hello966", res2)
+	assert.Equal("hello2004", res2)
 }
 
 func TestTypedWSHandlerClient(t *testing.T) {
@@ -79,15 +79,13 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewWSHandler(rootCtx, nil)
-	err := server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server.Actor.OnTyped("echoTyped", func(v string) (string, error) {
 		return v, nil
 	})
-	assert.Nil(err)
 
-	err = server.Actor.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	server.Actor.OnTyped("add", func(a, b int) (int, error) {
 		return a + b, nil
 	})
-	assert.Nil(err)
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28101", server)
 	time.Sleep(10 * time.Millisecond)
@@ -95,14 +93,14 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	client := NewWSClient(urlParse("ws://127.0.0.1:28101"))
 
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello2005"}
 	reqmsg := jlib.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello2005", res)
 
 	// type mismatch
 	params1 := [](interface{}){true}
@@ -155,7 +153,7 @@ func TestWSClose(t *testing.T) {
 	defer cancelClient()
 
 	server := NewWSHandler(serverCtx, nil)
-	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -172,14 +170,14 @@ func TestWSClose(t *testing.T) {
 		closeCalled[0] = true
 	})
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello2001"}
 	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(clientCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello2001", res)
 
 	// cancel root
 	cancelServer()

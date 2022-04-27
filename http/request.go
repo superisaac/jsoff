@@ -74,13 +74,14 @@ func (self RPCRequest) Log() *log.Entry {
 }
 
 // handler func
-type HandlerCallback func(req *RPCRequest, params []interface{}) (interface{}, error)
+type RequestCallback func(req *RPCRequest, params []interface{}) (interface{}, error)
+type MsgCallback func(params []interface{}) (interface{}, error)
 type MissingCallback func(req *RPCRequest) (interface{}, error)
 type CloseCallback func(r *http.Request, session RPCSession)
 
 // With method handler
 type MethodHandler struct {
-	callback HandlerCallback
+	callback RequestCallback
 	schema   jlibschema.Schema
 }
 
@@ -131,7 +132,18 @@ func (self *Actor) AddChild(child *Actor) {
 }
 
 // register a method handler
-func (self *Actor) On(method string, callback HandlerCallback, setters ...HandlerSetter) error {
+func (self *Actor) On(method string, callback MsgCallback, setters ...HandlerSetter) {
+
+	reqcb := func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		return callback(params)
+	}
+	err := self.OnRequest(method, reqcb, setters...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (self *Actor) OnRequest(method string, callback RequestCallback, setters ...HandlerSetter) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
 	}
@@ -147,13 +159,24 @@ func (self *Actor) On(method string, callback HandlerCallback, setters ...Handle
 }
 
 // register a typed method handler
-func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) {
+	handler, err := wrapTyped(typedHandler, nil)
+	if err != nil {
+		panic(err)
+	}
+	err = self.OnRequest(method, handler, setters...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (self *Actor) OnTypedRequest(method string, typedHandler interface{}, setters ...HandlerSetter) error {
 	firstArg := &RPCRequest{}
 	handler, err := wrapTyped(typedHandler, firstArg)
 	if err != nil {
 		return err
 	}
-	return self.On(method, handler, setters...)
+	return self.OnRequest(method, handler, setters...)
 }
 
 // Off unregister the method from handlers

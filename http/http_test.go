@@ -76,7 +76,7 @@ func TestServerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewH1Handler(nil)
-	server.Actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -96,17 +96,17 @@ func TestServerClient(t *testing.T) {
 	client := NewH1Client(urlParse("http://127.0.0.1:28000"))
 
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello001"}
 	reqmsg := jlib.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello001", res)
 
 	// method not found
-	params1 := [](interface{}){"hello999"}
+	params1 := [](interface{}){"hello002"}
 	reqmsg1 := jlib.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
@@ -135,7 +135,7 @@ func TestMissing(t *testing.T) {
 
 	client := NewH1Client(urlParse("http://127.0.0.1:28003"))
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello003"}
 	ntfmsg := jlib.NewNotifyMessage("testnotify", params)
 
 	err = client.Send(rootCtx, ntfmsg)
@@ -149,21 +149,19 @@ func TestTypedServerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewH1Handler(nil)
-	err := server.Actor.OnTyped("wrongArg", func(a int, b int) (int, error) {
+	err := server.Actor.OnTypedRequest("wrongArg", func(a int, b int) (int, error) {
 		return a + b, nil
 	})
 	assert.NotNil(err)
 	assert.Equal("the first arg must be *jlibhttp.RPCRequest", err.Error())
 
-	err = server.Actor.OnTyped("echoTyped", func(req *RPCRequest, v string) (string, error) {
+	server.Actor.OnTyped("echoTyped", func(v string) (string, error) {
 		return v, nil
 	})
-	assert.Nil(err)
 
-	err = server.Actor.OnTyped("add", func(req *RPCRequest, a, b int) (int, error) {
+	server.Actor.OnTyped("add", func(a, b int) (int, error) {
 		return a + b, nil
 	})
-	assert.Nil(err)
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28001", server)
 	time.Sleep(10 * time.Millisecond)
@@ -171,14 +169,14 @@ func TestTypedServerClient(t *testing.T) {
 	client := NewH1Client(urlParse("http://127.0.0.1:28001"))
 
 	// right request
-	params := [](interface{}){"hello999"}
+	params := [](interface{}){"hello004"}
 	reqmsg := jlib.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
 	res := resmsg.MustResult()
-	assert.Equal("hello999", res)
+	assert.Equal("hello004", res)
 
 	// type mismatch
 	params1 := [](interface{}){true}
@@ -248,7 +246,7 @@ func TestHandlerSchema(t *testing.T) {
 
 	server := NewH1Handler(nil)
 	server.Actor.ValidateSchema = true
-	server.Actor.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("add2num", func(params []interface{}) (interface{}, error) {
 		var tp struct {
 			A int
 			B int
@@ -288,7 +286,7 @@ func TestPassingHeader(t *testing.T) {
 
 	server := NewH1Handler(nil)
 	server.Actor.ValidateSchema = true
-	server.Actor.On("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.OnRequest("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// echo the http reader X-Input back to client
 		r := req.HttpRequest()
 		resp := r.Header.Get("X-Input")
@@ -317,7 +315,7 @@ func TestGatewayHandler(t *testing.T) {
 	defer cancel()
 
 	server := NewGatewayHandler(rootCtx, nil, false)
-	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echoAny", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -366,7 +364,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	defer cancel()
 
 	server := NewGatewayHandler(rootCtx, nil, true) // Insecure way
-	server.Actor.On("echoAny", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.On("echoAny", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -431,7 +429,7 @@ func TestAuthorization(t *testing.T) {
 	assert.False(ok)
 
 	server := NewH1Handler(nil)
-	server.Actor.On("greeting", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.OnRequest("greeting", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
 			return fmt.Sprintf("hello: %s", authInfo.Username), nil
 		} else {
@@ -518,7 +516,7 @@ func TestJwtAuthorization(t *testing.T) {
 	defer cancel()
 
 	server := NewH1Handler(nil)
-	server.Actor.OnTyped("greeting", func(req *RPCRequest) (*AuthInfo, error) {
+	server.Actor.OnTypedRequest("greeting", func(req *RPCRequest) (*AuthInfo, error) {
 		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
 			return authInfo, nil
 		} else {
@@ -576,7 +574,7 @@ func TestActors(t *testing.T) {
 	actor1 := NewActor()
 	main_actor.AddChild(actor1)
 
-	actor1.On("add2num", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	actor1.On("add2num", func(params []interface{}) (interface{}, error) {
 		var tp struct {
 			A int
 			B int
@@ -588,7 +586,7 @@ func TestActors(t *testing.T) {
 		return tp.A + tp.B, nil
 	}, WithSchemaYaml(addSchemaYaml))
 
-	main_actor.On("echo", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	main_actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
