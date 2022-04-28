@@ -21,6 +21,7 @@ func TestValidators(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.True(IsMethod(".abc+def"))
+	assert.False(IsPublicMethod("rpc.list"))
 	assert.False(IsPublicMethod(".abc+def"))
 	assert.True(IsPublicMethod("textDocument/didOpen"))
 	assert.True(IsPublicMethod("namespace::show"))
