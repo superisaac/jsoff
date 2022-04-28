@@ -121,8 +121,9 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	errbody1 := resmsg1.MustError()
 	assert.Equal(-32602, errbody1.Code) // params error
 	assert.Contains(errbody1.Message, "got unconvertible type")
+
 	// test params size
-	params2 := [](interface{}){"hello", 2}
+	params2 := [](interface{}){}
 	reqmsg2 := jlib.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
@@ -130,7 +131,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	assert.True(resmsg2.IsError())
 	errbody2 := resmsg2.MustError()
 	assert.Equal(-32602, errbody2.Code)
-	assert.Equal("different params size", errbody2.Message)
+	assert.Equal("no enough params size", errbody2.Message)
 
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
@@ -191,6 +192,7 @@ func TestH2Close(t *testing.T) {
 	resmsg, err := client.Call(clientCtx, reqmsg)
 	assert.Nil(err)
 	assert.True(resmsg.IsResult())
+
 	res := resmsg.MustResult()
 	assert.Equal("hello1002", res)
 	assert.True(connectedCalled[0])

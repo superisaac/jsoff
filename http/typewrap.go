@@ -92,8 +92,8 @@ func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (RequestCallback, er
 
 	handler := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// check inputs
-		if numIn != len(params)+firstArgNum {
-			return nil, jlib.ParamsError("different params size")
+		if numIn > len(params)+firstArgNum {
+			return nil, jlib.ParamsError("no enough params size")
 		}
 
 		// params -> []reflect.Value
@@ -101,15 +101,19 @@ func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (RequestCallback, er
 		if hasFirstArg {
 			fnArgs = append(fnArgs, reflect.ValueOf(req))
 		}
-		for i, param := range params {
-			argType := funcType.In(i + firstArgNum)
-			//fmt.Printf("i %d, interface type %s from %#v\n", i, argType, param)
+		j := 0
+		for i := firstArgNum; i < numIn; i++ {
+			argType := funcType.In(i)
+			param := params[j]
+			j++
+
 			argValue, err := interfaceToValue(param, argType)
 			if err != nil {
 				return nil, jlib.ParamsError(
 					fmt.Sprintf("params %d %s", i+1, err))
 			}
 			fnArgs = append(fnArgs, argValue)
+
 		}
 
 		// wrap result

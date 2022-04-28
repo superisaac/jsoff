@@ -113,7 +113,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.Equal(-32602, errbody1.Code) // params error
 	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
 	// test params size
-	params2 := [](interface{}){"hello", 2}
+	params2 := [](interface{}){}
 	reqmsg2 := jlib.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
@@ -121,7 +121,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.True(resmsg2.IsError())
 	errbody2 := resmsg2.MustError()
 	assert.Equal(-32602, errbody2.Code)
-	assert.Equal("different params size", errbody2.Message)
+	assert.Equal("no enough params size", errbody2.Message)
 
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
