@@ -355,7 +355,7 @@ func (self *SchemaBuilder) buildStringSchema(node map[string](interface{}), path
 
 func (self *SchemaBuilder) buildObjectSchema(node map[string](interface{}), paths ...string) (*ObjectSchema, error) {
 	schema := NewObjectSchema()
-	if propNodes, ok := convertAttrMapOfMap(node, "properties", false); ok {
+	if propNodes, ok := convertAttrMapOfMap(node, "properties", true); ok {
 		for propName, propNode := range propNodes {
 			newPaths := append(paths, ".properties", fmt.Sprintf(".%s", propName))
 			child, err := self.buildNodeMap(propNode, newPaths...)

@@ -110,7 +110,7 @@ func convertAttrFloat(node map[string]interface{}, attrName string, optional boo
 }
 
 func convertAttrMapOfMap(node map[string](interface{}), attrName string, optional bool) (map[string](map[string]interface{}), bool) {
-	if mm, ok := convertAttrMap(node, attrName, optional); ok {
+	if mm, ok := convertAttrMap(node, attrName, false); ok {
 		resMap := make(map[string](map[string]interface{}))
 		for name, value := range mm {
 			mv, ok := convertTypeMap(value)
@@ -120,8 +120,11 @@ func convertAttrMapOfMap(node map[string](interface{}), attrName string, optiona
 			resMap[name] = mv
 		}
 		return resMap, true
+	} else if optional {
+		return map[string](map[string]interface{}){}, true
+	} else {
+		return nil, false
 	}
-	return nil, false
 }
 
 func convertAttrListOfMap(node map[string]interface{}, attrName string, optional bool) ([](map[string]interface{}), bool) {

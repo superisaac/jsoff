@@ -104,8 +104,7 @@ func TestBuildObjectSchema(t *testing.T) {
 	s1 := []byte(`{"type": "object"}`)
 	builder := NewSchemaBuilder()
 	_, err := builder.BuildBytes(s1)
-	assert.NotNil(err)
-	assert.Equal("SchemaBuildError properties is not a map of objects, paths: ", err.Error())
+	assert.Nil(err)
 
 	s1 = []byte(`{
 "type": "object",
