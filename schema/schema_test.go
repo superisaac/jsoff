@@ -123,6 +123,10 @@ func TestBuildObjectSchema(t *testing.T) {
 	assert.Equal("string", obj.Properties["aaa"].Type())
 	assert.Equal("number", obj.Properties["bbb"].Type())
 
+	props, ok := s.Map()["properties"].(map[string]interface{})
+	assert.True(ok)
+	assert.Equal(2, len(props))
+
 	s1 = []byte(`{
 "type": "object",
 "properties": {

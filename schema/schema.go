@@ -441,6 +441,8 @@ func (self ObjectSchema) Map() map[string]interface{} {
 	for name, p := range self.Properties {
 		props[name] = p.Map()
 	}
+	tp["properties"] = props
+
 	arr := make([]string, 0)
 	for name, _ := range self.Requires {
 		arr = append(arr, name)
