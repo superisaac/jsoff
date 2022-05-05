@@ -517,6 +517,10 @@ func (self ObjectSchema) Map() map[string]interface{} {
 		arr = append(arr, name)
 	}
 	tp["requires"] = arr
+
+	if self.AdditionalProperties != nil {
+		tp["additionalProperties"] = self.AdditionalProperties.Map()
+	}
 	return tp
 }
 
@@ -525,7 +529,9 @@ func (self *ObjectSchema) Scan(validator *SchemaValidator, data interface{}) *Er
 	if !ok {
 		return validator.NewErrorPos("data is not an object")
 	}
+	checked := map[string]bool{}
 	for prop, schema := range self.Properties {
+		checked[prop] = true
 		if v, found := obj[prop]; found {
 			if errPos := validator.Scan(schema, "."+prop, v); errPos != nil {
 				return errPos
@@ -541,6 +547,18 @@ func (self *ObjectSchema) Scan(validator *SchemaValidator, data interface{}) *Er
 			}
 		}
 	}
+
+	if self.AdditionalProperties != nil {
+		for prop, v := range obj {
+			if _, ok := checked[prop]; ok {
+				continue
+			}
+			if errPos := validator.Scan(self.AdditionalProperties, "."+prop, v); errPos != nil {
+				return errPos
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -147,7 +147,8 @@ func TestBuildObjectSchema(t *testing.T) {
   "bbb": {"type": "number"},
   "ccc": {"type": "list", "items": {"type": "string"}}
 },
-"requires": ["aaa", "bbb"]
+"requires": ["aaa", "bbb"],
+"additionalProperties": "string"
 }`)
 	builder = NewSchemaBuilder()
 	s, err = builder.BuildBytes(s1)
@@ -157,6 +158,9 @@ func TestBuildObjectSchema(t *testing.T) {
 	assert.True(ok)
 
 	assert.Equal(2, len(obj.Requires))
+
+	assert.NotNil(obj.AdditionalProperties)
+	assert.Equal("string", obj.AdditionalProperties.Type())
 }
 
 func TestBasicValidator(t *testing.T) {
@@ -430,6 +434,52 @@ func TestComplexValidator(t *testing.T) {
 	assert.Equal("data is not string", errPos.hint)
 	assert.Equal("[3]", errPos.Path())
 
+}
+
+func TestObjectValidator(t *testing.T) {
+	assert := assert.New(t)
+
+	s1 := []byte(`{
+"type": "object",
+"properties": {
+   "abc": {"type": "string"},
+   "def": {"type": "number"}
+},
+"requires": ["abc"],
+"additionalProperties": {"type": "string"}
+}`)
+	builder := NewSchemaBuilder()
+	schema, err := builder.BuildBytes(s1)
+	assert.Nil(err)
+	s, ok := schema.(*ObjectSchema)
+	assert.True(ok)
+
+	validator := NewSchemaValidator()
+	data := []byte(`{}`)
+	errPos := validator.ValidateBytes(s, data)
+	assert.NotNil(errPos)
+	assert.Equal("required prop is not present", errPos.hint)
+	assert.Equal(".abc", errPos.Path())
+
+	data = []byte(`{"abc": "hello", "def": "yet a wrong string"}`)
+	errPos = validator.ValidateBytes(s, data)
+	assert.NotNil(errPos)
+	assert.Equal("data is not number", errPos.hint)
+	assert.Equal(".def", errPos.Path())
+
+	data = []byte(`{"abc": "hello", "xxx": 1001}`)
+	errPos = validator.ValidateBytes(s, data)
+	assert.NotNil(errPos)
+	assert.Equal("data is not string", errPos.hint)
+	assert.Equal(".xxx", errPos.Path())
+
+	data = []byte(`{"abc": "hello", "xxx": "additional string", "yyy": "string again"}`)
+	errPos = validator.ValidateBytes(s, data)
+	assert.Nil(errPos)
+
+	mapv := s.Map()
+	_, ok = mapv["additionalProperties"]
+	assert.True(ok)
 }
 
 func TestMethodValidator(t *testing.T) {

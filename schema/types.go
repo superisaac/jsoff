@@ -107,8 +107,9 @@ type TupleSchema struct {
 
 type ObjectSchema struct {
 	SchemaMixin
-	Properties map[string]Schema
-	Requires   map[string]bool
+	Properties           map[string]Schema
+	Requires             map[string]bool
+	AdditionalProperties Schema
 }
 
 type MethodSchema struct {

@@ -395,5 +395,16 @@ func (self *SchemaBuilder) buildObjectSchema(node map[string](interface{}), path
 		newPaths := append(paths, ".requires")
 		return nil, NewBuildError("requires is not a list of strings", newPaths)
 	}
+
+	// additional items
+	if additional, ok := node["additionalProperties"]; ok {
+		newPaths := append(paths, ".additionalProperties")
+		addSchema, err := self.buildNode(additional, newPaths...)
+		if err != nil {
+			return nil, err
+		}
+		schema.AdditionalProperties = addSchema
+	}
+
 	return schema, nil
 }
