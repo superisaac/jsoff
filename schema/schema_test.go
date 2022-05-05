@@ -166,6 +166,7 @@ func TestBasicValidator(t *testing.T) {
 	s1 := []byte(`{
 "type": "number",
 "maximum": 6000,
+"exclusiveMaximum": true,
 "minimum": -1980}`)
 
 	builder := NewSchemaBuilder()
@@ -180,11 +181,18 @@ func TestBasicValidator(t *testing.T) {
 
 	errPos = validator.ValidateBytes(numberSchema, []byte(`13001.27`))
 	assert.NotNil(errPos)
-	assert.Equal("value > maximum", errPos.hint)
+	assert.Equal("value >= maximum", errPos.hint)
+
+	errPos = validator.ValidateBytes(numberSchema, []byte(`6000`))
+	assert.NotNil(errPos)
+	assert.Equal("value >= maximum", errPos.hint)
 
 	errPos = validator.ValidateBytes(numberSchema, []byte(`-8888.99`))
 	assert.NotNil(errPos)
 	assert.Equal("value < minimum", errPos.hint)
+
+	errPos = validator.ValidateBytes(numberSchema, []byte(`-1980`))
+	assert.Nil(errPos)
 
 	//validator = NewSchemaValidator()
 	errPos = validator.ValidateBytes(numberSchema, []byte(`"a string"`))

@@ -71,6 +71,17 @@ func convertAttrList(node map[string]interface{}, attrName string, optional bool
 	return nil, false
 }
 
+func convertAttrBool(node map[string]interface{}, attrName string, optional bool) (bool, bool) {
+	if v, ok := node[attrName]; ok {
+		if bf, ok := v.(bool); ok {
+			return bf, true
+		}
+	} else if optional {
+		return false, true
+	}
+	return false, false
+}
+
 func convertAttrInt(node map[string]interface{}, attrName string, optional bool) (int, bool) {
 	if v, ok := node[attrName]; ok {
 		if intv, ok := v.(int); ok {

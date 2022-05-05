@@ -87,7 +87,21 @@ func (self NumberSchema) Type() string {
 	return "number"
 }
 func (self NumberSchema) Map() map[string]interface{} {
-	return self.rebuildType(self.Type())
+	tp := self.rebuildType(self.Type())
+	if self.Maximum != nil {
+		tp["maximum"] = *self.Maximum
+		if self.ExclusiveMaximum != nil {
+			tp["exclusiveMaximum"] = *self.ExclusiveMaximum
+		}
+	}
+
+	if self.Minimum != nil {
+		tp["minimum"] = *self.Minimum
+		if self.ExclusiveMinimum != nil {
+			tp["exclusiveMinimum"] = *self.ExclusiveMinimum
+		}
+	}
+	return tp
 }
 
 func (self *NumberSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
@@ -106,12 +120,32 @@ func (self *NumberSchema) Scan(validator *SchemaValidator, data interface{}) *Er
 }
 
 func (self NumberSchema) checkRange(validator *SchemaValidator, v float64) *ErrorPos {
-	if self.Maximum != nil && *self.Maximum < v {
-		return validator.NewErrorPos("value > maximum")
+	if self.Maximum != nil {
+		exmax := false
+		if self.ExclusiveMaximum != nil {
+			exmax = *self.ExclusiveMaximum
+		}
+		if exmax && *self.Maximum <= v {
+			return validator.NewErrorPos("value >= maximum")
+		}
+
+		if !exmax && *self.Maximum < v {
+			return validator.NewErrorPos("value > maximum")
+		}
 	}
 
-	if self.Minimum != nil && *self.Minimum > v {
-		return validator.NewErrorPos("value < minimum")
+	if self.Minimum != nil {
+		exmin := false
+		if self.ExclusiveMinimum != nil {
+			exmin = *self.ExclusiveMinimum
+		}
+		if !exmin && *self.Minimum > v {
+			return validator.NewErrorPos("value < minimum")
+		}
+		if exmin && *self.Minimum >= v {
+			return validator.NewErrorPos("value <= minimum")
+		}
+
 	}
 	return nil
 }
@@ -124,7 +158,21 @@ func (self IntegerSchema) Type() string {
 	return "integer"
 }
 func (self IntegerSchema) Map() map[string]interface{} {
-	return self.rebuildType(self.Type())
+	tp := self.rebuildType(self.Type())
+	if self.Maximum != nil {
+		tp["maximum"] = *self.Maximum
+		if self.ExclusiveMaximum != nil {
+			tp["exclusiveMaximum"] = *self.ExclusiveMaximum
+		}
+	}
+
+	if self.Minimum != nil {
+		tp["minimum"] = *self.Minimum
+		if self.ExclusiveMinimum != nil {
+			tp["exclusiveMinimum"] = *self.ExclusiveMinimum
+		}
+	}
+	return tp
 }
 
 func (self *IntegerSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
@@ -141,12 +189,33 @@ func (self *IntegerSchema) Scan(validator *SchemaValidator, data interface{}) *E
 }
 
 func (self IntegerSchema) checkRange(validator *SchemaValidator, v int64) *ErrorPos {
-	if self.Maximum != nil && *self.Maximum < v {
-		return validator.NewErrorPos("value > maximum")
+	if self.Maximum != nil {
+		exmax := false
+		if self.ExclusiveMaximum != nil {
+			exmax = *self.ExclusiveMaximum
+		}
+		if exmax && *self.Maximum <= v {
+			return validator.NewErrorPos("value >= maximum")
+		}
+
+		if !exmax && *self.Maximum < v {
+			return validator.NewErrorPos("value > maximum")
+		}
 	}
 
-	if self.Minimum != nil && *self.Minimum > v {
-		return validator.NewErrorPos("value < minimum")
+	if self.Minimum != nil {
+		exmin := false
+		if self.ExclusiveMinimum != nil {
+			exmin = *self.ExclusiveMinimum
+		}
+		if !exmin && *self.Minimum > v {
+			return validator.NewErrorPos("value < minimum")
+		}
+
+		if exmin && *self.Minimum >= v {
+			return validator.NewErrorPos("value <= minimum")
+		}
+
 	}
 	return nil
 }

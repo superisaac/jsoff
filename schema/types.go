@@ -56,14 +56,18 @@ type BoolSchema struct {
 
 type NumberSchema struct {
 	SchemaMixin
-	Minimum *float64
-	Maximum *float64
+	Minimum          *float64
+	Maximum          *float64
+	ExclusiveMinimum *bool
+	ExclusiveMaximum *bool
 }
 
 type IntegerSchema struct {
 	SchemaMixin
-	Minimum *int64
-	Maximum *int64
+	Minimum          *int64
+	Maximum          *int64
+	ExclusiveMinimum *bool
+	ExclusiveMaximum *bool
 }
 
 type StringSchema struct {

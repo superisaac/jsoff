@@ -324,6 +324,14 @@ func (self *SchemaBuilder) buildNumberSchema(node map[string](interface{}), path
 	if minimum, ok := convertAttrFloat(node, "minimum", false); ok {
 		schema.Minimum = &minimum
 	}
+
+	if exmax, ok := convertAttrBool(node, "exclusiveMaximum", false); ok {
+		schema.ExclusiveMaximum = &exmax
+	}
+	if exmin, ok := convertAttrBool(node, "exclusiveMinimum", false); ok {
+		schema.ExclusiveMinimum = &exmin
+	}
+
 	return schema, nil
 }
 
@@ -336,6 +344,13 @@ func (self *SchemaBuilder) buildIntegerSchema(node map[string](interface{}), pat
 	if minimum, ok := convertAttrInt(node, "minimum", false); ok {
 		n := int64(minimum)
 		schema.Minimum = &n
+	}
+
+	if exmax, ok := convertAttrBool(node, "exclusiveMaximum", false); ok {
+		schema.ExclusiveMaximum = &exmax
+	}
+	if exmin, ok := convertAttrBool(node, "exclusiveMinimum", false); ok {
+		schema.ExclusiveMinimum = &exmin
 	}
 	return schema, nil
 }
