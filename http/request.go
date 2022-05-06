@@ -336,6 +336,7 @@ func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
+			msg.Log().Warnf("error %s", err)
 			return jlib.ErrInternalError.ToMessage(reqmsg), nil
 		}
 	} else if resmsg1, ok := res.(jlib.Message); ok {
