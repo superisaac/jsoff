@@ -3,7 +3,6 @@ package jlib
 import (
 	"bytes"
 	"encoding/json"
-	//"github.com/pkg/errors"
 )
 
 func ParseBytes(data []byte) (Message, error) {
@@ -143,6 +142,17 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			ntfmsg.SetTraceId(un.TraceId)
 			return ntfmsg, nil
 		}
+	} else if un.Id != nil {
+		// parse id
+		id, err := decodeId(&un)
+		if err != nil {
+			return nil, err
+		}
+
+		// result is null
+		resmsg := rawResultMessage(id, nil)
+		resmsg.SetTraceId(un.TraceId)
+		return resmsg, nil
 	}
 	return nil, errdecode("not a jsonrpc message")
 }

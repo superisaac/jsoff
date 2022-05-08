@@ -75,6 +75,14 @@ func TestParseParams(t *testing.T) {
 	assert.Equal(0, len(reqmsg3.MustParams()))
 }
 
+func TestParseNullBytes(t *testing.T) {
+	assert := assert.New(t)
+
+	data := `{"jsonrpc":"2.0","id":1,"result":null}`
+	_, err := ParseBytes([]byte(data))
+	assert.Nil(err)
+}
+
 func TestRequestMsg(t *testing.T) {
 	assert := assert.New(t)
 
