@@ -314,7 +314,7 @@ func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jlib.Re
 	if resmsg.IsResult() {
 		err := jlib.DecodeInterface(resmsg.MustResult(), output)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
 		}
 		return nil
 	} else {
@@ -323,6 +323,14 @@ func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jlib.Re
 }
 
 func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
+	resmsg, err := self.request(rootCtx, reqmsg)
+	if err != nil {
+		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
+	}
+	return resmsg, nil
+}
+
+func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
 	err := self.Connect(rootCtx)
 	if err != nil {
 		return nil, err

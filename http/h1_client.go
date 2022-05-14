@@ -67,7 +67,7 @@ func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jlib.RequestMe
 	if resmsg.IsResult() {
 		err := jlib.DecodeInterface(resmsg.MustResult(), output)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
 		}
 		return nil
 	} else {
@@ -76,6 +76,14 @@ func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jlib.RequestMe
 }
 
 func (self *H1Client) Call(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
+	resmsg, err := self.request(rootCtx, reqmsg)
+	if err != nil {
+		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
+	}
+	return resmsg, nil
+}
+
+func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
