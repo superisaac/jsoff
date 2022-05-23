@@ -141,48 +141,6 @@ func TestNotifyMsg(t *testing.T) {
 	assert.Equal(params[1], "uu")
 }
 
-func TestGuessJson(t *testing.T) {
-	assert := assert.New(t)
-
-	v1, err := GuessJson("")
-	assert.Nil(err)
-	assert.Equal("", v1)
-
-	v1_0, err := GuessJson("5")
-	assert.Equal(int64(5), v1_0)
-
-	v1_1, err := GuessJson("-5")
-	assert.Equal(int64(-5), v1_1)
-
-	v1_2, err := GuessJson("-5.78389383")
-	assert.InDelta(float64(-5.78389383), v1_2, 0.0001)
-
-	v2, err := GuessJson("false")
-	assert.Equal(false, v2)
-
-	_, err = GuessJson("[aaa")
-	assert.Contains(err.Error(), "invalid character")
-
-	_, err = GuessJson("{aaa")
-	assert.Contains(err.Error(), "invalid character")
-
-	v3, err := GuessJson(`{"abc": 5}`)
-	map3 := v3.(map[string]interface{})
-	assert.NotNil(map3)
-	assert.Equal(json.Number("5"), map3["abc"])
-
-	v4, err := GuessJsonArray([]string{"5", "hahah", `{"ccc": 6}`})
-	assert.Equal(3, len(v4))
-	assert.Equal(int64(5), v4[0])
-	assert.Equal("hahah", v4[1])
-
-	v5, err := GuessJson(`["abc", 666.99, {"kic": 5}]`)
-	arr5 := v5.([]interface{})
-	assert.Equal(3, len(arr5))
-	assert.Equal("abc", arr5[0])
-	assert.Equal(json.Number("666.99"), arr5[1])
-}
-
 func TestDecodeMessage(t *testing.T) {
 	assert := assert.New(t)
 

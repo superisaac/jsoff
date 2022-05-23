@@ -30,6 +30,7 @@ func GuessJson(input string) (interface{}, error) {
 		bv, _ := strconv.ParseBool(input)
 		return bv, nil
 	}
+
 	iv, err := strconv.ParseInt(input, 10, 64)
 	if err == nil {
 		return iv, nil
@@ -58,6 +59,15 @@ func GuessJson(input string) (interface{}, error) {
 			return nil, err
 		}
 		return m, nil
+	} else if fc == '"' {
+		var s string
+		dec := json.NewDecoder(strings.NewReader(input))
+		dec.UseNumber()
+		err := dec.Decode(&s)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
 	} else {
 		return input, nil
 	}
