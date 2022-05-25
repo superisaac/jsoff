@@ -75,6 +75,8 @@ func (self RPCRequest) Log() *log.Entry {
 
 // handler func
 type RequestCallback func(req *RPCRequest, params []interface{}) (interface{}, error)
+
+type ContextedMsgCallback func(ctx context.Context, params []interface{}) (interface{}, error)
 type MsgCallback func(params []interface{}) (interface{}, error)
 type MissingCallback func(req *RPCRequest) (interface{}, error)
 type CloseCallback func(r *http.Request, session RPCSession)
@@ -143,6 +145,17 @@ func (self *Actor) On(method string, callback MsgCallback, setters ...HandlerSet
 	}
 }
 
+func (self *Actor) OnContext(method string, callback ContextedMsgCallback, setters ...HandlerSetter) {
+
+	reqcb := func(req *RPCRequest, params []interface{}) (interface{}, error) {
+		return callback(req.Context(), params)
+	}
+	err := self.OnRequest(method, reqcb, setters...)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (self *Actor) OnRequest(method string, callback RequestCallback, setters ...HandlerSetter) error {
 	if _, exist := self.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
@@ -171,8 +184,17 @@ func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...H
 }
 
 func (self *Actor) OnTypedRequest(method string, typedHandler interface{}, setters ...HandlerSetter) error {
-	firstArg := &RPCRequest{}
-	handler, err := wrapTyped(typedHandler, firstArg)
+	//firstArg := reflect.TypeOf(&RPCRequest{})
+	handler, err := wrapTyped(typedHandler, &ReqSpec{})
+	if err != nil {
+		return err
+	}
+	return self.OnRequest(method, handler, setters...)
+}
+
+func (self *Actor) OnTypedContext(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+	//firstArgSpec := reflect.TypeOf((*context.Context)(nil)).Elem()
+	handler, err := wrapTyped(typedHandler, &ContextSpec{})
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package jlibhttp
 
 import (
+	"context"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -54,7 +55,38 @@ func valueToInterface(tp reflect.Type, val reflect.Value) (interface{}, error) {
 	return output, nil
 }
 
-func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (RequestCallback, error) {
+type FirstArgSpec interface {
+	Check(firstArgType reflect.Type) bool
+	Value(req *RPCRequest) interface{}
+	String() string
+}
+
+type ReqSpec struct{}
+
+func (self ReqSpec) Check(firstArgType reflect.Type) bool {
+	return firstArgType.Kind() == reflect.Ptr && firstArgType.String() == self.String()
+}
+func (self ReqSpec) Value(req *RPCRequest) interface{} {
+	return req
+}
+func (self ReqSpec) String() string {
+	return "*jlibhttp.RPCRequest"
+}
+
+type ContextSpec struct{}
+
+func (self ContextSpec) Check(firstArgType reflect.Type) bool {
+	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
+	return firstArgType.Kind() == reflect.Interface && firstArgType.Implements(ctxType)
+}
+func (self ContextSpec) Value(req *RPCRequest) interface{} {
+	return req.Context()
+}
+func (self ContextSpec) String() string {
+	return "context.Context"
+}
+
+func wrapTyped(tfunc interface{}, firstArgSpec FirstArgSpec) (RequestCallback, error) {
 
 	funcType := reflect.TypeOf(tfunc)
 	if funcType.Kind() != reflect.Func {
@@ -63,18 +95,18 @@ func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (RequestCallback, er
 
 	numIn := funcType.NumIn()
 
-	hasFirstArg := firstArgSpec != nil
+	requireFirstArg := firstArgSpec != (FirstArgSpec)(nil)
 	firstArgNum := 0
-	if hasFirstArg {
+	if requireFirstArg {
 		firstArgNum = 1
-		firstSpecType := reflect.TypeOf(firstArgSpec)
 		// check inputs and 1st argument
 		if numIn < firstArgNum {
 			return nil, errors.New("func must have 1 more arguments")
 		}
 		firstArgType := funcType.In(0)
-		if !(firstArgType.Kind() == reflect.Ptr && firstArgType.String() == firstSpecType.String()) {
-			return nil, errors.New(fmt.Sprintf("the first arg must be %s", firstSpecType.String()))
+
+		if !firstArgSpec.Check(firstArgType) {
+			return nil, errors.New(fmt.Sprintf("the first arg must be %s", firstArgSpec.String()))
 		}
 	}
 
@@ -98,8 +130,9 @@ func wrapTyped(tfunc interface{}, firstArgSpec interface{}) (RequestCallback, er
 
 		// params -> []reflect.Value
 		fnArgs := []reflect.Value{}
-		if hasFirstArg {
-			fnArgs = append(fnArgs, reflect.ValueOf(req))
+		if requireFirstArg {
+			v := firstArgSpec.Value(req)
+			fnArgs = append(fnArgs, reflect.ValueOf(v))
 		}
 		j := 0
 		for i := firstArgNum; i < numIn; i++ {

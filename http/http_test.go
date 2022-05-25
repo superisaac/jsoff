@@ -155,11 +155,17 @@ func TestTypedServerClient(t *testing.T) {
 	assert.NotNil(err)
 	assert.Equal("the first arg must be *jlibhttp.RPCRequest", err.Error())
 
-	server.Actor.OnTyped("echoTyped", func(v string) (string, error) {
+	err = server.Actor.OnTypedContext("wrongNoContext", func(a int, b int) (int, error) {
+		return a + b, nil
+	})
+	assert.NotNil(err)
+	assert.Equal("the first arg must be context.Context", err.Error())
+
+	server.Actor.OnTypedContext("echoTyped", func(ctx context.Context, v string) (string, error) {
 		return v, nil
 	})
 
-	server.Actor.OnTyped("add", func(a, b int) (int, error) {
+	server.Actor.OnTypedContext("add", func(ctx context.Context, a, b int) (int, error) {
 		return a + b, nil
 	})
 
