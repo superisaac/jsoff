@@ -114,16 +114,19 @@ func WithSchemaJson(jsonSchema string) HandlerSetter {
 }
 
 type Actor struct {
-	ValidateSchema bool
-	methodHandlers map[string]*MethodHandler
-	missingHandler MissingCallback
-	closeHandler   CloseCallback
-	children       []*Actor
+	ValidateSchema   bool
+	RecoverFromPanic bool
+	methodHandlers   map[string]*MethodHandler
+	missingHandler   MissingCallback
+	closeHandler     CloseCallback
+	children         []*Actor
 }
 
 func NewActor() *Actor {
 	return &Actor{
-		ValidateSchema: true,
+		ValidateSchema:   true,
+		RecoverFromPanic: true,
+
 		methodHandlers: make(map[string]*MethodHandler),
 		children:       make([]*Actor, 0),
 	}
@@ -316,9 +319,7 @@ func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 				return nil, errPos
 			}
 		}
-		res, err := handler.callback(req, params)
-		resmsg, err := self.wrapResult(res, err, msg)
-		return resmsg, err
+		return self.recoverCallHandler(handler, req, params)
 	} else {
 		for _, child := range self.children {
 			if child.Has(msg.MustMethod()) {
@@ -326,9 +327,7 @@ func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 			}
 		}
 		if self.missingHandler != nil {
-			res, err := self.missingHandler(req)
-			resmsg, err := self.wrapResult(res, err, msg)
-			return resmsg, err
+			return self.recoverCallMissingHandler(req)
 		} else {
 			if msg.IsRequest() {
 				return jlib.ErrMethodNotFound.ToMessageFromId(
@@ -339,10 +338,43 @@ func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 	return nil, nil
 }
 
+func (self Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []interface{}) (resmsg0 jlib.Message, err0 error) {
+	if self.RecoverFromPanic {
+		defer func() {
+			if r := recover(); r != nil {
+				if err, ok := r.(error); ok {
+					resmsg0, err0 = self.wrapResult(nil, err, req.Msg())
+				} else {
+					panic(r)
+				}
+			}
+		}()
+	}
+	res, err := handler.callback(req, params)
+	return self.wrapResult(res, err, req.Msg())
+}
+
+func (self Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jlib.Message, err0 error) {
+	if self.RecoverFromPanic {
+		defer func() {
+			if r := recover(); r != nil {
+				if err, ok := r.(error); ok {
+					resmsg0, err0 = self.wrapResult(nil, err, req.Msg())
+				} else {
+					// rethrown the panic result
+					panic(r)
+				}
+			}
+		}()
+	}
+	res, err := self.missingHandler(req)
+	return self.wrapResult(res, err, req.Msg())
+}
+
 func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
-			msg.Log().Warnf("error %s", err)
+			msg.Log().Errorf("wrapResult(), error handleing res, %#v", err)
 		}
 		return nil, err
 	}
@@ -358,7 +390,7 @@ func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
 		} else {
-			msg.Log().Warnf("error %s", err)
+			msg.Log().Errorf("wrapResult(), error handling err %#v", err)
 			return jlib.ErrInternalError.ToMessage(reqmsg), nil
 		}
 	} else if resmsg1, ok := res.(jlib.Message); ok {
