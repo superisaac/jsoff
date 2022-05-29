@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"math/big"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -40,8 +41,25 @@ func GuessJson(input string) (interface{}, error) {
 		return fv, nil
 	}
 
-	fc := input[0]
-	if fc == '[' {
+	switch input[0] {
+	case '@':
+		// a path to json file
+		f, err := os.Open(input[1:])
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		var v interface{}
+		dec := json.NewDecoder(f)
+		dec.UseNumber()
+		err = dec.Decode(&v)
+		if err != nil {
+			return nil, err
+		}
+		return v, nil
+	case '[':
+		// maybe a list
 		var arr []interface{}
 		dec := json.NewDecoder(strings.NewReader(input))
 		dec.UseNumber()
@@ -50,7 +68,8 @@ func GuessJson(input string) (interface{}, error) {
 			return nil, err
 		}
 		return arr, nil
-	} else if fc == '{' {
+	case '{':
+		// maybe an object
 		var m map[string]interface{}
 		dec := json.NewDecoder(strings.NewReader(input))
 		dec.UseNumber()
@@ -59,7 +78,8 @@ func GuessJson(input string) (interface{}, error) {
 			return nil, err
 		}
 		return m, nil
-	} else if fc == '"' {
+	case '"':
+		// a string quote
 		var s string
 		dec := json.NewDecoder(strings.NewReader(input))
 		dec.UseNumber()
@@ -68,7 +88,7 @@ func GuessJson(input string) (interface{}, error) {
 			return nil, err
 		}
 		return s, nil
-	} else {
+	default:
 		return input, nil
 	}
 }

@@ -122,4 +122,13 @@ func TestGuessJson(t *testing.T) {
 	s7 := v7.(string)
 	assert.Equal("-666.999", s7)
 
+	v8, err := GuessJson(`@testdata/guess.json`)
+	assert.Nil(err)
+	m8 := v8.(map[string]interface{})
+	assert.Equal("ttt", m8["aaa"])
+	assert.Equal(json.Number("789"), m8["bbb"])
+
+	_, err = GuessJson(`@testdata/nosuchfile.json`)
+	assert.Equal("open testdata/nosuchfile.json: no such file or directory", err.Error())
+
 }
