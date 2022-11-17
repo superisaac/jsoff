@@ -128,6 +128,17 @@ func TestGuessJson(t *testing.T) {
 	assert.Equal("ttt", m8["aaa"])
 	assert.Equal(json.Number("789"), m8["bbb"])
 
+	v10, err := GuessJson("null")
+	assert.Nil(err)
+	assert.Nil(v10)
+
+	v11, err := GuessJson("[166, null, \"hello\"]")
+	assert.Nil(err)
+	arr11 := v11.([]interface{})
+	assert.Equal(json.Number("166"), arr11[0])
+	assert.Nil(arr11[1])
+	assert.Equal("hello", arr11[2])
+
 	_, err = GuessJson(`@testdata/nosuchfile.json`)
 	assert.Equal("open testdata/nosuchfile.json: no such file or directory", err.Error())
 

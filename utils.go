@@ -27,9 +27,14 @@ func GuessJson(input string) (interface{}, error) {
 	if len(input) == 0 {
 		return "", nil
 	}
+
 	if input == "true" || input == "false" {
 		bv, _ := strconv.ParseBool(input)
 		return bv, nil
+	}
+
+	if input == "null" {
+		return nil, nil
 	}
 
 	iv, err := strconv.ParseInt(input, 10, 64)

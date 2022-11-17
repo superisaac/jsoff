@@ -1,5 +1,5 @@
 gofiles := $(shell find . -name '*.go')
-goflag := -gcflags=-G=3
+goflag :=
 
 all: test
 
