@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/pkg/errors"
 	"github.com/superisaac/jlib"
-	"io"
+	//"io"
 	"net/http"
 )
 
@@ -59,9 +59,11 @@ func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			w.WriteHeader(origResp.StatusCode)
-			_, err := io.Copy(w, origResp.Body)
+
+			_, err := w.Write(upResp.Buffer.Bytes())
+			//_, err := io.Copy(w, origResp.Body)
 			if err != nil {
-				msg.Log().Errorf("io.Copy error %#v", err)
+				msg.Log().Errorf("Write buffer error %#v", err)
 			}
 			return
 		}

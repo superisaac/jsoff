@@ -1,6 +1,7 @@
 package jlibhttp
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 )
@@ -9,6 +10,7 @@ import (
 // non standard Response returned by endpoints
 type WrappedResponse struct {
 	Response *http.Response
+	Buffer   bytes.Buffer
 }
 
 func (self WrappedResponse) Error() string {

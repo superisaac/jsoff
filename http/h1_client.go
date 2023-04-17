@@ -124,8 +124,15 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		var buffer bytes.Buffer
+		readed, err := buffer.ReadFrom(resp.Body)
+		if err != nil {
+			return nil, errors.Wrapf(err, "read from response, readed=%d, status=%d", readed, resp.StatusCode)
+		}
+		// TODO: handle ErrTooLarge
 		abnResp := &WrappedResponse{
 			Response: resp,
+			Buffer:   buffer,
 		}
 		reqmsg.Log().Warnf("abnormal response %d", resp.StatusCode)
 		return nil, errors.Wrap(abnResp, "abnormal response")
