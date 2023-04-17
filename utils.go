@@ -133,7 +133,7 @@ func DecodeInterface(input interface{}, output interface{}) error {
 	return decoder.Decode(input)
 }
 
-/// Convert params to a struct field by field
+// / Convert params to a struct field by field
 func DecodeParams(params []interface{}, outputPtr interface{}) error {
 	ptrType := reflect.TypeOf(outputPtr)
 	if ptrType.Kind() != reflect.Ptr {

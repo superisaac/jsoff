@@ -46,7 +46,6 @@ func (self *SchemaBuilder) Build(data interface{}) (Schema, error) {
 	return self.buildNode(data)
 }
 
-//
 func (self SchemaBuilder) FixYamlMaps(src interface{}, paths ...string) (interface{}, error) {
 	if anyMap, ok := src.(map[interface{}]interface{}); ok {
 		strMap := make(map[string]interface{})

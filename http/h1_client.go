@@ -127,6 +127,7 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessa
 		abnResp := &WrappedResponse{
 			Response: resp,
 		}
+		reqmsg.Log().Warnf("abnormal response %d", resp.StatusCode)
 		return nil, errors.Wrap(abnResp, "abnormal response")
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)

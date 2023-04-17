@@ -26,10 +26,10 @@ type RPCError struct {
 // https://www.jsonrpc.org/specification
 //
 // data Message = Request id method params |
-//                Notify method params |
-//                Result id result |
-//                Error id error={ code message data }
 //
+//	Notify method params |
+//	Result id result |
+//	Error id error={ code message data }
 type Message interface {
 	// Return's the judgement of message types
 	IsRequest() bool
