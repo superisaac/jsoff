@@ -387,8 +387,11 @@ func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib
 
 	if err != nil {
 		var rpcErr *jlib.RPCError
+		var wrapErr *WrappedResponse
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
+		} else if errors.As(err, &wrapErr) {
+			return nil, wrapErr
 		} else {
 			msg.Log().Errorf("wrapResult(), error handling err %#v", err)
 			return jlib.ErrInternalError.ToMessage(reqmsg), nil
