@@ -59,7 +59,10 @@ func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			w.WriteHeader(origResp.StatusCode)
-			io.Copy(w, origResp.Body)
+			_, err := io.Copy(w, origResp.Body)
+			if err != nil {
+				msg.Log().Errorf("io.Copy error %#v", err)
+			}
 			return
 		}
 		msg.Log().Warnf("err.handleMessage %s", err)
