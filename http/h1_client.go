@@ -15,20 +15,26 @@ import (
 )
 
 type H1Client struct {
-	serverUrl   *url.URL
-	extraHeader http.Header
-	httpClient  *http.Client
+	serverUrl     *url.URL
+	extraHeader   http.Header
+	httpClient    *http.Client
+	clientOptions ClientOptions
 
 	connectOnce sync.Once
 
 	clientTLS *tls.Config
 }
 
-func NewH1Client(serverUrl *url.URL) *H1Client {
+func NewH1Client(serverUrl *url.URL, optlist ...ClientOptions) *H1Client {
 	if serverUrl.Scheme != "http" && serverUrl.Scheme != "https" {
 		log.Panicf("server url %s is not http", serverUrl)
 	}
-	return &H1Client{serverUrl: serverUrl}
+
+	clientOptions := ClientOptions{}
+	if len(optlist) > 0 {
+		clientOptions = optlist[0]
+	}
+	return &H1Client{serverUrl: serverUrl, clientOptions: clientOptions}
 }
 
 func (self *H1Client) ServerURL() *url.URL {
@@ -37,6 +43,10 @@ func (self *H1Client) ServerURL() *url.URL {
 
 func (self *H1Client) connect() {
 	self.connectOnce.Do(func() {
+		timeout := self.clientOptions.Timeout
+		if timeout <= 0 {
+			timeout = 5
+		}
 		tr := &http.Transport{
 			MaxIdleConns:        30,
 			MaxIdleConnsPerHost: 10,
@@ -47,7 +57,7 @@ func (self *H1Client) connect() {
 		}
 		self.httpClient = &http.Client{
 			Transport: tr,
-			Timeout:   5 * time.Second,
+			Timeout:   time.Duration(timeout) * time.Second,
 		}
 	})
 }

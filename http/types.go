@@ -11,6 +11,11 @@ import (
 	"net/url"
 )
 
+type ClientOptions struct {
+	// client request timeout
+	Timeout int `json:"timeout" yaml:"timeout"`
+}
+
 // Client is an abstract interface a client type must implement
 type Client interface {
 	// Returns the server URL
