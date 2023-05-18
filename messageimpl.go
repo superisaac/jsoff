@@ -323,6 +323,14 @@ func (self RequestMessage) Clone(newId interface{}) *RequestMessage {
 	return newReq
 }
 
+func (self RequestMessage) CacheKey(prefix string) string {
+	paramBytes, err := json.Marshal(self.Params)
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%s%s%s", prefix, self.Method, string(paramBytes))
+}
+
 func NewNotifyMessage(method string, params interface{}) *NotifyMessage {
 	if method == "" {
 		panic(ErrEmptyMethod)
