@@ -40,6 +40,15 @@ func (self SchemaMixin) rebuildType(nType string) map[string]interface{} {
 func (self AnySchema) Type() string {
 	return "any"
 }
+
+func (self AnySchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*AnySchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description)
+	}
+	return false
+}
+
 func (self AnySchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
@@ -52,6 +61,15 @@ func (self *AnySchema) Scan(validator *SchemaValidator, data interface{}) *Error
 func (self NullSchema) Type() string {
 	return "null"
 }
+
+func (self NullSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*NullSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description)
+	}
+	return false
+}
+
 func (self NullSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
@@ -67,6 +85,14 @@ func (self *NullSchema) Scan(validator *SchemaValidator, data interface{}) *Erro
 func (self BoolSchema) Type() string {
 	return "bool"
 }
+func (self BoolSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*BoolSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description)
+	}
+	return false
+}
+
 func (self BoolSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
@@ -86,6 +112,22 @@ func NewNumberSchema() *NumberSchema {
 func (self NumberSchema) Type() string {
 	return "number"
 }
+
+func (self NumberSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*NumberSchema); ok {
+		if otherSchema == nil {
+			return false
+		}
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			PointerEqual(self.Maximum, otherSchema.Maximum) &&
+			PointerEqual(self.Minimum, otherSchema.Minimum) &&
+			PointerEqual(self.ExclusiveMaximum, otherSchema.ExclusiveMaximum) &&
+			PointerEqual(self.ExclusiveMinimum, otherSchema.ExclusiveMinimum))
+	}
+	return false
+}
+
 func (self NumberSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	if self.Maximum != nil {
@@ -175,6 +217,18 @@ func (self IntegerSchema) Map() map[string]interface{} {
 	return tp
 }
 
+func (self IntegerSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*IntegerSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			PointerEqual(self.Maximum, otherSchema.Maximum) &&
+			PointerEqual(self.Minimum, otherSchema.Minimum) &&
+			PointerEqual(self.ExclusiveMaximum, otherSchema.ExclusiveMaximum) &&
+			PointerEqual(self.ExclusiveMinimum, otherSchema.ExclusiveMinimum))
+	}
+	return false
+}
+
 func (self *IntegerSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
 	if n, ok := data.(json.Number); ok {
 		if in, err := n.Int64(); err == nil {
@@ -232,6 +286,16 @@ func (self StringSchema) Map() map[string]interface{} {
 	return self.rebuildType(self.Type())
 }
 
+func (self StringSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*StringSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			PointerEqual(self.MaxLength, otherSchema.MaxLength) &&
+			PointerEqual(self.MinLength, otherSchema.MinLength))
+	}
+	return false
+}
+
 func (self *StringSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
 	if str, ok := data.(string); ok {
 		if self.MaxLength != nil && len(str) > *self.MaxLength {
@@ -264,6 +328,16 @@ func (self AnyOfSchema) Map() map[string]interface{} {
 func (self AnyOfSchema) Type() string {
 	return "anyOf"
 }
+
+func (self AnyOfSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*AnyOfSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			SchemaListEqual(self.Choices, otherSchema.Choices))
+	}
+	return false
+}
+
 func (self *AnyOfSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
 	for _, schema := range self.Choices {
 		if errPos := validator.Scan(schema, "", data); errPos == nil {
@@ -291,6 +365,15 @@ func (self AllOfSchema) Map() map[string]interface{} {
 func (self AllOfSchema) Type() string {
 	return "allOf"
 }
+func (self AllOfSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*AllOfSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			SchemaListEqual(self.Choices, otherSchema.Choices))
+	}
+	return false
+}
+
 func (self *AllOfSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
 	for _, schema := range self.Choices {
 		if errPos := validator.Scan(schema, "", data); errPos != nil {
@@ -314,6 +397,16 @@ func (self NotSchema) Map() map[string]interface{} {
 func (self NotSchema) Type() string {
 	return "not"
 }
+
+func (self NotSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*NotSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			SubSchemaEqual(self.Child, otherSchema.Child))
+	}
+	return false
+}
+
 func (self *NotSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
 
 	errPos := self.Child.Scan(validator, data)
@@ -332,6 +425,18 @@ func NewListSchema() *ListSchema {
 func (self ListSchema) Type() string {
 	return "list"
 }
+
+func (self ListSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*ListSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			PointerEqual(self.MaxItems, otherSchema.MaxItems) &&
+			PointerEqual(self.MinItems, otherSchema.MinItems) &&
+			SubSchemaEqual(self.Item, otherSchema.Item))
+	}
+	return false
+}
+
 func (self ListSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	tp["items"] = self.Item.Map()
@@ -367,6 +472,16 @@ func NewTupleSchema() *TupleSchema {
 }
 func (self TupleSchema) Type() string {
 	return "list"
+}
+
+func (self TupleSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*TupleSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			SubSchemaEqual(self.AdditionalSchema, otherSchema.AdditionalSchema) &&
+			SchemaListEqual(self.Children, otherSchema.Children))
+	}
+	return false
 }
 
 func (self TupleSchema) Map() map[string]interface{} {
@@ -417,6 +532,18 @@ func NewMethodSchema() *MethodSchema {
 }
 func (self MethodSchema) Type() string {
 	return "method"
+}
+
+func (self MethodSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*MethodSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			SubSchemaEqual(self.AdditionalSchema, otherSchema.AdditionalSchema) &&
+			SchemaListEqual(self.Params, otherSchema.Params) &&
+			SubSchemaEqual(self.Returns, otherSchema.Returns))
+
+	}
+	return false
 }
 
 func (self MethodSchema) Map() map[string]interface{} {
@@ -504,6 +631,17 @@ func (self ObjectSchema) Type() string {
 	return "object"
 }
 
+func (self ObjectSchema) Equal(other Schema) bool {
+	if otherSchema, ok := other.(*ObjectSchema); ok && otherSchema != nil {
+		return (self.name == otherSchema.name &&
+			self.description == otherSchema.description &&
+			SchemaMapEqual(self.Properties, otherSchema.Properties) &&
+			SchemaMapValueEqual(self.Requires, otherSchema.Requires) &&
+			SubSchemaEqual(self.AdditionalProperties, otherSchema.AdditionalProperties))
+	}
+	return false
+}
+
 func (self ObjectSchema) Map() map[string]interface{} {
 	tp := self.rebuildType(self.Type())
 	props := make(map[string]interface{})
@@ -569,4 +707,83 @@ func SchemaToString(schema Schema) string {
 		panic(err)
 	}
 	return string(data)
+}
+
+// equal checking
+func PointerEqual[T comparable](p1 *T, p2 *T) bool {
+	if p1 != nil && p2 != nil {
+		return *p1 == *p2
+	} else if p1 == nil && p2 == nil {
+		return true
+	} else {
+		return false
+	}
+}
+
+func SubSchemaEqual(s1 Schema, s2 Schema) bool {
+	if s1 != nil && s2 != nil {
+		return s1.Equal(s2)
+	} else if s1 == nil && s2 == nil {
+		return true
+	} else {
+		return false
+	}
+}
+
+func SchemaListEqual(l1 []Schema, l2 []Schema) bool {
+	if l1 != nil && l2 != nil {
+		if len(l1) != len(l2) {
+			return false
+		}
+		for i, elem := range l1 {
+			if !elem.Equal(l2[i]) {
+				return false
+			}
+		}
+		return true
+	} else if l1 == nil && l2 == nil {
+		return true
+	}
+	return false
+}
+
+func SchemaMapValueEqual[T comparable](m1 map[string]T, m2 map[string]T) bool {
+	if m1 != nil && m2 != nil {
+		if len(m1) != len(m2) {
+			return false
+		}
+		for key, elem1 := range m1 {
+			elem2, ok := m2[key]
+			if !ok {
+				return false
+			}
+			if elem1 != elem2 {
+				return false
+			}
+		}
+		return true
+	} else if m1 == nil && m2 == nil {
+		return true
+	}
+	return false
+}
+func SchemaMapEqual(m1 map[string]Schema, m2 map[string]Schema) bool {
+	if m1 != nil && m2 != nil {
+		if len(m1) != len(m2) {
+			return false
+		}
+		for key, elem1 := range m1 {
+			elem2, ok := m2[key]
+			if !ok {
+				return false
+			}
+			if !elem1.Equal(elem2) {
+				return false
+			}
+		}
+		return true
+	} else if m1 == nil && m2 == nil {
+		return true
+	}
+	return false
 }

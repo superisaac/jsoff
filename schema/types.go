@@ -35,6 +35,7 @@ type Schema interface {
 	GetName() string
 	SetDescription(desc string)
 	GetDescription() string
+	Equal(other Schema) bool
 }
 
 type SchemaMixin struct {

@@ -29,6 +29,10 @@ func TestBuildBasicSchema(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("string", s.Type())
 
+	sc1, err := builder.BuildBytes([]byte(`{"type": "string"}`))
+	assert.Nil(err)
+	assert.True(sc1.Equal(s))
+
 	s1 = []byte(`{"type": "bad"}`)
 	s, err = builder.BuildBytes(s1)
 	assert.NotNil(err)
