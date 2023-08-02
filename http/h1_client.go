@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jlib"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/superisaac/jlib"
 )
 
 type H1Client struct {
@@ -129,6 +131,13 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessa
 
 	resp, err := self.httpClient.Do(req)
 	if err != nil {
+		if os.IsTimeout(err) {
+			timeoutResp := &SimpleResponse{
+				Code: http.StatusRequestTimeout,
+				Body: []byte(`"request timeout"`),
+			}
+			return nil, errors.Wrap(timeoutResp, "request timeout")
+		}
 		return nil, errors.Wrap(err, "http Do")
 	}
 	defer resp.Body.Close()
@@ -142,7 +151,7 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessa
 		// TODO: handle ErrTooLarge
 		abnResp := &WrappedResponse{
 			Response: resp,
-			Buffer:   buffer,
+			Body:     buffer.Bytes(),
 		}
 		reqmsg.Log().Warnf("abnormal response %d", resp.StatusCode)
 		return nil, errors.Wrap(abnResp, "abnormal response")

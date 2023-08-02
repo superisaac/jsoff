@@ -60,7 +60,7 @@ func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(origResp.StatusCode)
 
-			_, err := w.Write(upResp.Buffer.Bytes())
+			_, err := w.Write(upResp.Body)
 			//_, err := io.Copy(w, origResp.Body)
 			if err != nil {
 				msg.Log().Errorf("Write buffer error %#v", err)
