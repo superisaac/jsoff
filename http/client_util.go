@@ -24,7 +24,7 @@ func (self *HeaderFlags) Parse() (http.Header, error) {
 		if len(arr) != 2 {
 			return nil, errors.New("invalid http header")
 		}
-		header.Add(arr[0], arr[1])
+		header.Add(strings.Trim(arr[0], " "), strings.Trim(arr[1], " "))
 	}
 	return header, nil
 }
