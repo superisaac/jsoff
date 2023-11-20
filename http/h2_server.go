@@ -152,9 +152,7 @@ func (self *H2Session) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
-		TransportHTTP2,
-		self.httpRequest)
-	req.session = self
+		TransportHTTP2).WithHTTPRequest(self.httpRequest).WithSession(self)
 
 	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {

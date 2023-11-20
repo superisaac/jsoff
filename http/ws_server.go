@@ -126,9 +126,7 @@ func (self *WSSession) msgBytesReceived(msgBytes []byte) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
-		TransportWebsocket,
-		self.httpRequest)
-	req.session = self
+		TransportWebsocket).WithHTTPRequest(self.httpRequest).WithSession(self)
 
 	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {

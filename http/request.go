@@ -31,13 +31,22 @@ type RPCRequest struct {
 	session       RPCSession
 }
 
-func NewRPCRequest(ctx context.Context, msg jsoff.Message, transportType string, r *http.Request) *RPCRequest {
+func NewRPCRequest(ctx context.Context, msg jsoff.Message, transportType string) *RPCRequest {
 	return &RPCRequest{
 		context:       ctx,
 		msg:           msg,
 		transportType: transportType,
-		r:             r,
 	}
+}
+
+func (self *RPCRequest) WithSession(session RPCSession) *RPCRequest {
+	self.session = session
+	return self
+}
+
+func (self *RPCRequest) WithHTTPRequest(r *http.Request) *RPCRequest {
+	self.r = r
+	return self
 }
 
 func (self RPCRequest) Context() context.Context {

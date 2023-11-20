@@ -29,17 +29,17 @@ type TCPServer struct {
 	serverCtx context.Context
 }
 
-func NewTCPServer(serverCtx context.Context, actor *Actor) *H2Handler {
+func NewTCPServer(serverCtx context.Context, actor *Actor) *TCPServer {
 	if actor == nil {
 		actor = NewActor()
 	}
-	return &H2Handler{
+	return &TCPServer{
 		serverCtx: serverCtx,
 		Actor:     actor,
 	}
 }
 
-func (self *TCPServer) Start(bind string) error {
+func (self *TCPServer) Start(rootCtx context.Context, bind string) error {
 	listen, err := net.Listen("tcp", bind)
 	if err != nil {
 		return err
@@ -51,17 +51,16 @@ func (self *TCPServer) Start(bind string) error {
 			fmt.Printf("accept failed, %v\n", err)
 			continue
 		}
-		go self.processConnection(conn)
+		go self.processConnection(rootCtx, conn)
 	}
 }
 
-func (self *TCPServer) processConnection(conn net.Conn) {
+func (self *TCPServer) processConnection(rootCtx context.Context, conn net.Conn) {
 	decoder := json.NewDecoder(bufio.NewReader(conn))
 
 	session := &TCPSession{
-		server:  self,
-		rootCtx: context.Background(), // r.Context(),
-		//writer:      w,
+		server:      self,
+		rootCtx:     rootCtx,
 		conn:        conn,
 		decoder:     decoder,
 		done:        make(chan error, 10),
@@ -70,7 +69,7 @@ func (self *TCPServer) processConnection(conn net.Conn) {
 	}
 	defer func() {
 		conn.Close()
-		//self.Actor.HandleClose(r, session)
+		self.Actor.HandleClose(session)
 	}()
 	session.wait()
 }
@@ -123,9 +122,7 @@ func (self *TCPSession) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
-		TransportTCP,
-		nil)
-	req.session = self
+		TransportTCP).WithSession(self)
 
 	resmsg, err := self.server.Actor.Feed(req)
 	if err != nil {
