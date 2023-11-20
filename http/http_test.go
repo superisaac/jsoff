@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsoff"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,7 +29,7 @@ func urlParse(server string) *url.URL {
 }
 
 func TestMain(m *testing.M) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Exit(m.Run())
 }
 
@@ -57,7 +57,7 @@ func serverTLS() *TLSConfig {
 
 func clientTLS() *tls.Config {
 	// client certificates using CA
-	cacert, err := ioutil.ReadFile("testdata/ca.crt")
+	cacert, err := os.ReadFile("testdata/ca.crt")
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func TestServerClient(t *testing.T) {
 	// request a GET method
 	resp, err := http.Get("http://127.0.0.1:28000")
 	assert.Equal(http.StatusMethodNotAllowed, resp.StatusCode)
-	respData, _ := ioutil.ReadAll(resp.Body)
+	respData, _ := io.ReadAll(resp.Body)
 	assert.Equal("Method not allowed", string(respData))
 
 	client := NewH1Client(urlParse("http://127.0.0.1:28000"))
