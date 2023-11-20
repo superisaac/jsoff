@@ -123,7 +123,7 @@ func (self *TCPSession) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
-		TransportHTTP2,
+		TransportTCP,
 		nil)
 	req.session = self
 
