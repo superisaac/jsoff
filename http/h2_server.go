@@ -95,12 +95,12 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		r.Body.Close()
-		self.Actor.HandleClose(r, session)
+		self.Actor.HandleClose(session)
 	}()
 	session.wait()
 }
 
-// websocket session
+// http2 session
 func (self *H2Session) wait() {
 	connCtx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()

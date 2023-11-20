@@ -13,6 +13,7 @@ const (
 	TransportHTTP      = "http"
 	TransportWebsocket = "websocket"
 	TransportHTTP2     = "http2"
+	TransportTCP       = "tcp"
 )
 
 type RPCSession interface {
@@ -79,7 +80,9 @@ type RequestCallback func(req *RPCRequest, params []interface{}) (interface{}, e
 type ContextedMsgCallback func(ctx context.Context, params []interface{}) (interface{}, error)
 type MsgCallback func(params []interface{}) (interface{}, error)
 type MissingCallback func(req *RPCRequest) (interface{}, error)
-type CloseCallback func(r *http.Request, session RPCSession)
+
+// type CloseCallback func(r *http.Request, session RPCSession)
+type CloseCallback func(session RPCSession)
 
 // With method handler
 type MethodHandler struct {
@@ -229,14 +232,14 @@ func (self *Actor) OnClose(handler CloseCallback) error {
 }
 
 // call the close handler if possible
-func (self *Actor) HandleClose(r *http.Request, session RPCSession) {
+func (self *Actor) HandleClose(session RPCSession) {
 	// each child have to be called
 	for _, child := range self.children {
-		child.HandleClose(r, session)
+		child.HandleClose(session)
 	}
 
 	if self.closeHandler != nil {
-		self.closeHandler(r, session)
+		self.closeHandler(session)
 	}
 }
 

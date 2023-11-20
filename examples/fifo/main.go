@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsoff"
 	"github.com/superisaac/jsoff/http"
-	"net/http"
 	"os"
 	"sync"
 )
@@ -99,7 +98,7 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.OnClose(func(r *http.Request, session jsoffhttp.RPCSession) {
+	handler.Actor.OnClose(func(session jsoffhttp.RPCSession) {
 		log.Infof("fifo unsub %s", session.SessionID())
 		delete(subs, session.SessionID())
 	})

@@ -22,7 +22,7 @@ type pendingRequest struct {
 var TransportConnectFailed = errors.New("connect refused")
 var TransportClosed = errors.New("streaming closed")
 
-// the underline transport, currently there are websocket and gRPC
+// the underline transport, currently there are websocket, h2 and net socket
 // implementations
 type Transport interface {
 	Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error

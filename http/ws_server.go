@@ -63,7 +63,7 @@ func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sessionId:   jsoff.NewUuid(),
 	}
 	defer func() {
-		self.Actor.HandleClose(r, session)
+		self.Actor.HandleClose(session)
 	}()
 	session.wait()
 	session.server = nil
