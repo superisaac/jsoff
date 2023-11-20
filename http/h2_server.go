@@ -1,4 +1,4 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"io"
@@ -33,7 +33,7 @@ type H2Session struct {
 	httpRequest *http.Request
 	rootCtx     context.Context
 	done        chan error
-	sendChannel chan jlib.Message
+	sendChannel chan jsoff.Message
 	sessionId   string
 }
 
@@ -90,8 +90,8 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		flusher:     flusher,
 		decoder:     decoder,
 		done:        make(chan error, 10),
-		sendChannel: make(chan jlib.Message, 100),
-		sessionId:   jlib.NewUuid(),
+		sendChannel: make(chan jsoff.Message, 100),
+		sessionId:   jsoff.NewUuid(),
 	}
 	defer func() {
 		r.Body.Close()
@@ -128,7 +128,7 @@ func (self *H2Session) wait() {
 
 func (self *H2Session) recvLoop() {
 	for {
-		msg, err := jlib.DecodeMessage(self.decoder)
+		msg, err := jsoff.DecodeMessage(self.decoder)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
@@ -148,7 +148,7 @@ func (self *H2Session) recvLoop() {
 	return
 }
 
-func (self *H2Session) msgReceived(msg jlib.Message) {
+func (self *H2Session) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
@@ -170,7 +170,7 @@ func (self *H2Session) msgReceived(msg jlib.Message) {
 	}
 }
 
-func (self *H2Session) Send(msg jlib.Message) {
+func (self *H2Session) Send(msg jsoff.Message) {
 	self.sendChannel <- msg
 }
 
@@ -193,7 +193,7 @@ func (self *H2Session) sendLoop() {
 			if self.decoder == nil {
 				return
 			}
-			marshaled, err := jlib.MessageBytes(msg)
+			marshaled, err := jsoff.MessageBytes(msg)
 			if err != nil {
 				log.Warnf("marshal msg error %s", err)
 				return

@@ -1,11 +1,11 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jlib"
-	"github.com/superisaac/jlib/schema"
+	"github.com/superisaac/jsoff"
+	"github.com/superisaac/jsoff/schema"
 	"net/http"
 )
 
@@ -16,21 +16,21 @@ const (
 )
 
 type RPCSession interface {
-	Send(msg jlib.Message)
+	Send(msg jsoff.Message)
 	SessionID() string
 }
 
 // http rpc quest structure
 type RPCRequest struct {
 	context       context.Context
-	msg           jlib.Message
+	msg           jsoff.Message
 	transportType string
 	r             *http.Request
 	data          interface{} // arbitrary data
 	session       RPCSession
 }
 
-func NewRPCRequest(ctx context.Context, msg jlib.Message, transportType string, r *http.Request) *RPCRequest {
+func NewRPCRequest(ctx context.Context, msg jsoff.Message, transportType string, r *http.Request) *RPCRequest {
 	return &RPCRequest{
 		context:       ctx,
 		msg:           msg,
@@ -43,7 +43,7 @@ func (self RPCRequest) Context() context.Context {
 	return self.context
 }
 
-func (self RPCRequest) Msg() jlib.Message {
+func (self RPCRequest) Msg() jsoff.Message {
 	return self.msg
 }
 
@@ -84,19 +84,19 @@ type CloseCallback func(r *http.Request, session RPCSession)
 // With method handler
 type MethodHandler struct {
 	callback RequestCallback
-	schema   jlibschema.Schema
+	schema   jsoffschema.Schema
 }
 
 type HandlerSetter func(h *MethodHandler)
 
-func WithSchema(s jlibschema.Schema) HandlerSetter {
+func WithSchema(s jsoffschema.Schema) HandlerSetter {
 	return func(h *MethodHandler) {
 		h.schema = s
 	}
 }
 
 func WithSchemaYaml(yamlSchema string) HandlerSetter {
-	builder := jlibschema.NewSchemaBuilder()
+	builder := jsoffschema.NewSchemaBuilder()
 	s, err := builder.BuildYamlBytes([]byte(yamlSchema))
 	if err != nil {
 		panic(err)
@@ -105,7 +105,7 @@ func WithSchemaYaml(yamlSchema string) HandlerSetter {
 }
 
 func WithSchemaJson(jsonSchema string) HandlerSetter {
-	builder := jlibschema.NewSchemaBuilder()
+	builder := jsoffschema.NewSchemaBuilder()
 	s, err := builder.BuildBytes([]byte(jsonSchema))
 	if err != nil {
 		panic(err)
@@ -267,7 +267,7 @@ func (self Actor) MethodList() []string {
 }
 
 // get the schema of a method
-func (self Actor) GetSchema(method string) (jlibschema.Schema, bool) {
+func (self Actor) GetSchema(method string) (jsoffschema.Schema, bool) {
 	if h, ok := self.getHandler(method); ok && h.schema != nil {
 		return h.schema, true
 	}
@@ -289,7 +289,7 @@ func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 }
 
 // give the actor a request message
-func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
+func (self *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 	msg := req.Msg()
 	if !msg.IsRequestOrNotify() {
 		if self.missingHandler != nil {
@@ -306,14 +306,14 @@ func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 		params := msg.MustParams()
 		if handler.schema != nil && self.ValidateSchema {
 			// validate the request
-			validator := jlibschema.NewSchemaValidator()
-			m, err := jlib.MessageMap(msg)
+			validator := jsoffschema.NewSchemaValidator()
+			m, err := jsoff.MessageMap(msg)
 			if err != nil {
 				return nil, err
 			}
 			errPos := validator.Validate(handler.schema, m)
 			if errPos != nil {
-				if reqmsg, ok := msg.(*jlib.RequestMessage); ok {
+				if reqmsg, ok := msg.(*jsoff.RequestMessage); ok {
 					return errPos.ToMessage(reqmsg), nil
 				}
 				return nil, errPos
@@ -330,7 +330,7 @@ func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 			return self.recoverCallMissingHandler(req)
 		} else {
 			if msg.IsRequest() {
-				return jlib.ErrMethodNotFound.ToMessageFromId(
+				return jsoff.ErrMethodNotFound.ToMessageFromId(
 					msg.MustId(), msg.TraceId()), nil
 			}
 		}
@@ -338,7 +338,7 @@ func (self *Actor) Feed(req *RPCRequest) (jlib.Message, error) {
 	return nil, nil
 }
 
-func (self Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []interface{}) (resmsg0 jlib.Message, err0 error) {
+func (self Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []interface{}) (resmsg0 jsoff.Message, err0 error) {
 	if self.RecoverFromPanic {
 		defer func() {
 			if r := recover(); r != nil {
@@ -354,7 +354,7 @@ func (self Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, pa
 	return self.wrapResult(res, err, req.Msg())
 }
 
-func (self Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jlib.Message, err0 error) {
+func (self Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jsoff.Message, err0 error) {
 	if self.RecoverFromPanic {
 		defer func() {
 			if r := recover(); r != nil {
@@ -371,7 +371,7 @@ func (self Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jlib.Messa
 	return self.wrapResult(res, err, req.Msg())
 }
 
-func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib.Message, error) {
+func (self Actor) wrapResult(res interface{}, err error, msg jsoff.Message) (jsoff.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Errorf("wrapResult(), error handleing res, %#v", err)
@@ -379,14 +379,14 @@ func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib
 		return nil, err
 	}
 
-	reqmsg, ok := msg.(*jlib.RequestMessage)
+	reqmsg, ok := msg.(*jsoff.RequestMessage)
 	if !ok {
 		msg.Log().Panicf("convert to request message failed")
 		return nil, err
 	}
 
 	if err != nil {
-		var rpcErr *jlib.RPCError
+		var rpcErr *jsoff.RPCError
 		var wrapErr *WrappedResponse
 		if errors.As(err, &rpcErr) {
 			return rpcErr.ToMessage(reqmsg), nil
@@ -394,12 +394,12 @@ func (self Actor) wrapResult(res interface{}, err error, msg jlib.Message) (jlib
 			return nil, wrapErr
 		} else {
 			msg.Log().Errorf("wrapResult(), error handling err %#v", err)
-			return jlib.ErrInternalError.ToMessage(reqmsg), nil
+			return jsoff.ErrInternalError.ToMessage(reqmsg), nil
 		}
-	} else if resmsg1, ok := res.(jlib.Message); ok {
+	} else if resmsg1, ok := res.(jsoff.Message); ok {
 		// normal response
 		return resmsg1, nil
 	} else {
-		return jlib.NewResultMessage(reqmsg, res), nil
+		return jsoff.NewResultMessage(reqmsg, res), nil
 	}
 }

@@ -1,4 +1,4 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"io"
 	"net"
 	"net/http"
@@ -81,8 +81,8 @@ func (self *wsTransport) handleWebsocketError(err error) error {
 	return errors.Wrap(err, "handleWebsocketError")
 }
 
-func (self *wsTransport) WriteMessage(msg jlib.Message) error {
-	marshaled, err := jlib.MessageBytes(msg)
+func (self *wsTransport) WriteMessage(msg jsoff.Message) error {
+	marshaled, err := jsoff.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (self *wsTransport) WriteMessage(msg jlib.Message) error {
 	return nil
 }
 
-func (self *wsTransport) ReadMessage() (jlib.Message, bool, error) {
+func (self *wsTransport) ReadMessage() (jsoff.Message, bool, error) {
 	messageType, msgBytes, err := self.ws.ReadMessage()
 	if err != nil {
 		return nil, false, self.handleWebsocketError(err)
@@ -102,7 +102,7 @@ func (self *wsTransport) ReadMessage() (jlib.Message, bool, error) {
 		return nil, false, nil
 	}
 
-	msg, err := jlib.ParseBytes(msgBytes)
+	msg, err := jsoff.ParseBytes(msgBytes)
 	if err != nil {
 		self.client.Log().Warnf("bad jsonrpc message %s", msgBytes)
 		return nil, false, err

@@ -1,11 +1,11 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"reflect"
 )
 
@@ -70,7 +70,7 @@ func (self ReqSpec) Value(req *RPCRequest) interface{} {
 	return req
 }
 func (self ReqSpec) String() string {
-	return "*jlibhttp.RPCRequest"
+	return "*jsoffhttp.RPCRequest"
 }
 
 type ContextSpec struct{}
@@ -125,7 +125,7 @@ func wrapTyped(tfunc interface{}, firstArgSpec FirstArgSpec) (RequestCallback, e
 	handler := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// check inputs
 		if numIn > len(params)+firstArgNum {
-			return nil, jlib.ParamsError("no enough params size")
+			return nil, jsoff.ParamsError("no enough params size")
 		}
 
 		// params -> []reflect.Value
@@ -142,7 +142,7 @@ func wrapTyped(tfunc interface{}, firstArgSpec FirstArgSpec) (RequestCallback, e
 
 			argValue, err := interfaceToValue(param, argType)
 			if err != nil {
-				return nil, jlib.ParamsError(
+				return nil, jsoff.ParamsError(
 					fmt.Sprintf("params %d %s", i+1, err))
 			}
 			fnArgs = append(fnArgs, argValue)

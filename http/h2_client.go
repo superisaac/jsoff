@@ -1,4 +1,4 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"golang.org/x/net/http2"
 	"io"
 	"net"
@@ -141,8 +141,8 @@ func (self *h2Transport) handleHttp2Error(err error) error {
 	return errors.Wrap(err, "h2transport.handleHttp2Error")
 }
 
-func (self *h2Transport) WriteMessage(msg jlib.Message) error {
-	marshaled, err := jlib.MessageBytes(msg)
+func (self *h2Transport) WriteMessage(msg jsoff.Message) error {
+	marshaled, err := jsoff.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
@@ -154,8 +154,8 @@ func (self *h2Transport) WriteMessage(msg jlib.Message) error {
 	return nil
 }
 
-func (self *h2Transport) ReadMessage() (jlib.Message, bool, error) {
-	msg, err := jlib.DecodeMessage(self.decoder)
+func (self *h2Transport) ReadMessage() (jsoff.Message, bool, error) {
+	msg, err := jsoff.DecodeMessage(self.decoder)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, false, TransportClosed

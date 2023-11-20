@@ -1,4 +1,4 @@
-package jlib
+package jsoff
 
 import (
 	"encoding/json"

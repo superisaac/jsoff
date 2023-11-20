@@ -1,10 +1,10 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"testing"
 	"time"
 )
@@ -20,7 +20,7 @@ func TestH2HandlerClient(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jlib.ParamsError("no argument given")
+			return nil, jsoff.ParamsError("no argument given")
 		}
 	})
 
@@ -35,7 +35,7 @@ func TestH2HandlerClient(t *testing.T) {
 	client.SetClientTLSConfig(clientTLS())
 	// right request
 	params := [](interface{}){"hello1003"}
-	reqmsg := jlib.NewRequestMessage(1, "echo", params)
+	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -55,7 +55,7 @@ func TestH2CServerClient(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jlib.ParamsError("no argument given")
+			return nil, jsoff.ParamsError("no argument given")
 		}
 	})
 
@@ -71,7 +71,7 @@ func TestH2CServerClient(t *testing.T) {
 	//client.SetClientTLSConfig(clientTLS())
 	// right request
 	params := [](interface{}){"hello1000"}
-	reqmsg := jlib.NewRequestMessage(2, "echo", params)
+	reqmsg := jsoff.NewRequestMessage(2, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -103,7 +103,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 
 	// right request
 	params := [](interface{}){"hello1001"}
-	reqmsg := jlib.NewRequestMessage(1, "echoTyped", params)
+	reqmsg := jsoff.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -113,7 +113,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 
 	// type mismatch
 	params1 := [](interface{}){true}
-	reqmsg1 := jlib.NewRequestMessage(1, "echoTyped", params1)
+	reqmsg1 := jsoff.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
@@ -124,7 +124,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 
 	// test params size
 	params2 := [](interface{}){}
-	reqmsg2 := jlib.NewRequestMessage(2, "echoTyped", params2)
+	reqmsg2 := jsoff.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
@@ -135,7 +135,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
-	reqmsg3 := jlib.NewRequestMessage(3, "add", params3)
+	reqmsg3 := jsoff.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
 	assert.True(resmsg3.IsResult())
@@ -144,7 +144,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 
 	// test add 2 numbers with typing mismatch
 	params4 := [](interface{}){"6", 4}
-	reqmsg4 := jlib.NewRequestMessage(4, "add", params4)
+	reqmsg4 := jsoff.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
 	assert.True(resmsg4.IsError())
@@ -167,7 +167,7 @@ func TestH2Close(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jlib.ParamsError("no argument given")
+			return nil, jsoff.ParamsError("no argument given")
 		}
 	})
 
@@ -187,7 +187,7 @@ func TestH2Close(t *testing.T) {
 	})
 	// right request
 	params := [](interface{}){"hello1002"}
-	reqmsg := jlib.NewRequestMessage(1, "echo", params)
+	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(clientCtx, reqmsg)
 	assert.Nil(err)

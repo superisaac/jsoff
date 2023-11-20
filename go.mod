@@ -1,4 +1,4 @@
-module github.com/superisaac/jlib
+module github.com/superisaac/jsoff
 
 go 1.19
 

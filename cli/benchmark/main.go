@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/superisaac/jlib"
-	"github.com/superisaac/jlib/http"
+	"github.com/superisaac/jsoff"
+	"github.com/superisaac/jsoff/http"
 	"net/http"
 	"os"
 	"sort"
@@ -18,7 +18,7 @@ func main() {
 	pConcurrency := cliFlags.Uint("m", 10, "the number of concurrent clients")
 	pNum := cliFlags.Uint("n", 10, "the number of calls per client")
 
-	var headerFlags jlibhttp.HeaderFlags
+	var headerFlags jsoffhttp.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 
 	cliFlags.Parse(os.Args[1:])
@@ -33,7 +33,7 @@ func main() {
 	method := args[0]
 	clParams := args[1:len(args)]
 
-	params, err := jlib.GuessJsonArray(clParams)
+	params, err := jsoff.GuessJsonArray(clParams)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "params error: %s\n", err)
 		os.Exit(1)
@@ -95,14 +95,14 @@ func RunCallBenchmark(serverUrl string, method string, params []interface{}, hea
 
 func callNTimes(chResults chan uint, serverUrl string, method string, params []interface{}, header http.Header, num uint) error {
 	ctx := context.Background()
-	c, err := jlibhttp.NewClient(serverUrl)
+	c, err := jsoffhttp.NewClient(serverUrl)
 	if err != nil {
 		panic(err)
 	}
 	c.SetExtraHeader(header)
 
 	for i := uint(0); i < num; i++ {
-		reqmsg := jlib.NewRequestMessage(jlib.NewUuid(), method, params)
+		reqmsg := jsoff.NewRequestMessage(jsoff.NewUuid(), method, params)
 		startTime := time.Now()
 		_, err := c.Call(ctx, reqmsg)
 		if err != nil {

@@ -1,4 +1,4 @@
-package jlibschema
+package jsoffschema
 
 import (
 	"fmt"

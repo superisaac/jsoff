@@ -1,11 +1,11 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
 	"crypto/tls"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"net/http"
 	"net/url"
 	"sync"
@@ -13,8 +13,8 @@ import (
 )
 
 type pendingRequest struct {
-	reqmsg        *jlib.RequestMessage
-	resultChannel chan jlib.Message
+	reqmsg        *jsoff.RequestMessage
+	resultChannel chan jsoff.Message
 	expire        time.Time
 }
 
@@ -28,8 +28,8 @@ type Transport interface {
 	Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error
 	Close()
 	Connected() bool
-	ReadMessage() (msg jlib.Message, readed bool, err error)
-	WriteMessage(msg jlib.Message) error
+	ReadMessage() (msg jsoff.Message, readed bool, err error)
+	WriteMessage(msg jsoff.Message) error
 }
 
 type StreamingClient struct {
@@ -59,7 +59,7 @@ type StreamingClient struct {
 	cancelFunc func()
 
 	// send channel to write messsage sequencially
-	sendChannel chan jlib.Message
+	sendChannel chan jsoff.Message
 
 	// channel to wait until connection closed
 	closeChannel chan error
@@ -178,7 +178,7 @@ func (self *StreamingClient) Connect(rootCtx context.Context) error {
 		}
 		connCtx, cancel := context.WithCancel(rootCtx)
 		self.cancelFunc = cancel
-		self.sendChannel = make(chan jlib.Message, 100)
+		self.sendChannel = make(chan jsoff.Message, 100)
 		self.closeChannel = make(chan error, 10)
 		go self.sendLoop(connCtx)
 		go self.recvLoop()
@@ -269,7 +269,7 @@ func (self *StreamingClient) recvLoop() {
 	}
 }
 
-func (self *StreamingClient) handleResult(msg jlib.Message) {
+func (self *StreamingClient) handleResult(msg jsoff.Message) {
 	msgId := msg.MustId()
 	v, loaded := self.pendingRequests.LoadAndDelete(msgId)
 	if !loaded {
@@ -299,20 +299,20 @@ func (self *StreamingClient) expire(k interface{}, after time.Duration) {
 		v, loaded := self.pendingRequests.LoadAndDelete(k)
 		if loaded {
 			if pending, ok := v.(*pendingRequest); ok {
-				timeout := jlib.ErrTimeout.ToMessage(pending.reqmsg)
+				timeout := jsoff.ErrTimeout.ToMessage(pending.reqmsg)
 				pending.resultChannel <- timeout
 			}
 		}
 	}
 }
 
-func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jlib.RequestMessage, output interface{}) error {
+func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
 	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
 	}
 	if resmsg.IsResult() {
-		err := jlib.DecodeInterface(resmsg.MustResult(), output)
+		err := jsoff.DecodeInterface(resmsg.MustResult(), output)
 		if err != nil {
 			return errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
 		}
@@ -322,7 +322,7 @@ func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jlib.Re
 	}
 }
 
-func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
+func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
 	resmsg, err := self.request(rootCtx, reqmsg)
 	if err != nil {
 		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
@@ -330,16 +330,16 @@ func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jlib.RequestM
 	return resmsg, nil
 }
 
-func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
+func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
 	err := self.Connect(rootCtx)
 	if err != nil {
 		return nil, err
 	}
-	ch := make(chan jlib.Message, 10)
+	ch := make(chan jsoff.Message, 10)
 
 	sendmsg := reqmsg
 	if _, loaded := self.pendingRequests.Load(reqmsg.Id); loaded {
-		sendmsg = reqmsg.Clone(jlib.NewUuid())
+		sendmsg = reqmsg.Clone(jsoff.NewUuid())
 	}
 
 	p := &pendingRequest{
@@ -362,7 +362,7 @@ func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jlib.Reque
 	return resmsg, nil
 }
 
-func (self *StreamingClient) Send(rootCtx context.Context, msg jlib.Message) error {
+func (self *StreamingClient) Send(rootCtx context.Context, msg jsoff.Message) error {
 	err := self.Connect(rootCtx)
 	if err != nil {
 		return err

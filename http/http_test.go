@@ -1,4 +1,4 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -80,7 +80,7 @@ func TestServerClient(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jlib.ParamsError("no argument given")
+			return nil, jsoff.ParamsError("no argument given")
 		}
 	})
 
@@ -97,7 +97,7 @@ func TestServerClient(t *testing.T) {
 
 	// right request
 	params := [](interface{}){"hello001"}
-	reqmsg := jlib.NewRequestMessage(1, "echo", params)
+	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -107,12 +107,12 @@ func TestServerClient(t *testing.T) {
 
 	// method not found
 	params1 := [](interface{}){"hello002"}
-	reqmsg1 := jlib.NewRequestMessage(666, "echoxxx", params1)
+	reqmsg1 := jsoff.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
 	assert.True(resmsg1.IsError())
 	errbody := resmsg1.MustError()
-	assert.Equal(jlib.ErrMethodNotFound.Code, errbody.Code)
+	assert.Equal(jsoff.ErrMethodNotFound.Code, errbody.Code)
 }
 
 func TestMissing(t *testing.T) {
@@ -136,7 +136,7 @@ func TestMissing(t *testing.T) {
 	client := NewH1Client(urlParse("http://127.0.0.1:28003"))
 	// right request
 	params := [](interface{}){"hello003"}
-	ntfmsg := jlib.NewNotifyMessage("testnotify", params)
+	ntfmsg := jsoff.NewNotifyMessage("testnotify", params)
 
 	err = client.Send(rootCtx, ntfmsg)
 	assert.Nil(err)
@@ -153,7 +153,7 @@ func TestTypedServerClient(t *testing.T) {
 		return a + b, nil
 	})
 	assert.NotNil(err)
-	assert.Equal("the first arg must be *jlibhttp.RPCRequest", err.Error())
+	assert.Equal("the first arg must be *jsoffhttp.RPCRequest", err.Error())
 
 	err = server.Actor.OnTypedContext("wrongNoContext", func(a int, b int) (int, error) {
 		return a + b, nil
@@ -176,7 +176,7 @@ func TestTypedServerClient(t *testing.T) {
 
 	// right request
 	params := [](interface{}){"hello004"}
-	reqmsg := jlib.NewRequestMessage(1, "echoTyped", params)
+	reqmsg := jsoff.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -186,7 +186,7 @@ func TestTypedServerClient(t *testing.T) {
 
 	// type mismatch
 	params1 := [](interface{}){true}
-	reqmsg1 := jlib.NewRequestMessage(1, "echoTyped", params1)
+	reqmsg1 := jsoff.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
@@ -196,7 +196,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
 	// test params size
 	params2 := [](interface{}){}
-	reqmsg2 := jlib.NewRequestMessage(2, "echoTyped", params2)
+	reqmsg2 := jsoff.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
@@ -207,7 +207,7 @@ func TestTypedServerClient(t *testing.T) {
 
 	// test add 2 numbers
 	params3 := [](interface{}){6, 3}
-	reqmsg3 := jlib.NewRequestMessage(3, "add", params3)
+	reqmsg3 := jsoff.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
 	assert.True(resmsg3.IsResult())
@@ -216,7 +216,7 @@ func TestTypedServerClient(t *testing.T) {
 
 	// test add 2 numbers with typing mismatch
 	params4 := [](interface{}){"6", 4}
-	reqmsg4 := jlib.NewRequestMessage(4, "add", params4)
+	reqmsg4 := jsoff.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
 	assert.True(resmsg4.IsError())
@@ -226,18 +226,18 @@ func TestTypedServerClient(t *testing.T) {
 
 	// test add 2 numbers with typing mismatch
 	params5 := [](interface{}){"6", 5}
-	reqmsg5 := jlib.NewRequestMessage(5, "add", params5)
+	reqmsg5 := jsoff.NewRequestMessage(5, "add", params5)
 	var res5 int
 	err5 := client.UnwrapCall(rootCtx, reqmsg5, &res5)
 	assert.NotNil(err5)
-	var errbody5 *jlib.RPCError
+	var errbody5 *jsoff.RPCError
 	assert.True(errors.As(err5, &errbody5))
 	assert.Equal(-32602, errbody5.Code)
 	assert.True(strings.Contains(errbody5.Message, "got unconvertible type"))
 
 	// correct unwrapcall
 	params6 := [](interface{}){8, 99}
-	reqmsg6 := jlib.NewRequestMessage(6, "add", params6)
+	reqmsg6 := jsoff.NewRequestMessage(6, "add", params6)
 	var res6 int
 	err6 := client.UnwrapCall(rootCtx, reqmsg6, &res6)
 	assert.Nil(err6)
@@ -257,7 +257,7 @@ func TestHandlerSchema(t *testing.T) {
 			A int
 			B int
 		}
-		err := jlib.DecodeParams(params, &tp)
+		err := jsoff.DecodeParams(params, &tp)
 		if err != nil {
 			return nil, err
 		}
@@ -270,17 +270,17 @@ func TestHandlerSchema(t *testing.T) {
 	client := NewH1Client(urlParse("http://127.0.0.1:28040"))
 
 	// right request
-	reqmsg := jlib.NewRequestMessage(
+	reqmsg := jsoff.NewRequestMessage(
 		1, "add2num", []interface{}{5, 8})
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.Equal(json.Number("13"), resmsg.MustResult())
 
-	reqmsg2 := jlib.NewRequestMessage(
+	reqmsg2 := jsoff.NewRequestMessage(
 		2, "add2num", []interface{}{"12", "a str"})
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
-	assert.Equal(jlib.ErrInvalidSchema.Code, resmsg2.MustError().Code)
+	assert.Equal(jsoff.ErrInvalidSchema.Code, resmsg2.MustError().Code)
 	assert.Equal("Validation Error: .params[0] data is not integer", resmsg2.MustError().Message)
 }
 
@@ -306,7 +306,7 @@ func TestPassingHeader(t *testing.T) {
 
 	client.SetExtraHeader(http.Header{"X-Input": []string{"Hello"}})
 	// right request
-	reqmsg := jlib.NewRequestMessage(
+	reqmsg := jsoff.NewRequestMessage(
 		1, "echoHeader", nil)
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -335,7 +335,7 @@ func TestGatewayHandler(t *testing.T) {
 	client := NewH1Client(urlParse("https://127.0.0.1:28450"))
 	client.SetClientTLSConfig(clientTLS())
 
-	reqmsg := jlib.NewRequestMessage(
+	reqmsg := jsoff.NewRequestMessage(
 		1, "echoAny", []interface{}{1991, 1992})
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -345,7 +345,7 @@ func TestGatewayHandler(t *testing.T) {
 	client1 := NewWSClient(urlParse("wss://127.0.0.1:28450"))
 	client1.SetClientTLSConfig(clientTLS())
 
-	reqmsg1 := jlib.NewRequestMessage(
+	reqmsg1 := jsoff.NewRequestMessage(
 		1001, "echoAny", []interface{}{8888})
 	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
@@ -355,7 +355,7 @@ func TestGatewayHandler(t *testing.T) {
 	client2 := NewH2Client(urlParse("h2://127.0.0.1:28450"))
 	client2.SetClientTLSConfig(clientTLS())
 
-	reqmsg2 := jlib.NewRequestMessage(
+	reqmsg2 := jsoff.NewRequestMessage(
 		2002, "echoAny", []interface{}{8886})
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
@@ -390,7 +390,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	_, ok := client.(*H1Client)
 	assert.True(ok)
 
-	reqmsg := jlib.NewRequestMessage(
+	reqmsg := jsoff.NewRequestMessage(
 		1, "echoAny", []interface{}{1991, 1992})
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
@@ -403,7 +403,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	_, ok1 := client1.(*WSClient)
 	assert.True(ok1)
 
-	reqmsg1 := jlib.NewRequestMessage(
+	reqmsg1 := jsoff.NewRequestMessage(
 		1001, "echoAny", []interface{}{8888})
 	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
@@ -417,7 +417,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	_, ok2 := client2.(*H2Client)
 	assert.True(ok2)
 
-	reqmsg2 := jlib.NewRequestMessage(
+	reqmsg2 := jsoff.NewRequestMessage(
 		2002, "echoAny", []interface{}{8886})
 
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
@@ -488,7 +488,7 @@ func TestAuthorization(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	client1 := NewH1Client(urlParse("http://127.0.0.1:28007"))
-	reqmsg1 := jlib.NewRequestMessage(jlib.NewUuid(), "greeting", nil)
+	reqmsg1 := jsoff.NewRequestMessage(jsoff.NewUuid(), "greeting", nil)
 
 	_, err1 := client1.Call(rootCtx, reqmsg1)
 	assert.NotNil(err1)
@@ -499,7 +499,7 @@ func TestAuthorization(t *testing.T) {
 
 	// client with correct user/pass
 	client2 := NewH1Client(urlParse("http://donkey:grass@127.0.0.1:28007"))
-	reqmsg2 := jlib.NewRequestMessage(jlib.NewUuid(), "greeting", nil)
+	reqmsg2 := jsoff.NewRequestMessage(jsoff.NewUuid(), "greeting", nil)
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.Equal("hello: donkey", resmsg2.MustResult())
@@ -509,7 +509,7 @@ func TestAuthorization(t *testing.T) {
 	client3.SetExtraHeader(http.Header{
 		"Authorization": []string{"Bearer bearbear"},
 	})
-	reqmsg3 := jlib.NewRequestMessage(jlib.NewUuid(), "greeting", nil)
+	reqmsg3 := jsoff.NewRequestMessage(jsoff.NewUuid(), "greeting", nil)
 	resmsg3, err3 := client3.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
 	assert.Equal("hello: a_bear", resmsg3.MustResult())
@@ -547,7 +547,7 @@ func TestJwtAuthorization(t *testing.T) {
 		Settings: map[string]interface{}{"namespace": "jail"},
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour).Unix(),
-			Issuer:    "jlib.com",
+			Issuer:    "jsoff.com",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -559,12 +559,12 @@ func TestJwtAuthorization(t *testing.T) {
 	client1.SetExtraHeader(http.Header{
 		"Authorization": []string{fmt.Sprintf("Bearer %s", tokenStr)},
 	})
-	reqmsg1 := jlib.NewRequestMessage(jlib.NewUuid(), "greeting", nil)
+	reqmsg1 := jsoff.NewRequestMessage(jsoff.NewUuid(), "greeting", nil)
 	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
 
 	var authinfo1 *AuthInfo
-	errdecode := jlib.DecodeInterface(resmsg1.MustResult(), &authinfo1)
+	errdecode := jsoff.DecodeInterface(resmsg1.MustResult(), &authinfo1)
 	assert.Nil(errdecode)
 	assert.NotNil(authinfo1)
 	assert.Equal("jake", authinfo1.Username)
@@ -585,7 +585,7 @@ func TestActors(t *testing.T) {
 			A int
 			B int
 		}
-		err := jlib.DecodeParams(params, &tp)
+		err := jsoff.DecodeParams(params, &tp)
 		if err != nil {
 			return nil, err
 		}
@@ -596,7 +596,7 @@ func TestActors(t *testing.T) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
-			return nil, jlib.ParamsError("no argument given")
+			return nil, jsoff.ParamsError("no argument given")
 		}
 	})
 

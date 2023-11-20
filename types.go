@@ -1,5 +1,5 @@
-// jlib is JSONRPC 2.0 libaray in golang
-package jlib
+// jsoff is JSONRPC 2.0 libaray in golang
+package jsoff
 
 import (
 	log "github.com/sirupsen/logrus"

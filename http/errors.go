@@ -1,4 +1,4 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"fmt"

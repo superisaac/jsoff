@@ -1,4 +1,4 @@
-package jlibhttp
+package jsoffhttp
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 )
 
 type H1Client struct {
@@ -71,13 +71,13 @@ func (self *H1Client) SetClientTLSConfig(cfg *tls.Config) {
 	self.clientTLS = cfg
 }
 
-func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jlib.RequestMessage, output interface{}) error {
+func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
 	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
 	}
 	if resmsg.IsResult() {
-		err := jlib.DecodeInterface(resmsg.MustResult(), output)
+		err := jsoff.DecodeInterface(resmsg.MustResult(), output)
 		if err != nil {
 			return errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
 		}
@@ -87,7 +87,7 @@ func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jlib.RequestMe
 	}
 }
 
-func (self *H1Client) Call(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
+func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
 	resmsg, err := self.request(rootCtx, reqmsg)
 	if err != nil {
 		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
@@ -95,14 +95,14 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jlib.RequestMessage)
 	return resmsg, nil
 }
 
-func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessage) (jlib.Message, error) {
+func (self *H1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
 
 	reqmsg.SetTraceId("")
 
-	marshaled, err := jlib.MessageBytes(reqmsg)
+	marshaled, err := jsoff.MessageBytes(reqmsg)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessa
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil.ReadAll")
 	}
-	respmsg, err := jlib.ParseBytes(respBody)
+	respmsg, err := jsoff.ParseBytes(respBody)
 	if err != nil {
 		return nil, err
 	}
@@ -168,13 +168,13 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jlib.RequestMessa
 	return respmsg, nil
 }
 
-func (self *H1Client) Send(rootCtx context.Context, msg jlib.Message) error {
+func (self *H1Client) Send(rootCtx context.Context, msg jsoff.Message) error {
 	self.connect()
 
 	traceId := msg.TraceId()
 	msg.SetTraceId("")
 
-	marshaled, err := jlib.MessageBytes(msg)
+	marshaled, err := jsoff.MessageBytes(msg)
 	if err != nil {
 		return err
 	}

@@ -1,18 +1,18 @@
-# jlib
+# jsoff
 
-jlib is a JSONRPC 2.0 library and a suite of client utilities in golang
+jsoff is a JSONRPC 2.0 library and a suite of client utilities in golang
 
 # Install and build
 ```shell
-% git checkout https://github.com/superisaac/jlib
-% cd jlib
+% git checkout https://github.com/superisaac/jsoff
+% cd jsoff
 % make test # run unit test
 ...
 % make build  # build cli tools
 go build -gcflags=-G=3 -o bin/jsonrpc-call cli/call/jsonrpc_call.go
 go build -gcflags=-G=3 -o bin/jsonrpc-notify cli/notify/jsonrpc_notify.go
 go build -gcflags=-G=3 -o bin/jsonrpc-watch cli/watch/jsonrpc_watch.go
-go build -gcflags=-G=3 -o bin/jlib-example-fifo examples/fifo/main.go
+go build -gcflags=-G=3 -o bin/jsoff-example-fifo examples/fifo/main.go
 ```
 
 # Examples
@@ -20,17 +20,17 @@ go build -gcflags=-G=3 -o bin/jlib-example-fifo examples/fifo/main.go
 server side code
 ```go
 import (
-    // "github.com/superisaac/jlib"
-    "github.com/superisaac/jlib/http"
+    // "github.com/superisaac/jsoff"
+    "github.com/superisaac/jsoff/http"
 )
 // create a HTTP/1 handler, currently http1, http2 and websocket handlers are supported
-server := jlibhttp.NewH1Handler(nil)
+server := jsoffhttp.NewH1Handler(nil)
 // register an actor function
-server.Actor.OnTyped("echo", func(req *jlibhttp.RPCRequest, text string) (string, error) {
+server.Actor.OnTyped("echo", func(req *jsoffhttp.RPCRequest, text string) (string, error) {
     return "echo " + text, nil
 })
 // serve the JSONRPC at port 8000
-jlibhttp.ListenAndServe(rootCtx, ":8000", server)
+jsoffhttp.ListenAndServe(rootCtx, ":8000", server)
 ```
 the server can be tested using client tools jsonrpc-call
 ```shell
@@ -46,35 +46,35 @@ the server can be tested using client tools jsonrpc-call
 ```go
 import (
     "context"
-    "github.com/superisaac/jlib"
-    "github.com/superisaac/jlib/http"
+    "github.com/superisaac/jsoff"
+    "github.com/superisaac/jsoff/http"
 )
 
 // create a jsonrpc client according to the server url
 // the supported url schemes are: http, https, h2, h2c, ws and wss
-client := jlibhttp.NewClient("http://127.0.0.1:8000")
+client := jsoffhttp.NewClient("http://127.0.0.1:8000")
 
 // create a request message with a random id field
-reqmsg := jlib.NewRequestMessage(jlib.NewUuid(), "echo", []interface{}{"hi5"})
-fmt.Printf("request message: %s\n", jlib.MessageString(reqmsg))
+reqmsg := jsoff.NewRequestMessage(jsoff.NewUuid(), "echo", []interface{}{"hi5"})
+fmt.Printf("request message: %s\n", jsoff.MessageString(reqmsg))
 
 resmsg, err := client.Call(context.Background(), reqmsg)
-fmt.Printf("result message: %s\n", jlib.MessageString(resmsg))
+fmt.Printf("result message: %s\n", jsoff.MessageString(resmsg))
 assert.True(resmsg.IsResultOrError())  // resmsg is a Result type message or an Error type message
 assert.Equal("echo hi5", resmsg.MustResult())
 
 // a notify message, notify message doesn't have id field and doesn't expect result
-ntfmsg := jlib.NewNotifyMessage("echo", []interface{}{"hi6"})
+ntfmsg := jsoff.NewNotifyMessage("echo", []interface{}{"hi6"})
 err := client.Send(context.Background(), ntfmsg)
 
 ```
 
 ## FIFO service
-the FIFO service is an example to demonstrate how jlib server and client works without writing and code. the server maintains an array in memory, you can push/pop/get items from it and list all items, you can even subscribe the item additions.
+the FIFO service is an example to demonstrate how jsoff server and client works without writing and code. the server maintains an array in memory, you can push/pop/get items from it and list all items, you can even subscribe the item additions.
 
 ### Start server which listen at port 6000
 ```shell
-% bin/jlib-example-fifo
+% bin/jsoff-example-fifo
 INFO[0000] Example fifo service starts at 127.0.0.1:6000
 ```
 

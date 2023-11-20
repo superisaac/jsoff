@@ -5,15 +5,15 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/superisaac/jlib"
-	"github.com/superisaac/jlib/http"
+	"github.com/superisaac/jsoff"
+	"github.com/superisaac/jsoff/http"
 	"os"
 )
 
 func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-call", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, https? or wss? prefixed, can be in env JSONRPC_CONNECT, default is http://127.0.0.1:9990")
-	var headerFlags jlibhttp.HeaderFlags
+	var headerFlags jsoffhttp.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 
 	cliFlags.Parse(os.Args[1:])
@@ -28,7 +28,7 @@ func main() {
 	method := args[0]
 	clParams := args[1:len(args)]
 
-	params, err := jlib.GuessJsonArray(clParams)
+	params, err := jsoff.GuessJsonArray(clParams)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "params error: %s\n", err)
 		os.Exit(1)
@@ -51,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	c, err := jlibhttp.NewClient(serverUrl)
+	c, err := jsoffhttp.NewClient(serverUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fail to find jsonrpc client: %s\n", err)
 		os.Exit(1)
@@ -59,15 +59,15 @@ func main() {
 
 	c.SetExtraHeader(header)
 
-	reqId := jlib.NewUuid()
-	reqmsg := jlib.NewRequestMessage(reqId, method, params)
+	reqId := jsoff.NewUuid()
+	reqmsg := jsoff.NewRequestMessage(reqId, method, params)
 	resmsg, err := c.Call(context.Background(), reqmsg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "rpc error: %s\n", err)
 		os.Exit(1)
 	}
 
-	repr, err := jlib.EncodePretty(resmsg)
+	repr, err := jsoff.EncodePretty(resmsg)
 	if err != nil {
 		panic(err)
 	}

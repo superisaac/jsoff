@@ -33,9 +33,9 @@ bin/jsonrpc-benchmark: ${gofiles}
 clean:
 	rm -rf build dist bin/*
 
-build-examples: bin/jlib-example-fifo
+build-examples: bin/jsoff-example-fifo
 
-bin/jlib-example-fifo: ${gofiles}
+bin/jsoff-example-fifo: ${gofiles}
 	go build $(goflag) -o $@ examples/fifo/main.go
 
 .PHONY: test gofmt build-cli clean

@@ -1,11 +1,11 @@
-package jlibschema
+package jsoffschema
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/superisaac/jlib"
+	"github.com/superisaac/jsoff"
 	"strings"
 )
 
@@ -18,9 +18,9 @@ func (self ErrorPos) Error() string {
 	return fmt.Sprintf("Validation Error: %s %s", self.Path(), self.hint)
 }
 
-func (self ErrorPos) ToMessage(reqmsg *jlib.RequestMessage) *jlib.ErrorMessage {
-	err := &jlib.RPCError{
-		Code:    jlib.ErrInvalidSchema.Code,
+func (self ErrorPos) ToMessage(reqmsg *jsoff.RequestMessage) *jsoff.ErrorMessage {
+	err := &jsoff.RPCError{
+		Code:    jsoff.ErrInvalidSchema.Code,
 		Message: self.Error(),
 		Data:    nil}
 	return err.ToMessage(reqmsg)
