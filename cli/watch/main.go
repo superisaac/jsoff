@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsoff"
-	"github.com/superisaac/jsoff/http"
+	"github.com/superisaac/jsoff/net"
 	"io"
 	"os"
 	"reflect"
@@ -18,7 +18,7 @@ func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-watch", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, wss?, h2c? prefixed, can be in env JSONRPC_CONNECT, default is ws://127.0.0.1:9990")
 	pRetry := cliFlags.Int("retry", 1, "retry times")
-	var headerFlags jsoffhttp.HeaderFlags
+	var headerFlags jsoffnet.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 	cliFlags.Parse(os.Args[1:])
 
@@ -58,14 +58,14 @@ func main() {
 	}
 
 	// jsoff client
-	c, err := jsoffhttp.NewClient(serverUrl)
+	c, err := jsoffnet.NewClient(serverUrl)
 	if err != nil {
 		log.Fatalf("fail to find jsonrpc client: %s", err)
 		os.Exit(1)
 	}
 	c.SetExtraHeader(header)
 
-	sc, ok := c.(jsoffhttp.Streamable)
+	sc, ok := c.(jsoffnet.Streamable)
 	//if !c.IsStreaming() {
 	if !ok {
 		log.Panicf("streaming client required, but found %s", reflect.TypeOf(c))
@@ -93,7 +93,7 @@ func main() {
 }
 
 type jsonrpcWatcher struct {
-	sc           jsoffhttp.Streamable
+	sc           jsoffnet.Streamable
 	method       string
 	params       []interface{}
 	retrylimit   int
@@ -103,8 +103,8 @@ type jsonrpcWatcher struct {
 func (self *jsonrpcWatcher) run() {
 	for {
 		if err := self.connect(); err != nil {
-			if errors.Is(err, jsoffhttp.TransportConnectFailed) ||
-				errors.Is(err, jsoffhttp.TransportClosed) ||
+			if errors.Is(err, jsoffnet.TransportConnectFailed) ||
+				errors.Is(err, jsoffnet.TransportClosed) ||
 				errors.Is(err, io.EOF) {
 
 				self.connectretry++

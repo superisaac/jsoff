@@ -1,4 +1,4 @@
-package jsoffhttp
+package jsoffnet
 
 import (
 	"context"
@@ -70,7 +70,7 @@ func (self ReqSpec) Value(req *RPCRequest) interface{} {
 	return req
 }
 func (self ReqSpec) String() string {
-	return "*jsoffhttp.RPCRequest"
+	return "*jsoffnet.RPCRequest"
 }
 
 type ContextSpec struct{}

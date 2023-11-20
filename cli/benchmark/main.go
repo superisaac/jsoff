@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/superisaac/jsoff"
-	"github.com/superisaac/jsoff/http"
+	"github.com/superisaac/jsoff/net"
 	"net/http"
 	"os"
 	"sort"
@@ -18,7 +18,7 @@ func main() {
 	pConcurrency := cliFlags.Uint("m", 10, "the number of concurrent clients")
 	pNum := cliFlags.Uint("n", 10, "the number of calls per client")
 
-	var headerFlags jsoffhttp.HeaderFlags
+	var headerFlags jsoffnet.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 
 	cliFlags.Parse(os.Args[1:])
@@ -95,7 +95,7 @@ func RunCallBenchmark(serverUrl string, method string, params []interface{}, hea
 
 func callNTimes(chResults chan uint, serverUrl string, method string, params []interface{}, header http.Header, num uint) error {
 	ctx := context.Background()
-	c, err := jsoffhttp.NewClient(serverUrl)
+	c, err := jsoffnet.NewClient(serverUrl)
 	if err != nil {
 		panic(err)
 	}

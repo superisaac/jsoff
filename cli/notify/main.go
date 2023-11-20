@@ -5,14 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"github.com/superisaac/jsoff"
-	"github.com/superisaac/jsoff/http"
+	"github.com/superisaac/jsoff/net"
 	"os"
 )
 
 func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-notify", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, https? or wss? prefixed, can be in env JSONRPC_CONNECT, default is http://127.0.0.1:9990")
-	var headerFlags jsoffhttp.HeaderFlags
+	var headerFlags jsoffnet.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
 
 	cliFlags.Parse(os.Args[1:])
@@ -50,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	c, err := jsoffhttp.NewClient(serverUrl)
+	c, err := jsoffnet.NewClient(serverUrl)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fail to find jsonrpc client: %s\n", err)
 		os.Exit(1)

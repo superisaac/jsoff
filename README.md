@@ -21,7 +21,7 @@ server side code
 ```go
 import (
     // "github.com/superisaac/jsoff"
-    "github.com/superisaac/jsoff/http"
+    "github.com/superisaac/jsoff/net"
 )
 // create a HTTP/1 handler, currently http1, http2 and websocket handlers are supported
 server := jsoffhttp.NewH1Handler(nil)
@@ -47,7 +47,7 @@ the server can be tested using client tools jsonrpc-call
 import (
     "context"
     "github.com/superisaac/jsoff"
-    "github.com/superisaac/jsoff/http"
+    "github.com/superisaac/jsoff/net"
 )
 
 // create a jsonrpc client according to the server url

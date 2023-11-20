@@ -1,4 +1,4 @@
-package jsoffhttp
+package jsoffnet
 
 import (
 	"bytes"

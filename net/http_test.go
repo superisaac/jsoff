@@ -1,4 +1,4 @@
-package jsoffhttp
+package jsoffnet
 
 import (
 	"context"
@@ -153,7 +153,7 @@ func TestTypedServerClient(t *testing.T) {
 		return a + b, nil
 	})
 	assert.NotNil(err)
-	assert.Equal("the first arg must be *jsoffhttp.RPCRequest", err.Error())
+	assert.Equal("the first arg must be *jsoffnet.RPCRequest", err.Error())
 
 	err = server.Actor.OnTypedContext("wrongNoContext", func(a int, b int) (int, error) {
 		return a + b, nil

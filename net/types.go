@@ -1,7 +1,7 @@
-// interacting jsonrpc in http family specs, currently jsoffhttp
+// interacting jsonrpc in http family specs, currently jsoffnet
 // provides 3 mechanisms: the classical http/1.1, websocket and http/2
 // wire protocol.
-package jsoffhttp
+package jsoffnet
 
 import (
 	"context"

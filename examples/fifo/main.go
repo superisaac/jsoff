@@ -5,7 +5,7 @@ import (
 	"flag"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsoff"
-	"github.com/superisaac/jsoff/http"
+	"github.com/superisaac/jsoff/net"
 	"os"
 	"sync"
 )
@@ -18,12 +18,12 @@ func main() {
 
 	rootCtx := context.Background()
 
-	handler := jsoffhttp.NewGatewayHandler(rootCtx, nil, true)
+	handler := jsoffnet.NewGatewayHandler(rootCtx, nil, true)
 
 	fifo := make([]interface{}, 0)
 	lock := sync.RWMutex{}
 
-	subs := map[string]jsoffhttp.RPCSession{}
+	subs := map[string]jsoffnet.RPCSession{}
 
 	handler.Actor.On("fifo_echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
@@ -85,7 +85,7 @@ func main() {
 		return fifo[at], nil
 	})
 
-	handler.Actor.OnRequest("fifo_subscribe", func(req *jsoffhttp.RPCRequest, params []interface{}) (interface{}, error) {
+	handler.Actor.OnRequest("fifo_subscribe", func(req *jsoffnet.RPCRequest, params []interface{}) (interface{}, error) {
 		session := req.Session()
 		if session == nil {
 			return "no sesion", nil
@@ -98,11 +98,11 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.OnClose(func(session jsoffhttp.RPCSession) {
+	handler.Actor.OnClose(func(session jsoffnet.RPCSession) {
 		log.Infof("fifo unsub %s", session.SessionID())
 		delete(subs, session.SessionID())
 	})
 
 	log.Infof("Example fifo service starts at %s\n", *pBind)
-	jsoffhttp.ListenAndServe(rootCtx, *pBind, handler)
+	jsoffnet.ListenAndServe(rootCtx, *pBind, handler)
 }
