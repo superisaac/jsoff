@@ -10,22 +10,14 @@ import (
 	"sync"
 )
 
-func main() {
-	flagset := flag.NewFlagSet("jsoff-example-fifo", flag.ExitOnError)
-	pBind := flagset.String("bind", "127.0.0.1:6000", "bind address")
-
-	flagset.Parse(os.Args[1:])
-
-	rootCtx := context.Background()
-
-	handler := jsoffnet.NewGatewayHandler(rootCtx, nil, true)
-
+func fifoActor() *jsoffnet.Actor {
 	fifo := make([]interface{}, 0)
 	lock := sync.RWMutex{}
 
 	subs := map[string]jsoffnet.RPCSession{}
+	actor := jsoffnet.NewActor()
 
-	handler.Actor.On("fifo_echo", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -33,7 +25,7 @@ func main() {
 		}
 	})
 
-	handler.Actor.On("fifo_push", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_push", func(params []interface{}) (interface{}, error) {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -54,7 +46,7 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.On("fifo_pop", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_pop", func(params []interface{}) (interface{}, error) {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -66,7 +58,7 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.On("fifo_list", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_list", func(params []interface{}) (interface{}, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -74,7 +66,7 @@ func main() {
 		return fifo, nil
 	})
 
-	handler.Actor.OnTyped("fifo_get", func(at int) (interface{}, error) {
+	actor.OnTyped("fifo_get", func(at int) (interface{}, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -85,7 +77,7 @@ func main() {
 		return fifo[at], nil
 	})
 
-	handler.Actor.OnRequest("fifo_subscribe", func(req *jsoffnet.RPCRequest, params []interface{}) (interface{}, error) {
+	actor.OnRequest("fifo_subscribe", func(req *jsoffnet.RPCRequest, params []interface{}) (interface{}, error) {
 		session := req.Session()
 		if session == nil {
 			return "no sesion", nil
@@ -98,11 +90,32 @@ func main() {
 		return "ok", nil
 	})
 
-	handler.Actor.OnClose(func(session jsoffnet.RPCSession) {
+	actor.OnClose(func(session jsoffnet.RPCSession) {
 		log.Infof("fifo unsub %s", session.SessionID())
 		delete(subs, session.SessionID())
 	})
 
-	log.Infof("Example fifo service starts at %s\n", *pBind)
-	jsoffnet.ListenAndServe(rootCtx, *pBind, handler)
+	return actor
+}
+
+func main() {
+	flagset := flag.NewFlagSet("jsoff-example-fifo", flag.ExitOnError)
+	pProtocol := flagset.String("transport", "", "underline transport, tcp or auto")
+	pBind := flagset.String("bind", "127.0.0.1:6000", "bind address")
+
+	flagset.Parse(os.Args[1:])
+
+	rootCtx := context.Background()
+
+	actor := fifoActor()
+
+	if *pProtocol == "tcp" {
+		log.Infof("Example fifo service starts at tcp://%s\n", *pBind)
+		server := jsoffnet.NewTCPServer(rootCtx, actor)
+		server.Start(rootCtx, *pBind)
+	} else {
+		log.Infof("Example fifo service starts at %s\n", *pBind)
+		handler := jsoffnet.NewGatewayHandler(rootCtx, actor, true)
+		jsoffnet.ListenAndServe(rootCtx, *pBind, handler)
+	}
 }
