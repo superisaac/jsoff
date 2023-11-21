@@ -18,6 +18,7 @@ const (
 )
 
 type RPCSession interface {
+	Context() context.Context
 	Send(msg jsoff.Message)
 	SessionID() string
 }

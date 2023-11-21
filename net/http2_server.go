@@ -176,6 +176,10 @@ func (self Http2Session) SessionID() string {
 	return self.sessionId
 }
 
+func (self Http2Session) Context() context.Context {
+	return self.rootCtx
+}
+
 func (self *Http2Session) sendLoop() {
 	ctx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()

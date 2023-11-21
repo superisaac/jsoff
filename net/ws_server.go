@@ -146,6 +146,10 @@ func (self *WSSession) Send(msg jsoff.Message) {
 	self.sendChannel <- msg
 }
 
+func (self WSSession) Context() context.Context {
+	return self.rootCtx
+}
+
 func (self WSSession) SessionID() string {
 	return self.sessionId
 }

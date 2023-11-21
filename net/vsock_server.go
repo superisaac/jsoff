@@ -143,6 +143,10 @@ func (self *VsockSession) Send(msg jsoff.Message) {
 	self.sendChannel <- msg
 }
 
+func (self VsockSession) Context() context.Context {
+	return self.rootCtx
+}
+
 func (self VsockSession) SessionID() string {
 	return self.sessionId
 }

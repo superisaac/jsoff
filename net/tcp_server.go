@@ -146,6 +146,10 @@ func (self TCPSession) SessionID() string {
 	return self.sessionId
 }
 
+func (self TCPSession) Context() context.Context {
+	return self.rootCtx
+}
+
 func (self *TCPSession) sendLoop() {
 	ctx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
