@@ -18,25 +18,25 @@ import (
 	"sync"
 )
 
-type H2Client struct {
+type Http2Client struct {
 	StreamingClient
 
 	httpClient *http.Client
 	clientOnce sync.Once
 
 	// use h2c
-	UseH2C bool
+	UseHttp2C bool
 }
 
 type h2Transport struct {
-	client  *H2Client
+	client  *Http2Client
 	resp    *http.Response
 	decoder *json.Decoder
 	writer  io.Writer
 	flusher http.Flusher
 }
 
-func NewH2Client(serverUrl *url.URL) *H2Client {
+func NewHttp2Client(serverUrl *url.URL) *Http2Client {
 	newUrl, err := url.Parse(serverUrl.String())
 	useh2c := false
 	if err != nil {
@@ -51,15 +51,15 @@ func NewH2Client(serverUrl *url.URL) *H2Client {
 	if newUrl.Scheme != "https" && newUrl.Scheme != "http" {
 		log.Panicf("server url %s is not http2", serverUrl)
 	}
-	c := &H2Client{UseH2C: useh2c}
+	c := &Http2Client{UseHttp2C: useh2c}
 	transport := &h2Transport{client: c}
 	c.InitStreaming(newUrl, transport)
 	return c
 }
 
-func (self *H2Client) HTTPClient() *http.Client {
+func (self *Http2Client) HTTPClient() *http.Client {
 	self.clientOnce.Do(func() {
-		if self.UseH2C {
+		if self.UseHttp2C {
 			// refer to https://www.mailgun.com/blog/http-2-cleartext-h2c-client-example-go/
 			trans := &http2.Transport{
 				AllowHTTP: true,
@@ -87,7 +87,7 @@ func (self *H2Client) HTTPClient() *http.Client {
 	return self.httpClient
 }
 
-func (self *H2Client) String() string {
+func (self *Http2Client) String() string {
 	return fmt.Sprintf("http2 client %s", self.serverUrl)
 }
 

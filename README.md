@@ -2,6 +2,12 @@
 
 jsoff is a JSONRPC 2.0 library and a suite of client utilities in golang
 
+## features
+* Full spec support
+* JSON schema checking
+* Support multiple network transports, http1, http2, websocket, tcp and vsockets(for virtual machines and hypervisors)
+* Utility command line tools to call JSON RPC servers, see bin/jsonrpc-*
+
 # Install and build
 ```shell
 % git checkout https://github.com/superisaac/jsoff
@@ -20,17 +26,16 @@ go build -gcflags=-G=3 -o bin/jsoff-example-fifo examples/fifo/main.go
 server side code
 ```go
 import (
-    // "github.com/superisaac/jsoff"
     "github.com/superisaac/jsoff/net"
 )
 // create a HTTP/1 handler, currently http1, http2 and websocket handlers are supported
-server := jsoffhttp.NewH1Handler(nil)
+server := jsoffnet.NewHttp1Handler(nil)
 // register an actor function
-server.Actor.OnTyped("echo", func(req *jsoffhttp.RPCRequest, text string) (string, error) {
+server.Actor.OnTyped("echo", func(req *jsoffnet.RPCRequest, text string) (string, error) {
     return "echo " + text, nil
 })
 // serve the JSONRPC at port 8000
-jsoffhttp.ListenAndServe(rootCtx, ":8000", server)
+jsoffnet.ListenAndServe(rootCtx, ":8000", server)
 ```
 the server can be tested using client tools jsonrpc-call
 ```shell
@@ -52,7 +57,7 @@ import (
 
 // create a jsonrpc client according to the server url
 // the supported url schemes are: http, https, h2, h2c, ws and wss
-client := jsoffhttp.NewClient("http://127.0.0.1:8000")
+client := jsoffnet.NewClient("http://127.0.0.1:8000")
 
 // create a request message with a random id field
 reqmsg := jsoff.NewRequestMessage(jsoff.NewUuid(), "echo", []interface{}{"hi5"})

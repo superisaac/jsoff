@@ -24,15 +24,15 @@ func NewGatewayHandler(serverCtx context.Context, actor *Actor, insecure bool) *
 
 	sh := &GatewayHandler{
 		Actor:     actor,
-		h1Handler: NewH1Handler(actor),
+		h1Handler: NewHttp1Handler(actor),
 		wsHandler: NewWSHandler(serverCtx, actor),
 		insecure:  insecure,
 	}
 
 	if insecure {
-		sh.h2Handler = NewH2Handler(serverCtx, actor).H2CHandler()
+		sh.h2Handler = NewHttp2Handler(serverCtx, actor).Http2CHandler()
 	} else {
-		sh.h2Handler = NewH2Handler(serverCtx, actor)
+		sh.h2Handler = NewHttp2Handler(serverCtx, actor)
 	}
 	return sh
 }

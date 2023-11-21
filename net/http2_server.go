@@ -14,19 +14,19 @@ import (
 	"sync"
 )
 
-type H2Handler struct {
+type Http2Handler struct {
 	Actor     *Actor
 	serverCtx context.Context
 	// options
 	SpawnGoroutine bool
-	UseH2C         bool
+	UseHttp2C      bool
 
-	fallbackHandler *H1Handler
+	fallbackHandler *Http1Handler
 	fallbackOnce    sync.Once
 }
 
-type H2Session struct {
-	server      *H2Handler
+type Http2Session struct {
+	server      *Http2Handler
 	decoder     *json.Decoder
 	writer      io.Writer
 	flusher     http.Flusher
@@ -37,32 +37,32 @@ type H2Session struct {
 	sessionId   string
 }
 
-func NewH2Handler(serverCtx context.Context, actor *Actor) *H2Handler {
+func NewHttp2Handler(serverCtx context.Context, actor *Actor) *Http2Handler {
 	if actor == nil {
 		actor = NewActor()
 	}
-	return &H2Handler{
+	return &Http2Handler{
 		serverCtx:      serverCtx,
 		Actor:          actor,
 		SpawnGoroutine: true,
 	}
 }
 
-func (self *H2Handler) H2CHandler() http.Handler {
-	self.UseH2C = true
+func (self *Http2Handler) Http2CHandler() http.Handler {
+	self.UseHttp2C = true
 	h2server := &http2.Server{}
 	return h2c.NewHandler(self, h2server)
 }
 
-func (self *H2Handler) FallbackHandler() *H1Handler {
+func (self *Http2Handler) FallbackHandler() *Http1Handler {
 	self.fallbackOnce.Do(func() {
-		self.fallbackHandler = NewH1Handler(self.Actor)
+		self.fallbackHandler = NewHttp1Handler(self.Actor)
 	})
 	return self.fallbackHandler
 }
 
-func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !self.UseH2C && !r.ProtoAtLeast(2, 0) {
+func (self *Http2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !self.UseHttp2C && !r.ProtoAtLeast(2, 0) {
 		//return fmt.Errorf("HTTP2 not supported")
 		//w.WriteHeader(400)
 		//w.Write([]byte("http2 not supported"))
@@ -82,7 +82,7 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	decoder := json.NewDecoder(r.Body)
-	session := &H2Session{
+	session := &Http2Session{
 		server:      self,
 		rootCtx:     r.Context(),
 		httpRequest: r,
@@ -101,7 +101,7 @@ func (self *H2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // http2 session
-func (self *H2Session) wait() {
+func (self *Http2Session) wait() {
 	connCtx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
 
@@ -126,7 +126,7 @@ func (self *H2Session) wait() {
 	}
 }
 
-func (self *H2Session) recvLoop() {
+func (self *Http2Session) recvLoop() {
 	for {
 		msg, err := jsoff.DecodeMessage(self.decoder)
 		if err != nil {
@@ -148,7 +148,7 @@ func (self *H2Session) recvLoop() {
 	return
 }
 
-func (self *H2Session) msgReceived(msg jsoff.Message) {
+func (self *Http2Session) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
 		self.rootCtx,
 		msg,
@@ -168,15 +168,15 @@ func (self *H2Session) msgReceived(msg jsoff.Message) {
 	}
 }
 
-func (self *H2Session) Send(msg jsoff.Message) {
+func (self *Http2Session) Send(msg jsoff.Message) {
 	self.sendChannel <- msg
 }
 
-func (self H2Session) SessionID() string {
+func (self Http2Session) SessionID() string {
 	return self.sessionId
 }
 
-func (self *H2Session) sendLoop() {
+func (self *Http2Session) sendLoop() {
 	ctx, cancel := context.WithCancel(self.rootCtx)
 	defer cancel()
 

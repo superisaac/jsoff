@@ -16,7 +16,7 @@ import (
 	"github.com/superisaac/jsoff"
 )
 
-type H1Client struct {
+type Http1Client struct {
 	serverUrl     *url.URL
 	extraHeader   http.Header
 	httpClient    *http.Client
@@ -27,7 +27,7 @@ type H1Client struct {
 	clientTLS *tls.Config
 }
 
-func NewH1Client(serverUrl *url.URL, optlist ...ClientOptions) *H1Client {
+func NewHttp1Client(serverUrl *url.URL, optlist ...ClientOptions) *Http1Client {
 	if serverUrl.Scheme != "http" && serverUrl.Scheme != "https" {
 		log.Panicf("server url %s is not http", serverUrl)
 	}
@@ -36,14 +36,14 @@ func NewH1Client(serverUrl *url.URL, optlist ...ClientOptions) *H1Client {
 	if len(optlist) > 0 {
 		clientOptions = optlist[0]
 	}
-	return &H1Client{serverUrl: serverUrl, clientOptions: clientOptions}
+	return &Http1Client{serverUrl: serverUrl, clientOptions: clientOptions}
 }
 
-func (self *H1Client) ServerURL() *url.URL {
+func (self *Http1Client) ServerURL() *url.URL {
 	return self.serverUrl
 }
 
-func (self *H1Client) connect() {
+func (self *Http1Client) connect() {
 	self.connectOnce.Do(func() {
 		timeout := self.clientOptions.Timeout
 		if timeout <= 0 {
@@ -64,14 +64,14 @@ func (self *H1Client) connect() {
 	})
 }
 
-func (self *H1Client) SetExtraHeader(h http.Header) {
+func (self *Http1Client) SetExtraHeader(h http.Header) {
 	self.extraHeader = h
 }
-func (self *H1Client) SetClientTLSConfig(cfg *tls.Config) {
+func (self *Http1Client) SetClientTLSConfig(cfg *tls.Config) {
 	self.clientTLS = cfg
 }
 
-func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
+func (self *Http1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
 	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (self *H1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestM
 	}
 }
 
-func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
+func (self *Http1Client) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
 	resmsg, err := self.request(rootCtx, reqmsg)
 	if err != nil {
 		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
@@ -95,7 +95,7 @@ func (self *H1Client) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage
 	return resmsg, nil
 }
 
-func (self *H1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
+func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
 	self.connect()
 
 	traceId := reqmsg.TraceId()
@@ -168,7 +168,7 @@ func (self *H1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestMess
 	return respmsg, nil
 }
 
-func (self *H1Client) Send(rootCtx context.Context, msg jsoff.Message) error {
+func (self *Http1Client) Send(rootCtx context.Context, msg jsoff.Message) error {
 	self.connect()
 
 	traceId := msg.TraceId()
@@ -216,6 +216,6 @@ func (self *H1Client) Send(rootCtx context.Context, msg jsoff.Message) error {
 	return nil
 }
 
-func (self *H1Client) IsStreaming() bool {
+func (self *Http1Client) IsStreaming() bool {
 	return false
 }

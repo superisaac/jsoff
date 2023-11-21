@@ -8,20 +8,20 @@ import (
 	"net/http"
 )
 
-type H1Handler struct {
+type Http1Handler struct {
 	Actor *Actor
 }
 
-func NewH1Handler(actor *Actor) *H1Handler {
+func NewHttp1Handler(actor *Actor) *Http1Handler {
 	if actor == nil {
 		actor = NewActor()
 	}
-	return &H1Handler{
+	return &Http1Handler{
 		Actor: actor,
 	}
 }
 
-func (self *H1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only support POST
 	if r.Method != "POST" {
 		jsoff.ErrorResponse(w, r, errors.New("method not allowed"), http.StatusMethodNotAllowed, "Method not allowed")

@@ -75,7 +75,7 @@ func TestServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -93,7 +93,7 @@ func TestServerClient(t *testing.T) {
 	respData, _ := io.ReadAll(resp.Body)
 	assert.Equal("Method not allowed", string(respData))
 
-	client := NewH1Client(urlParse("http://127.0.0.1:28000"))
+	client := NewHttp1Client(urlParse("http://127.0.0.1:28000"))
 
 	// right request
 	params := [](interface{}){"hello001"}
@@ -121,7 +121,7 @@ func TestMissing(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	err := server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
 		msg := req.Msg()
 		assert.True(msg.IsNotify())
@@ -133,7 +133,7 @@ func TestMissing(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28003", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client(urlParse("http://127.0.0.1:28003"))
+	client := NewHttp1Client(urlParse("http://127.0.0.1:28003"))
 	// right request
 	params := [](interface{}){"hello003"}
 	ntfmsg := jsoff.NewNotifyMessage("testnotify", params)
@@ -148,7 +148,7 @@ func TestTypedServerClient(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	err := server.Actor.OnTypedRequest("wrongArg", func(a int, b int) (int, error) {
 		return a + b, nil
 	})
@@ -172,7 +172,7 @@ func TestTypedServerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28001", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client(urlParse("http://127.0.0.1:28001"))
+	client := NewHttp1Client(urlParse("http://127.0.0.1:28001"))
 
 	// right request
 	params := [](interface{}){"hello004"}
@@ -250,7 +250,7 @@ func TestHandlerSchema(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	server.Actor.ValidateSchema = true
 	server.Actor.On("add2num", func(params []interface{}) (interface{}, error) {
 		var tp struct {
@@ -267,7 +267,7 @@ func TestHandlerSchema(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28040", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client(urlParse("http://127.0.0.1:28040"))
+	client := NewHttp1Client(urlParse("http://127.0.0.1:28040"))
 
 	// right request
 	reqmsg := jsoff.NewRequestMessage(
@@ -290,7 +290,7 @@ func TestPassingHeader(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	server.Actor.ValidateSchema = true
 	server.Actor.OnRequest("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		// echo the http reader X-Input back to client
@@ -302,7 +302,7 @@ func TestPassingHeader(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28050", server)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH1Client(urlParse("http://127.0.0.1:28050"))
+	client := NewHttp1Client(urlParse("http://127.0.0.1:28050"))
 
 	client.SetExtraHeader(http.Header{"X-Input": []string{"Hello"}})
 	// right request
@@ -332,7 +332,7 @@ func TestGatewayHandler(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// test http1 client
-	client := NewH1Client(urlParse("https://127.0.0.1:28450"))
+	client := NewHttp1Client(urlParse("https://127.0.0.1:28450"))
 	client.SetClientTLSConfig(clientTLS())
 
 	reqmsg := jsoff.NewRequestMessage(
@@ -352,7 +352,7 @@ func TestGatewayHandler(t *testing.T) {
 	assert.Equal(json.Number("8888"), resmsg1.MustResult())
 
 	// test http2
-	client2 := NewH2Client(urlParse("h2://127.0.0.1:28450"))
+	client2 := NewHttp2Client(urlParse("h2://127.0.0.1:28450"))
 	client2.SetClientTLSConfig(clientTLS())
 
 	reqmsg2 := jsoff.NewRequestMessage(
@@ -386,8 +386,8 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	// test http1 client
 	client, err := NewClient("http://127.0.0.1:28453")
 	assert.Nil(err)
-	// client is H1Client
-	_, ok := client.(*H1Client)
+	// client is Http1Client
+	_, ok := client.(*Http1Client)
 	assert.True(ok)
 
 	reqmsg := jsoff.NewRequestMessage(
@@ -411,10 +411,10 @@ func TestInsecureGatewayHandler(t *testing.T) {
 
 	// test http2
 
-	//client2 := NewH2Client(urlParse("h2c://127.0.0.1:28453"))
+	//client2 := NewHttp2Client(urlParse("h2c://127.0.0.1:28453"))
 	client2, err := NewClient("h2c://127.0.0.1:28453")
 	assert.Nil(err)
-	_, ok2 := client2.(*H2Client)
+	_, ok2 := client2.(*Http2Client)
 	assert.True(ok2)
 
 	reqmsg2 := jsoff.NewRequestMessage(
@@ -434,7 +434,7 @@ func TestAuthorization(t *testing.T) {
 	_, ok := AuthInfoFromContext(rootCtx)
 	assert.False(ok)
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	server.Actor.OnRequest("greeting", func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
 			return fmt.Sprintf("hello: %s", authInfo.Username), nil
@@ -487,7 +487,7 @@ func TestAuthorization(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28007", auth)
 	time.Sleep(10 * time.Millisecond)
 
-	client1 := NewH1Client(urlParse("http://127.0.0.1:28007"))
+	client1 := NewHttp1Client(urlParse("http://127.0.0.1:28007"))
 	reqmsg1 := jsoff.NewRequestMessage(jsoff.NewUuid(), "greeting", nil)
 
 	_, err1 := client1.Call(rootCtx, reqmsg1)
@@ -498,14 +498,14 @@ func TestAuthorization(t *testing.T) {
 	assert.Equal(401, wrapped.Response.StatusCode)
 
 	// client with correct user/pass
-	client2 := NewH1Client(urlParse("http://donkey:grass@127.0.0.1:28007"))
+	client2 := NewHttp1Client(urlParse("http://donkey:grass@127.0.0.1:28007"))
 	reqmsg2 := jsoff.NewRequestMessage(jsoff.NewUuid(), "greeting", nil)
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.Equal("hello: donkey", resmsg2.MustResult())
 
 	// client with correct bearer token
-	client3 := NewH1Client(urlParse("http://127.0.0.1:28007"))
+	client3 := NewHttp1Client(urlParse("http://127.0.0.1:28007"))
 	client3.SetExtraHeader(http.Header{
 		"Authorization": []string{"Bearer bearbear"},
 	})
@@ -521,7 +521,7 @@ func TestJwtAuthorization(t *testing.T) {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH1Handler(nil)
+	server := NewHttp1Handler(nil)
 	server.Actor.OnTypedRequest("greeting", func(req *RPCRequest) (*AuthInfo, error) {
 		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
 			return authInfo, nil
@@ -555,7 +555,7 @@ func TestJwtAuthorization(t *testing.T) {
 	tokenStr, err4 := token.SignedString([]byte("JwtIsUniversal"))
 	assert.Nil(err4)
 
-	client1 := NewH1Client(urlParse("http://127.0.0.1:28009"))
+	client1 := NewHttp1Client(urlParse("http://127.0.0.1:28009"))
 	client1.SetExtraHeader(http.Header{
 		"Authorization": []string{fmt.Sprintf("Bearer %s", tokenStr)},
 	})

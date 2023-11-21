@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-func TestH2HandlerClient(t *testing.T) {
+func TestHttp2HandlerClient(t *testing.T) {
 	assert := assert.New(t)
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH2Handler(rootCtx, nil)
+	server := NewHttp2Handler(rootCtx, nil)
 
 	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
@@ -31,7 +31,7 @@ func TestH2HandlerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28700", server, serverTLS())
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH2Client(urlParse("h2://127.0.0.1:28700"))
+	client := NewHttp2Client(urlParse("h2://127.0.0.1:28700"))
 	client.SetClientTLSConfig(clientTLS())
 	// right request
 	params := [](interface{}){"hello1003"}
@@ -44,12 +44,12 @@ func TestH2HandlerClient(t *testing.T) {
 	assert.Equal("hello1003", res)
 }
 
-func TestH2CServerClient(t *testing.T) {
+func TestHttp2CServerClient(t *testing.T) {
 	assert := assert.New(t)
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH2Handler(rootCtx, nil)
+	server := NewHttp2Handler(rootCtx, nil)
 
 	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
@@ -63,11 +63,11 @@ func TestH2CServerClient(t *testing.T) {
 		return nil, nil
 	})
 
-	go ListenAndServe(rootCtx, "127.0.0.1:28800", server.H2CHandler(), nil)
+	go ListenAndServe(rootCtx, "127.0.0.1:28800", server.Http2CHandler(), nil)
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH2Client(urlParse("h2c://127.0.0.1:28800"))
-	assert.True(client.UseH2C)
+	client := NewHttp2Client(urlParse("h2c://127.0.0.1:28800"))
+	assert.True(client.UseHttp2C)
 	//client.SetClientTLSConfig(clientTLS())
 	// right request
 	params := [](interface{}){"hello1000"}
@@ -80,13 +80,13 @@ func TestH2CServerClient(t *testing.T) {
 	assert.Equal("hello1000", res)
 }
 
-func TestTypedH2HandlerClient(t *testing.T) {
+func TestTypedHttp2HandlerClient(t *testing.T) {
 	assert := assert.New(t)
 
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := NewH2Handler(rootCtx, nil)
+	server := NewHttp2Handler(rootCtx, nil)
 	server.Actor.OnTyped("echoTyped", func(v string) (string, error) {
 		return v, nil
 	})
@@ -98,7 +98,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	go ListenAndServe(rootCtx, "127.0.0.1:28701", server, serverTLS())
 	time.Sleep(10 * time.Millisecond)
 
-	client := NewH2Client(urlParse("h2://127.0.0.1:28701"))
+	client := NewHttp2Client(urlParse("h2://127.0.0.1:28701"))
 	client.SetClientTLSConfig(clientTLS())
 
 	// right request
@@ -153,7 +153,7 @@ func TestTypedH2HandlerClient(t *testing.T) {
 	assert.Contains(errbody4.Message, "got unconvertible type")
 }
 
-func TestH2Close(t *testing.T) {
+func TestHttp2Close(t *testing.T) {
 	assert := assert.New(t)
 
 	serverCtx, cancelServer := context.WithCancel(context.Background())
@@ -162,7 +162,7 @@ func TestH2Close(t *testing.T) {
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	defer cancelClient()
 
-	server := NewH2Handler(serverCtx, nil)
+	server := NewHttp2Handler(serverCtx, nil)
 	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
@@ -175,7 +175,7 @@ func TestH2Close(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	closeCalled := make(map[int]bool)
-	client := NewH2Client(urlParse("h2://127.0.0.1:28723"))
+	client := NewHttp2Client(urlParse("h2://127.0.0.1:28723"))
 	client.SetClientTLSConfig(clientTLS())
 
 	connectedCalled := map[int]bool{}

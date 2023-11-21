@@ -18,13 +18,13 @@ func NewClient(serverUrl string, optlist ...ClientOptions) (Client, error) {
 	switch u.Scheme {
 	case "http", "https":
 		// HTTP/1.1 client
-		return NewH1Client(u, optlist...), nil
+		return NewHttp1Client(u, optlist...), nil
 	case "ws", "wss":
 		// Websocket client
 		return NewWSClient(u), nil
 	case "h2", "h2c":
 		// HTTP2 client
-		return NewH2Client(u), nil
+		return NewHttp2Client(u), nil
 	case "tcp":
 		return NewTCPClient(u), nil
 	case "vsock":
