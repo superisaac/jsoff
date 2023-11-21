@@ -269,7 +269,7 @@ func (self Actor) Has(method string) bool {
 
 func (self Actor) MethodList() []string {
 	methods := []string{}
-	for mname, _ := range self.methodHandlers {
+	for mname := range self.methodHandlers {
 		methods = append(methods, mname)
 	}
 	for _, child := range self.children {

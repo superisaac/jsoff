@@ -446,7 +446,7 @@ func TestAuthorization(t *testing.T) {
 
 	wrongauthcfg := &AuthConfig{
 		Basic: []BasicAuthConfig{
-			BasicAuthConfig{},
+			{},
 		},
 	}
 
@@ -455,7 +455,7 @@ func TestAuthorization(t *testing.T) {
 
 	wrongbearercfg := &AuthConfig{
 		Bearer: []BearerAuthConfig{
-			BearerAuthConfig{},
+			{},
 		},
 	}
 	erremptybearer := wrongbearercfg.ValidateValues()
@@ -463,18 +463,18 @@ func TestAuthorization(t *testing.T) {
 
 	authcfg := &AuthConfig{
 		Basic: []BasicAuthConfig{
-			BasicAuthConfig{
+			{
 				Username: "monkey",
 				Password: "banana",
 			},
-			BasicAuthConfig{
+			{
 				Username: "donkey",
 				Password: "grass",
 			},
 		},
 
 		Bearer: []BearerAuthConfig{
-			BearerAuthConfig{
+			{
 				Token:    "bearbear",
 				Username: "a_bear",
 			},
