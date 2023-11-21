@@ -1,6 +1,6 @@
 module github.com/superisaac/jsoff
 
-go 1.19
+go 1.21
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
