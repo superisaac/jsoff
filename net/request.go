@@ -14,6 +14,7 @@ const (
 	TransportWebsocket = "websocket"
 	TransportHTTP2     = "http2"
 	TransportTCP       = "tcp"
+	TransportVsock     = "vsock"
 )
 
 type RPCSession interface {

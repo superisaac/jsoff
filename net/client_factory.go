@@ -27,6 +27,8 @@ func NewClient(serverUrl string, optlist ...ClientOptions) (Client, error) {
 		return NewH2Client(u), nil
 	case "tcp":
 		return NewTCPClient(u), nil
+	case "vsock":
+		return NewVsockClient(u), nil
 	default:
 		return nil, errors.New("url scheme not supported")
 	}

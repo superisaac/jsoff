@@ -4,9 +4,26 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/superisaac/jsoff"
+	"net/url"
 	"testing"
 	"time"
 )
+
+func TestParseURL(t *testing.T) {
+	assert := assert.New(t)
+
+	url0, err0 := url.Parse("tcp://127.0.0.1:8888")
+	assert.Nil(err0)
+	assert.Equal("tcp", url0.Scheme)
+	assert.Equal("127.0.0.1", url0.Hostname())
+	assert.Equal("8888", url0.Port())
+
+	url1, err1 := url.Parse("vsock://2:8888")
+	assert.Nil(err1)
+	assert.Equal("vsock", url1.Scheme)
+	assert.Equal("2", url1.Hostname())
+	assert.Equal("8888", url1.Port())
+}
 
 func TestTCPServerClient(t *testing.T) {
 	assert := assert.New(t)
