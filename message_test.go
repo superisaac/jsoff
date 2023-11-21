@@ -229,7 +229,7 @@ func TestMessages(t *testing.T) {
 	assert.Equal("queryMethod", m1)
 
 	reqmsg1 := reqmsg.ReplaceId(102)
-	assert.True(reqmsg1.IsRequestOrNotify())
+	assert.True(reqmsg1.IsResponse())
 	assert.False(reqmsg1.IsResultOrError())
 
 	assert.Equal(101, reqmsg.Id)

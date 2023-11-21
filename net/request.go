@@ -304,7 +304,7 @@ func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 // give the actor a request message
 func (self *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 	msg := req.Msg()
-	if !msg.IsRequestOrNotify() {
+	if !msg.IsResponse() {
 		if self.missingHandler != nil {
 			res, err := self.missingHandler(req)
 			return self.wrapResult(res, err, msg)

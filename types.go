@@ -34,7 +34,7 @@ type Message interface {
 	// Return's the judgement of message types
 	IsRequest() bool
 	IsNotify() bool
-	IsRequestOrNotify() bool
+	IsResponse() bool
 	IsResult() bool
 	IsError() bool
 	IsResultOrError() bool

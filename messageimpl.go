@@ -49,9 +49,9 @@ func (self BaseMessage) IsNotify() bool {
 	return self.kind == MKNotify
 }
 
-// IsRequestOrNotify() returns if the message is a RequestMessage or
+// IsResponse() returns if the message is a RequestMessage or
 // NotifyMessage
-func (self BaseMessage) IsRequestOrNotify() bool {
+func (self BaseMessage) IsResponse() bool {
 	return self.IsRequest() || self.IsNotify()
 }
 
