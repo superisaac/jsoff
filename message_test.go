@@ -5,7 +5,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +12,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Exit(m.Run())
 }
 
@@ -144,18 +143,29 @@ func TestNotifyMsg(t *testing.T) {
 func TestDecodeMessage(t *testing.T) {
 	assert := assert.New(t)
 
-	input := `
-{"id": 1, "method": "is_request", "params": ["hello", 2]}
+	input := strings.Join([]string{
+		`{"id": 1, "method": "is_request", "params": ["hello", 2]}`, // test normal request
+		`{"method": "is_notify",
+	"params": {"name": "ok"}}
 
-{"method": "is_notify",
-"params": {"name": "ok"}}
+	`, // test multi line notify
+		`{"error": {"code": -300, "message": "error message", "data": "bad message"}, "id": 3}
 
-{"error": {"code": -300, "message": "error message", "data": "bad message"}, "id": 3}
+	`, // test bad message
 
-{"result": 66.89, "id": 999}
-{"result": "result without id"}
+		`{"result": 66.89, "id": 999}`, // test result
 
-`
+		`{"result": "result without id"}`, // test result with empty id, take empty id as null id
+
+		`{"id": null, "method": "is_request", "params": ["hello", 3]}`, // test request with null id
+
+		`{"result": 99.992, "id": null}`, // test result with null id
+
+		`{"error": {"code": -32600, "message": "invalid request", "data": "bad message"}, "id": null}`, // test error with null id
+
+		`{"id": {"what": "not a plain id"}, "method": "is_request", "params": ["hello", 3]}`, // test request with non plain id
+	}, "\n")
+
 	dec := json.NewDecoder(strings.NewReader(input))
 	dec.UseNumber()
 
@@ -188,6 +198,27 @@ func TestDecodeMessage(t *testing.T) {
 	assert.Nil(err)
 	assert.True(msg5.IsResult())
 	assert.Nil(msg5.MustId())
+
+	msg6, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg6.IsRequest())
+	assert.Nil(msg6.MustId())
+
+	msg7, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg7.IsResult())
+	assert.Equal(json.Number("99.992"), msg7.MustResult())
+	assert.Nil(msg7.MustId())
+
+	msg8, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg8.IsError())
+	assert.Nil(msg8.MustId())
+	assert.Equal(-32600, msg8.MustError().Code)
+
+	_, err9 := DecodeMessage(dec)
+	assert.NotNil(err9)
+	assert.Contains(err9.Error(), "cannot unmarshal object into Go struct field msgUnion.id of type string")
 
 	// EOF expected
 	_, err = DecodeMessage(dec)

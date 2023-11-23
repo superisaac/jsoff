@@ -5,7 +5,7 @@ import ()
 // error defination https://www.jsonrpc.org/specification#error_object
 var (
 	ErrServerError = &RPCError{100, "server error", nil}
-	ErrNilId       = &RPCError{102, "nil message id", nil}
+	//ErrNilId       = &RPCError{102, "nil message id", nil}
 
 	ErrMethodNotFound = &RPCError{-32601, "method not found", nil}
 

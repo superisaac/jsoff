@@ -102,6 +102,13 @@ func MessageMap(msg Message) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	} else {
+		if v, found := m["id"]; found {
+			if vObj, ok := v.(map[string]interface{}); ok {
+				if msgId, ok := vObj["Value"]; ok {
+					m["id"] = msgId
+				}
+			}
+		}
 		return m, nil
 	}
 }
@@ -245,7 +252,7 @@ func (self *RequestMessage) Interface() interface{} {
 		Jsonrpc: "2.0",
 		TraceId: self.TraceId(),
 		Method:  self.Method,
-		Id:      self.Id,
+		Id:      msgIdT{Value: self.Id, isSet: true},
 	}
 	if self.paramsAreList || len(self.Params) == 0 {
 		tmp.Params = self.Params
@@ -273,7 +280,7 @@ func (self *ResultMessage) Interface() interface{} {
 	tmp := &templateResult{
 		Jsonrpc: "2.0",
 		TraceId: self.TraceId(),
-		Id:      self.Id,
+		Id:      msgIdT{Value: self.Id, isSet: true},
 		Result:  self.Result,
 	}
 	return tmp
@@ -283,20 +290,16 @@ func (self *ErrorMessage) Interface() interface{} {
 	tmp := &templateError{
 		Jsonrpc: "2.0",
 		TraceId: self.TraceId(),
-		Id:      self.Id,
+		Id:      msgIdT{Value: self.Id, isSet: true},
 		Error:   self.Error,
 	}
 	return tmp
 }
 
 func NewRequestMessage(id interface{}, method string, params interface{}) *RequestMessage {
-	if id == nil {
-		panic(ErrNilId)
-	}
 	if method == "" {
 		panic(ErrEmptyMethod)
 	}
-
 	msg := &RequestMessage{}
 	msg.kind = MKRequest
 	msg.Id = id

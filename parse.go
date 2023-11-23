@@ -11,7 +11,7 @@ func ParseBytes(data []byte) (Message, error) {
 }
 
 type msgUnion struct {
-	Id      *json.RawMessage `json:"id,omitempty"`
+	IdSt    msgIdT           `json:"id,omitempty"`
 	Result  *json.RawMessage `json:"result,omitempty"`
 	Error   *json.RawMessage `json:"error,omitempty"`
 	Params  *json.RawMessage `json:"params,omitempty"`
@@ -29,26 +29,6 @@ func (self decodeErrorT) Error() string {
 
 func errdecode(errmsg string) *decodeErrorT {
 	return &decodeErrorT{errmsg: errmsg}
-}
-
-func decodeId(un *msgUnion) (interface{}, error) {
-	if un.Id == nil {
-		// no id
-		return nil, nil
-	}
-
-	// decode id
-	var intId int
-	if err := json.Unmarshal(*un.Id, &intId); err == nil {
-		return intId, nil
-	}
-
-	var sid string
-	if err := json.Unmarshal(*un.Id, &sid); err != nil {
-		return nil, err
-	}
-
-	return sid, nil
 }
 
 func decodeParams(un *msgUnion) (p []interface{}, islist bool, e error) {
@@ -91,12 +71,15 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			return nil, err
 		}
 
-		id, err := decodeId(&un)
-		if err != nil {
-			return nil, err
+		if !un.IdSt.isSet {
+			return nil, errdecode("no message id")
 		}
+		// id, err := decodeId(&un)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		errmsg := rawErrorMessage(id, &errbody)
+		errmsg := rawErrorMessage(un.IdSt.Value, &errbody)
 		errmsg.SetTraceId(un.TraceId)
 		return errmsg, nil
 	} else if un.Result != nil {
@@ -112,12 +95,12 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			return nil, err
 		}
 
-		id, err := decodeId(&un)
-		if err != nil {
-			return nil, err
+		var msgId interface{} = nil
+		if un.IdSt.isSet {
+			msgId = un.IdSt.Value
 		}
 
-		resmsg := rawResultMessage(id, res)
+		resmsg := rawResultMessage(msgId, res)
 		resmsg.SetTraceId(un.TraceId)
 		return resmsg, nil
 	} else if un.Method != "" {
@@ -126,13 +109,8 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			return nil, err
 		}
 
-		id, err := decodeId(&un)
-		if err != nil {
-			return nil, err
-		}
-
-		if id != nil {
-			reqmsg := NewRequestMessage(id, un.Method, params)
+		if un.IdSt.isSet {
+			reqmsg := NewRequestMessage(un.IdSt.Value, un.Method, params)
 			reqmsg.paramsAreList = islist
 			reqmsg.SetTraceId(un.TraceId)
 			return reqmsg, nil
@@ -142,15 +120,15 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			ntfmsg.SetTraceId(un.TraceId)
 			return ntfmsg, nil
 		}
-	} else if un.Id != nil {
+	} else if un.IdSt.isSet {
 		// parse id
-		id, err := decodeId(&un)
-		if err != nil {
-			return nil, err
-		}
+		// id, err := decodeId(&un)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 		// result is null
-		resmsg := rawResultMessage(id, nil)
+		resmsg := rawResultMessage(un.IdSt.Value, nil)
 		resmsg.SetTraceId(un.TraceId)
 		return resmsg, nil
 	}

@@ -119,33 +119,3 @@ type ErrorMessage struct {
 	Id    interface{}
 	Error *RPCError
 }
-
-// marshaling templates
-type templateRequest struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Id      interface{} `json:"id"`
-	Params  interface{} `json:"params"`
-	TraceId string      `json:"traceid,omitempty"`
-}
-
-type templateNotify struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params"`
-	TraceId string      `json:"traceid,omitempty"`
-}
-
-type templateResult struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Id      interface{} `json:"id"`
-	Result  interface{} `json:"result"`
-	TraceId string      `json:"traceid,omitempty"`
-}
-
-type templateError struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Id      interface{} `json:"id"`
-	Error   *RPCError   `json:"error"`
-	TraceId string      `json:"traceid,omitempty"`
-}
