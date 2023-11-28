@@ -17,12 +17,16 @@ func fifoActor() *jsoffnet.Actor {
 	subs := map[string]jsoffnet.RPCSession{}
 	actor := jsoffnet.NewActor()
 
-	actor.On("fifo_echo", func(params []interface{}) (interface{}, error) {
+	actor.On("example_echo", func(params []interface{}) (interface{}, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
 			return "", nil
 		}
+	})
+
+	actor.On("example_willPanic", func(params []any) (any, error) {
+		panic("just panic")
 	})
 
 	actor.On("fifo_push", func(params []interface{}) (interface{}, error) {
@@ -100,8 +104,8 @@ func fifoActor() *jsoffnet.Actor {
 
 func main() {
 	flagset := flag.NewFlagSet("jsoff-example-fifo", flag.ExitOnError)
-	pProtocol := flagset.String("transport", "", "underline transport, tcp or auto")
-	pBind := flagset.String("bind", "127.0.0.1:6000", "bind address")
+	pTcp := flagset.String("tcp", "", "underline transport, tcp or auto")
+	pBind := flagset.String("bind", "", "bind address")
 
 	flagset.Parse(os.Args[1:])
 
@@ -109,13 +113,17 @@ func main() {
 
 	actor := fifoActor()
 
-	if *pProtocol == "tcp" {
-		log.Infof("Example fifo service starts at tcp://%s\n", *pBind)
+	if *pTcp != "" {
+		log.Infof("Example fifo service starts at tcp://%s\n", *pTcp)
 		server := jsoffnet.NewTCPServer(rootCtx, actor)
-		server.Start(rootCtx, *pBind)
+		server.Start(rootCtx, *pTcp)
 	} else {
-		log.Infof("Example fifo service starts at %s\n", *pBind)
+		bind := *pBind
+		if bind == "" {
+			bind = "127.0.0.1:6000"
+		}
+		log.Infof("Example fifo service starts at %s\n", bind)
 		handler := jsoffnet.NewGatewayHandler(rootCtx, actor, true)
-		jsoffnet.ListenAndServe(rootCtx, *pBind, handler)
+		jsoffnet.ListenAndServe(rootCtx, bind, handler)
 	}
 }

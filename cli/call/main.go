@@ -26,7 +26,7 @@ func main() {
 	// parse params
 	args := cliFlags.Args()
 	method := args[0]
-	clParams := args[1:len(args)]
+	clParams := args[1:]
 
 	params, err := jsoff.GuessJsonArray(clParams)
 	if err != nil {

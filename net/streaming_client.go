@@ -3,13 +3,14 @@ package jsoffnet
 import (
 	"context"
 	"crypto/tls"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"github.com/superisaac/jsoff"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/superisaac/jsoff"
 )
 
 type pendingRequest struct {
@@ -354,12 +355,24 @@ func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jsoff.Requ
 		return nil, err
 	}
 	go self.expire(sendmsg.Id, time.Second*10)
-
-	resmsg, ok := <-ch
-	if !ok {
-		return nil, errors.New("result channel closed")
+	if closeChannel := self.closeChannel; closeChannel != nil {
+		select {
+		case <-closeChannel:
+			self.closeChannel = nil
+			return nil, TransportClosed
+		case resmsg, ok := <-ch:
+			if !ok {
+				return nil, errors.New("result channel closed")
+			}
+			return resmsg, nil
+		}
+	} else {
+		resmsg, ok := <-ch
+		if !ok {
+			return nil, errors.New("result channel closed")
+		}
+		return resmsg, nil
 	}
-	return resmsg, nil
 }
 
 func (self *StreamingClient) Send(rootCtx context.Context, msg jsoff.Message) error {
