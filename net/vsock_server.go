@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/mdlayher/vsock"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -28,6 +27,7 @@ type VsockSession struct {
 type VsockServer struct {
 	Actor     *Actor
 	serverCtx context.Context
+	listener  *vsock.Listener
 }
 
 func NewVsockServer(serverCtx context.Context, actor *Actor) *VsockServer {
@@ -41,18 +41,36 @@ func NewVsockServer(serverCtx context.Context, actor *Actor) *VsockServer {
 }
 
 func (self *VsockServer) Start(rootCtx context.Context, port uint32) error {
-	listen, err := vsock.Listen(port, nil)
+	listener, err := vsock.Listen(port, nil)
 	if err != nil {
 		return err
 	}
 
+	self.listener = listener
 	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Printf("accept failed, %v\n", err)
-			continue
+		if listener := self.listener; listener != nil {
+			conn, err := listener.Accept()
+			if err != nil {
+				var opErr *net.OpError
+				if errors.As(err, &opErr) {
+					// vsock server stopped
+					break
+				} else {
+					return errors.Wrap(err, "vsock.Accept")
+				}
+			}
+			go self.processConnection(rootCtx, conn)
+		} else {
+			break
 		}
-		go self.processConnection(rootCtx, conn)
+	}
+	return nil
+}
+
+func (self *VsockServer) Stop() {
+	if self.listener != nil {
+		self.listener.Close()
+		self.listener = nil
 	}
 }
 

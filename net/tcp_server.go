@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/superisaac/jsoff"
@@ -27,6 +26,7 @@ type TCPSession struct {
 type TCPServer struct {
 	Actor     *Actor
 	serverCtx context.Context
+	listener  net.Listener
 }
 
 func NewTCPServer(serverCtx context.Context, actor *Actor) *TCPServer {
@@ -40,18 +40,36 @@ func NewTCPServer(serverCtx context.Context, actor *Actor) *TCPServer {
 }
 
 func (self *TCPServer) Start(rootCtx context.Context, bind string) error {
-	listen, err := net.Listen("tcp", bind)
+	listener, err := net.Listen("tcp", bind)
 	if err != nil {
 		return err
 	}
+	self.listener = listener
 
 	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Printf("accept failed, %v\n", err)
-			continue
+		if listener := self.listener; listener != nil {
+			conn, err := listener.Accept()
+			if err != nil {
+				var opErr *net.OpError
+				if errors.As(err, &opErr) {
+					// tcp server stopped
+					break
+				} else {
+					return errors.Wrap(err, "tcp.Accept")
+				}
+			}
+			go self.processConnection(rootCtx, conn)
+		} else {
+			break
 		}
-		go self.processConnection(rootCtx, conn)
+	}
+	return nil
+}
+
+func (self *TCPServer) Stop() {
+	if self.listener != nil {
+		self.listener.Close()
+		self.listener = nil
 	}
 }
 

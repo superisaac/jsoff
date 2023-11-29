@@ -41,6 +41,7 @@ func TestTCPServerClient(t *testing.T) {
 	})
 
 	go server.Start(rootCtx, "127.0.0.1:21800")
+	defer server.Stop()
 	time.Sleep(10 * time.Millisecond)
 
 	client := NewTCPClient(urlParse("tcp://127.0.0.1:21800"))
