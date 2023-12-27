@@ -95,6 +95,14 @@ func MessageBytes(msg Message) ([]byte, error) {
 	return json.Marshal(v)
 }
 
+func MustMessageBytes(msg Message) []byte {
+	bytes, err := MessageBytes(msg)
+	if err != nil {
+		panic(err)
+	}
+	return bytes
+}
+
 func MessageMap(msg Message) (map[string]interface{}, error) {
 	v := msg.Interface()
 	m := map[string]interface{}{}
@@ -367,12 +375,19 @@ func rawResultMessage(id interface{}, result interface{}) *ResultMessage {
 }
 
 func NewResultMessage(reqmsg Message, result interface{}) *ResultMessage {
-	resmsg := rawResultMessage(reqmsg.MustId(), result)
-	resmsg.SetTraceId(reqmsg.TraceId())
-	return resmsg
+	if reqmsg == nil {
+		return rawResultMessage(nil, result)
+	} else {
+		resmsg := rawResultMessage(reqmsg.MustId(), result)
+		resmsg.SetTraceId(reqmsg.TraceId())
+		return resmsg
+	}
 }
 
 func NewErrorMessage(reqmsg Message, errbody *RPCError) *ErrorMessage {
+	if reqmsg == nil {
+		return rawErrorMessage(nil, errbody)
+	}
 	errmsg := rawErrorMessage(reqmsg.MustId(), errbody)
 	errmsg.SetTraceId(reqmsg.TraceId())
 	return errmsg

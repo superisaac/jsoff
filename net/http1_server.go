@@ -21,6 +21,12 @@ func NewHttp1Handler(actor *Actor) *Http1Handler {
 	}
 }
 
+func (self Http1Handler) WriteMessage(w http.ResponseWriter, msg jsoff.Message, code int) {
+	w.WriteHeader(code)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsoff.MustMessageBytes(msg))
+}
+
 func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only support POST
 	if r.Method != "POST" {
@@ -32,13 +38,17 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var buffer bytes.Buffer
 	_, err := buffer.ReadFrom(r.Body)
 	if err != nil {
-		jsoff.ErrorResponse(w, r, err, 400, "Bad request")
+		//jsoff.ErrorResponse(w, r, err, 400, "Bad request")
+		errMsg := jsoff.NewErrorMessage(nil, jsoff.ErrInvalidRequest)
+		self.WriteMessage(w, errMsg, 400)
 		return
 	}
 
 	msg, err := jsoff.ParseBytes(buffer.Bytes())
 	if err != nil {
-		jsoff.ErrorResponse(w, r, err, 400, "Bad jsonrpc request")
+		//	jsoff.ErrorResponse(w, r, err, 400, "Bad jsonrpc request")
+		errMsg := jsoff.NewErrorMessage(nil, jsoff.ErrParseMessage)
+		self.WriteMessage(w, errMsg, 400)
 		return
 	}
 
@@ -91,7 +101,7 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(data)
 	} else {
-		w.WriteHeader(200)
-		w.Write([]byte(""))
+		okMsg := jsoff.NewResultMessage(nil, "ok")
+		self.WriteMessage(w, okMsg, 200)
 	}
 } // Server.ServeHTTP
