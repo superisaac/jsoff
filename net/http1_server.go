@@ -22,8 +22,8 @@ func NewHttp1Handler(actor *Actor) *Http1Handler {
 }
 
 func (self Http1Handler) WriteMessage(w http.ResponseWriter, msg jsoff.Message, code int) {
-	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)	
 	w.Write(jsoff.MustMessageBytes(msg))
 }
 
@@ -93,9 +93,9 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			errmsg := jsoff.ErrInternalError.ToMessageFromId(msg.MustId(), msg.TraceId())
 			data, _ = jsoff.MessageBytes(errmsg)
 		}
-		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")
-
+		
+		w.WriteHeader(200)
 		if traceId != "" {
 			w.Header().Set("X-Trace-Id", traceId)
 		}
