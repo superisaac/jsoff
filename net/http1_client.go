@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -156,13 +157,22 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 		reqmsg.Log().Warnf("abnormal response %d", resp.StatusCode)
 		return nil, errors.Wrap(abnResp, "abnormal response")
 	}
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "ioutil.ReadAll")
 	}
 	respmsg, err := jsoff.ParseBytes(respBody)
 	if err != nil {
 		return nil, err
+	}
+	if responseMsg, ok := respmsg.(jsoff.ResponseMessage); ok {
+		for header, values := range resp.Header {
+			if strings.HasPrefix(strings.ToUpper(header), "X-") {
+				for _, value := range values {
+					responseMsg.ResponseHeader().Add(header, value)
+				}
+			}
+		}
 	}
 	respmsg.SetTraceId(traceId)
 	return respmsg, nil

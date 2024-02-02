@@ -296,7 +296,9 @@ func TestPassingHeader(t *testing.T) {
 		// echo the http reader X-Input back to client
 		r := req.HttpRequest()
 		resp := r.Header.Get("X-Input")
-		return resp, nil
+		resmsg := jsoff.NewResultMessage(req.Msg(), resp)
+		resmsg.ResponseHeader().Add("X-Output", resp)
+		return resmsg, nil
 	})
 
 	go ListenAndServe(rootCtx, "127.0.0.1:28050", server)
@@ -312,6 +314,11 @@ func TestPassingHeader(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("Hello", resmsg.MustResult())
 
+	resultMsg, ok := resmsg.(*jsoff.ResultMessage)
+	assert.True(ok)
+	assert.True(resultMsg.HasResponseHeader())
+	xOutput := resultMsg.ResponseHeader().Get("X-Output")
+	assert.Equal("Hello", xOutput)
 }
 
 func TestGatewayHandler(t *testing.T) {

@@ -3,6 +3,7 @@ package jsoff
 
 import (
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 type UID string
@@ -106,11 +107,18 @@ type NotifyMessage struct {
 	paramsAreList bool
 }
 
+type ResponseMessage interface {
+	HasResponseHeader() bool
+	ResponseHeader() http.Header
+}
+
 // Result message kind
 type ResultMessage struct {
 	BaseMessage
 	Id     interface{}
 	Result interface{}
+
+	responseHeader http.Header
 }
 
 // Error message kind
@@ -118,4 +126,6 @@ type ErrorMessage struct {
 	BaseMessage
 	Id    interface{}
 	Error *RPCError
+
+	responseHeader http.Header
 }

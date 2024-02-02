@@ -74,12 +74,8 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 		if !un.IdSt.isSet {
 			return nil, errdecode("no message id")
 		}
-		// id, err := decodeId(&un)
-		// if err != nil {
-		// 	return nil, err
-		// }
 
-		errmsg := rawErrorMessage(un.IdSt.Value, &errbody)
+		errmsg := rawErrorMessage(un.IdSt.Value, &errbody, nil)
 		errmsg.SetTraceId(un.TraceId)
 		return errmsg, nil
 	} else if un.Result != nil {
@@ -100,7 +96,7 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			msgId = un.IdSt.Value
 		}
 
-		resmsg := rawResultMessage(msgId, res)
+		resmsg := rawResultMessage(msgId, res, nil)
 		resmsg.SetTraceId(un.TraceId)
 		return resmsg, nil
 	} else if un.Method != "" {
@@ -121,14 +117,8 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 			return ntfmsg, nil
 		}
 	} else if un.IdSt.isSet {
-		// parse id
-		// id, err := decodeId(&un)
-		// if err != nil {
-		// 	return nil, err
-		// }
-
 		// result is null
-		resmsg := rawResultMessage(un.IdSt.Value, nil)
+		resmsg := rawResultMessage(un.IdSt.Value, nil, nil)
 		resmsg.SetTraceId(un.TraceId)
 		return resmsg, nil
 	}

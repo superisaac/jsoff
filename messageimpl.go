@@ -5,6 +5,8 @@ package jsoff
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -170,13 +172,13 @@ func (self NotifyMessage) ReplaceId(newId interface{}) Message {
 }
 
 func (self ResultMessage) ReplaceId(newId interface{}) Message {
-	resmsg := rawResultMessage(newId, self.Result)
+	resmsg := rawResultMessage(newId, self.Result, self.responseHeader)
 	resmsg.SetTraceId(self.TraceId())
 	return resmsg
 }
 
 func (self ErrorMessage) ReplaceId(newId interface{}) Message {
-	errmsg := rawErrorMessage(newId, self.Error)
+	errmsg := rawErrorMessage(newId, self.Error, self.responseHeader)
 	errmsg.SetTraceId(self.TraceId())
 	return errmsg
 }
@@ -366,19 +368,43 @@ func NewNotifyMessage(method string, params interface{}) *NotifyMessage {
 	return msg
 }
 
-func rawResultMessage(id interface{}, result interface{}) *ResultMessage {
+func rawResultMessage(id interface{}, result interface{}, responseHeader http.Header) *ResultMessage {
 	msg := &ResultMessage{}
 	msg.kind = MKResult
 	msg.Id = id
 	msg.Result = result
+	msg.responseHeader = responseHeader
 	return msg
+}
+
+// implements ResponseMessage
+func (self ResultMessage) HasResponseHeader() bool {
+	return self.responseHeader != nil
+}
+
+func (self *ResultMessage) ResponseHeader() http.Header {
+	if self.responseHeader == nil {
+		self.responseHeader = http.Header{}
+	}
+	return self.responseHeader
+}
+
+func (self ErrorMessage) HasResponseHeader() bool {
+	return self.responseHeader != nil
+}
+
+func (self *ErrorMessage) ResponseHeader() http.Header {
+	if self.responseHeader == nil {
+		self.responseHeader = http.Header{}
+	}
+	return self.responseHeader
 }
 
 func NewResultMessage(reqmsg Message, result interface{}) *ResultMessage {
 	if reqmsg == nil {
-		return rawResultMessage(nil, result)
+		return rawResultMessage(nil, result, nil)
 	} else {
-		resmsg := rawResultMessage(reqmsg.MustId(), result)
+		resmsg := rawResultMessage(reqmsg.MustId(), result, nil)
 		resmsg.SetTraceId(reqmsg.TraceId())
 		return resmsg
 	}
@@ -386,24 +412,25 @@ func NewResultMessage(reqmsg Message, result interface{}) *ResultMessage {
 
 func NewErrorMessage(reqmsg Message, errbody *RPCError) *ErrorMessage {
 	if reqmsg == nil {
-		return rawErrorMessage(nil, errbody)
+		return rawErrorMessage(nil, errbody, nil)
 	}
-	errmsg := rawErrorMessage(reqmsg.MustId(), errbody)
+	errmsg := rawErrorMessage(reqmsg.MustId(), errbody, nil)
 	errmsg.SetTraceId(reqmsg.TraceId())
 	return errmsg
 }
 
 func NewErrorMessageFromId(reqId interface{}, traceId string, errbody *RPCError) *ErrorMessage {
-	errmsg := rawErrorMessage(reqId, errbody)
+	errmsg := rawErrorMessage(reqId, errbody, nil)
 	errmsg.SetTraceId(traceId)
 	return errmsg
 }
 
-func rawErrorMessage(id interface{}, errbody *RPCError) *ErrorMessage {
+func rawErrorMessage(id interface{}, errbody *RPCError, responseHeader http.Header) *ErrorMessage {
 	msg := &ErrorMessage{}
 	msg.kind = MKError
 	msg.Id = id
 	msg.Error = errbody
+	msg.responseHeader = responseHeader
 	return msg
 }
 

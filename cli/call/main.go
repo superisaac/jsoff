@@ -5,9 +5,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/superisaac/jsoff"
-	"github.com/superisaac/jsoff/net"
 	"os"
+
+	"github.com/superisaac/jsoff"
+	jsoffnet "github.com/superisaac/jsoff/net"
 )
 
 func main() {
@@ -15,6 +16,8 @@ func main() {
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, https? or wss? prefixed, can be in env JSONRPC_CONNECT, default is http://127.0.0.1:9990")
 	var headerFlags jsoffnet.HeaderFlags
 	cliFlags.Var(&headerFlags, "header", "attached http headers")
+
+	pDumpHeader := cliFlags.Bool("dumpheader", false, "dump response headers")
 
 	cliFlags.Parse(os.Args[1:])
 
@@ -72,4 +75,15 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("%s\n", repr)
+
+	if *pDumpHeader {
+		if responseMsg, ok := resmsg.(jsoff.ResponseMessage); ok && responseMsg.HasResponseHeader() {
+			fmt.Println("Response header:")
+			for header, values := range responseMsg.ResponseHeader() {
+				for _, value := range values {
+					fmt.Printf("  %s: %s\n", header, value)
+				}
+			}
+		}
+	}
 }

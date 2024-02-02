@@ -2,8 +2,11 @@ package jsoffnet
 
 import (
 	"bytes"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/superisaac/jsoff"
+
 	//"io"
 	"net/http"
 )
@@ -23,7 +26,7 @@ func NewHttp1Handler(actor *Actor) *Http1Handler {
 
 func (self Http1Handler) WriteMessage(w http.ResponseWriter, msg jsoff.Message, code int) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)	
+	w.WriteHeader(code)
 	w.Write(jsoff.MustMessageBytes(msg))
 }
 
@@ -82,7 +85,7 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("internal server error"))
 		return
 	}
-	//if msg.IsRequest() {
+
 	if resmsg != nil {
 		traceId := resmsg.TraceId()
 		resmsg.SetTraceId("")
@@ -93,8 +96,20 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			errmsg := jsoff.ErrInternalError.ToMessageFromId(msg.MustId(), msg.TraceId())
 			data, _ = jsoff.MessageBytes(errmsg)
 		}
+
 		w.Header().Set("Content-Type", "application/json")
-		
+
+		if responseMsg, ok := resmsg.(jsoff.ResponseMessage); ok && responseMsg.HasResponseHeader() {
+			for header, values := range responseMsg.ResponseHeader() {
+				// only transfer X- prefixed headers
+				if strings.HasPrefix(strings.ToUpper(header), "X-") {
+					for _, value := range values {
+						w.Header().Add(header, value)
+					}
+				}
+			}
+		}
+
 		w.WriteHeader(200)
 		if traceId != "" {
 			w.Header().Set("X-Trace-Id", traceId)
