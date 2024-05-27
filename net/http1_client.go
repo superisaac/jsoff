@@ -155,7 +155,7 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 			Body:     buffer.Bytes(),
 		}
 		reqmsg.Log().WithFields(log.Fields{
-			"server": self.serverUrl,
+			"server": self.serverUrl.String(),
 			"status": resp.StatusCode,
 		}).Warnf("abnormal response")
 		return nil, errors.Wrap(abnResp, "abnormal response")
