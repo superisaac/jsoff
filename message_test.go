@@ -164,6 +164,8 @@ func TestDecodeMessage(t *testing.T) {
 		`{"error": {"code": -32600, "message": "invalid request", "data": "bad message"}, "id": null}`, // test error with null id
 
 		`{"id": {"what": "not a plain id"}, "method": "is_request", "params": ["hello", 3]}`, // test request with non plain id
+
+		`{"result": null, "error": {"code": -27, "message": "X bluh"}, "id": 1}`, // test error message with result null
 	}, "\n")
 
 	dec := json.NewDecoder(strings.NewReader(input))
@@ -219,6 +221,12 @@ func TestDecodeMessage(t *testing.T) {
 	_, err9 := DecodeMessage(dec)
 	assert.NotNil(err9)
 	assert.Contains(err9.Error(), "cannot unmarshal object into Go struct field msgUnion.id of type string")
+
+	msg10, err := DecodeMessage(dec)
+	assert.Nil(err)
+	assert.True(msg10.IsError())
+	assert.False(msg10.IsResult())
+	assert.Equal(-27, msg10.MustError().Code)
 
 	// EOF expected
 	_, err = DecodeMessage(dec)

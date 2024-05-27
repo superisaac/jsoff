@@ -143,7 +143,7 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		var buffer bytes.Buffer
 		readed, err := buffer.ReadFrom(resp.Body)
 		if err != nil {
@@ -154,7 +154,10 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 			Response: resp,
 			Body:     buffer.Bytes(),
 		}
-		reqmsg.Log().Warnf("abnormal response %d", resp.StatusCode)
+		reqmsg.Log().WithFields(log.Fields{
+			"server": self.serverUrl,
+			"status": resp.StatusCode,
+		}).Warnf("abnormal response")
 		return nil, errors.Wrap(abnResp, "abnormal response")
 	}
 	respBody, err := io.ReadAll(resp.Body)
