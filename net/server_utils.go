@@ -13,11 +13,11 @@ type TLSConfig struct {
 	Keyfile  string
 }
 
-func (self *TLSConfig) ValidateValues() error {
-	if self.Certfile == "" {
+func (cfg *TLSConfig) ValidateValues() error {
+	if cfg.Certfile == "" {
 		return errors.New("certfile is empty")
 	}
-	if self.Keyfile == "" {
+	if cfg.Keyfile == "" {
 		return errors.New("keyfile is empty")
 	}
 	return nil

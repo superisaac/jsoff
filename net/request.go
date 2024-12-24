@@ -41,46 +41,46 @@ func NewRPCRequest(ctx context.Context, msg jsoff.Message, transportType string)
 	}
 }
 
-func (self *RPCRequest) WithSession(session RPCSession) *RPCRequest {
-	self.session = session
-	return self
+func (req *RPCRequest) WithSession(session RPCSession) *RPCRequest {
+	req.session = session
+	return req
 }
 
-func (self *RPCRequest) WithHTTPRequest(r *http.Request) *RPCRequest {
-	self.r = r
-	return self
+func (req *RPCRequest) WithHTTPRequest(r *http.Request) *RPCRequest {
+	req.r = r
+	return req
 }
 
-func (self RPCRequest) Context() context.Context {
-	return self.context
+func (req RPCRequest) Context() context.Context {
+	return req.context
 }
 
-func (self RPCRequest) Msg() jsoff.Message {
-	return self.msg
+func (req RPCRequest) Msg() jsoff.Message {
+	return req.msg
 }
 
-func (self RPCRequest) Session() RPCSession {
-	return self.session
+func (req RPCRequest) Session() RPCSession {
+	return req.session
 }
 
-func (self RPCRequest) HttpRequest() *http.Request {
-	if self.r == nil {
+func (req RPCRequest) HttpRequest() *http.Request {
+	if req.r == nil {
 		panic("Http Request is nil")
 	}
-	return self.r
+	return req.r
 }
 
-func (self RPCRequest) Data() interface{} {
-	return self.data
+func (req RPCRequest) Data() interface{} {
+	return req.data
 }
 
-func (self RPCRequest) Log() *log.Entry {
+func (req RPCRequest) Log() *log.Entry {
 	remoteAddr := ""
-	if self.r != nil {
-		remoteAddr = self.r.RemoteAddr
+	if req.r != nil {
+		remoteAddr = req.r.RemoteAddr
 	}
-	return self.msg.Log().WithFields(log.Fields{
-		"ttype":      self.transportType,
+	return req.msg.Log().WithFields(log.Fields{
+		"ttype":      req.transportType,
 		"remoteAddr": remoteAddr,
 	})
 }
@@ -137,44 +137,45 @@ type Actor struct {
 }
 
 func NewActor() *Actor {
-	return &Actor{
+	a := &Actor{
 		ValidateSchema:   true,
 		RecoverFromPanic: true,
 
 		methodHandlers: make(map[string]*MethodHandler),
 		children:       make([]*Actor, 0),
 	}
+	return a
 }
 
-func (self *Actor) AddChild(child *Actor) {
-	self.children = append(self.children, child)
+func (a *Actor) AddChild(child *Actor) {
+	a.children = append(a.children, child)
 }
 
 // register a method handler
-func (self *Actor) On(method string, callback MsgCallback, setters ...HandlerSetter) {
+func (a *Actor) On(method string, callback MsgCallback, setters ...HandlerSetter) {
 
 	reqcb := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		return callback(params)
 	}
-	err := self.OnRequest(method, reqcb, setters...)
+	err := a.OnRequest(method, reqcb, setters...)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (self *Actor) OnContext(method string, callback ContextedMsgCallback, setters ...HandlerSetter) {
+func (a *Actor) OnContext(method string, callback ContextedMsgCallback, setters ...HandlerSetter) {
 
 	reqcb := func(req *RPCRequest, params []interface{}) (interface{}, error) {
 		return callback(req.Context(), params)
 	}
-	err := self.OnRequest(method, reqcb, setters...)
+	err := a.OnRequest(method, reqcb, setters...)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (self *Actor) OnRequest(method string, callback RequestCallback, setters ...HandlerSetter) error {
-	if _, exist := self.methodHandlers[method]; exist {
+func (a *Actor) OnRequest(method string, callback RequestCallback, setters ...HandlerSetter) error {
+	if _, exist := a.methodHandlers[method]; exist {
 		return errors.New("handler already exist!")
 	}
 	h := &MethodHandler{
@@ -184,83 +185,83 @@ func (self *Actor) OnRequest(method string, callback RequestCallback, setters ..
 	for _, setter := range setters {
 		setter(h)
 	}
-	self.methodHandlers[method] = h
+	a.methodHandlers[method] = h
 	return nil
 }
 
 // register a typed method handler
-func (self *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) {
+func (a *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) {
 	handler, err := wrapTyped(typedHandler, nil)
 	if err != nil {
 		panic(err)
 	}
-	err = self.OnRequest(method, handler, setters...)
+	err = a.OnRequest(method, handler, setters...)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (self *Actor) OnTypedRequest(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+func (a *Actor) OnTypedRequest(method string, typedHandler interface{}, setters ...HandlerSetter) error {
 	//firstArg := reflect.TypeOf(&RPCRequest{})
 	handler, err := wrapTyped(typedHandler, &ReqSpec{})
 	if err != nil {
 		return err
 	}
-	return self.OnRequest(method, handler, setters...)
+	return a.OnRequest(method, handler, setters...)
 }
 
-func (self *Actor) OnTypedContext(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+func (a *Actor) OnTypedContext(method string, typedHandler interface{}, setters ...HandlerSetter) error {
 	//firstArgSpec := reflect.TypeOf((*context.Context)(nil)).Elem()
 	handler, err := wrapTyped(typedHandler, &ContextSpec{})
 	if err != nil {
 		return err
 	}
-	return self.OnRequest(method, handler, setters...)
+	return a.OnRequest(method, handler, setters...)
 }
 
 // Off unregister the method from handlers
-func (self *Actor) Off(method string) {
-	delete(self.methodHandlers, method)
+func (a *Actor) Off(method string) {
+	delete(a.methodHandlers, method)
 }
 
 // register a callback called when no hander to handle a request
 // message or non-request message met
-func (self *Actor) OnMissing(handler MissingCallback) error {
-	if self.missingHandler != nil {
+func (a *Actor) OnMissing(handler MissingCallback) error {
+	if a.missingHandler != nil {
 		return errors.New("missing handler already exist!")
 	}
-	self.missingHandler = handler
+	a.missingHandler = handler
 	return nil
 }
 
 // OnClose handler is called when the stream beneath the actor is closed
-func (self *Actor) OnClose(handler CloseCallback) error {
-	if self.closeHandler != nil {
+func (a *Actor) OnClose(handler CloseCallback) error {
+	if a.closeHandler != nil {
 		return errors.New("close handler already exist!")
 	}
-	self.closeHandler = handler
+	a.closeHandler = handler
 	return nil
 }
 
 // call the close handler if possible
-func (self *Actor) HandleClose(session RPCSession) {
+func (a *Actor) HandleClose(session RPCSession) {
 	// each child have to be called
-	for _, child := range self.children {
+	for _, child := range a.children {
 		child.HandleClose(session)
 	}
 
-	if self.closeHandler != nil {
-		self.closeHandler(session)
+	if a.closeHandler != nil {
+		a.closeHandler(session)
 	}
 }
 
 // returns there is a handler for a method
-func (self Actor) Has(method string) bool {
-	if _, exist := self.methodHandlers[method]; exist {
+func (a Actor) Has(method string) bool {
+	if _, exist := a.methodHandlers[method]; exist {
 		return true
 	}
 
-	for _, child := range self.children {
+	for _, child := range a.children {
 		if child.Has(method) {
 			return true
 		}
@@ -268,12 +269,12 @@ func (self Actor) Has(method string) bool {
 	return false
 }
 
-func (self Actor) MethodList() []string {
+func (a Actor) MethodList() []string {
 	methods := []string{}
-	for mname := range self.methodHandlers {
+	for mname := range a.methodHandlers {
 		methods = append(methods, mname)
 	}
-	for _, child := range self.children {
+	for _, child := range a.children {
 		childMethods := child.MethodList()
 		methods = append(methods, childMethods...)
 	}
@@ -281,11 +282,11 @@ func (self Actor) MethodList() []string {
 }
 
 // get the schema of a method
-func (self Actor) GetSchema(method string) (jsoffschema.Schema, bool) {
-	if h, ok := self.getHandler(method); ok && h.schema != nil {
+func (a Actor) GetSchema(method string) (jsoffschema.Schema, bool) {
+	if h, ok := a.getHandler(method); ok && h.schema != nil {
 		return h.schema, true
 	}
-	for _, child := range self.children {
+	for _, child := range a.children {
 		if s, ok := child.GetSchema(method); ok {
 			return s, ok
 		}
@@ -293,9 +294,34 @@ func (self Actor) GetSchema(method string) (jsoffschema.Schema, bool) {
 	return nil, false
 }
 
+// get a map of all supported schemas
+func (a Actor) PublicSchemas() [](map[string]any) {
+	methods := make([]map[string]any, 0)
+	for _, mname := range a.MethodList() {
+		if !jsoff.IsPublicMethod(mname) {
+			continue
+		}
+		if s, ok := a.GetSchema(mname); ok {
+			sMap := s.Map()
+			sMap["name"] = mname
+			methods = append(methods, sMap)
+		} else {
+			methods = append(methods, map[string]any{
+				"name":        mname,
+				"description": "",
+				"params":      []any{},
+				"returns": map[string]any{
+					"type": "any",
+				},
+			})
+		}
+	}
+	return methods
+}
+
 // get the handler of a method
-func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
-	if h, ok := self.methodHandlers[method]; ok {
+func (a *Actor) getHandler(method string) (*MethodHandler, bool) {
+	if h, ok := a.methodHandlers[method]; ok {
 		return h, true
 	} else {
 		return nil, false
@@ -303,12 +329,12 @@ func (self *Actor) getHandler(method string) (*MethodHandler, bool) {
 }
 
 // give the actor a request message
-func (self *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
+func (a *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 	msg := req.Msg()
 	if !msg.IsResponse() {
-		if self.missingHandler != nil {
-			res, err := self.missingHandler(req)
-			return self.wrapResult(res, err, msg)
+		if a.missingHandler != nil {
+			res, err := a.missingHandler(req)
+			return a.wrapResult(res, err, msg)
 		} else {
 			req.Log().Info("no handler to handle this message")
 			return nil, nil
@@ -316,9 +342,9 @@ func (self *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 	}
 
 	// TODO: recover from panic
-	if handler, found := self.getHandler(msg.MustMethod()); found {
+	if handler, found := a.getHandler(msg.MustMethod()); found {
 		params := msg.MustParams()
-		if handler.schema != nil && self.ValidateSchema {
+		if handler.schema != nil && a.ValidateSchema {
 			// validate the request
 			validator := jsoffschema.NewSchemaValidator()
 			m, err := jsoff.MessageMap(msg)
@@ -333,15 +359,15 @@ func (self *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 				return nil, errPos
 			}
 		}
-		return self.recoverCallHandler(handler, req, params)
+		return a.recoverCallHandler(handler, req, params)
 	} else {
-		for _, child := range self.children {
+		for _, child := range a.children {
 			if child.Has(msg.MustMethod()) {
 				return child.Feed(req)
 			}
 		}
-		if self.missingHandler != nil {
-			return self.recoverCallMissingHandler(req)
+		if a.missingHandler != nil {
+			return a.recoverCallMissingHandler(req)
 		} else {
 			if msg.IsRequest() {
 				return jsoff.ErrMethodNotFound.ToMessageFromId(
@@ -352,12 +378,12 @@ func (self *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 	return nil, nil
 }
 
-func (self Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []interface{}) (resmsg0 jsoff.Message, err0 error) {
-	if self.RecoverFromPanic {
+func (a Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []interface{}) (resmsg0 jsoff.Message, err0 error) {
+	if a.RecoverFromPanic {
 		defer func() {
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
-					resmsg0, err0 = self.wrapResult(nil, err, req.Msg())
+					resmsg0, err0 = a.wrapResult(nil, err, req.Msg())
 				} else {
 					panic(r)
 				}
@@ -365,15 +391,15 @@ func (self Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, pa
 		}()
 	}
 	res, err := handler.callback(req, params)
-	return self.wrapResult(res, err, req.Msg())
+	return a.wrapResult(res, err, req.Msg())
 }
 
-func (self Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jsoff.Message, err0 error) {
-	if self.RecoverFromPanic {
+func (a Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jsoff.Message, err0 error) {
+	if a.RecoverFromPanic {
 		defer func() {
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
-					resmsg0, err0 = self.wrapResult(nil, err, req.Msg())
+					resmsg0, err0 = a.wrapResult(nil, err, req.Msg())
 				} else {
 					// rethrown the panic result
 					panic(r)
@@ -381,11 +407,11 @@ func (self Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jsoff.Mess
 			}
 		}()
 	}
-	res, err := self.missingHandler(req)
-	return self.wrapResult(res, err, req.Msg())
+	res, err := a.missingHandler(req)
+	return a.wrapResult(res, err, req.Msg())
 }
 
-func (self Actor) wrapResult(res interface{}, err error, msg jsoff.Message) (jsoff.Message, error) {
+func (a Actor) wrapResult(res interface{}, err error, msg jsoff.Message) (jsoff.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Errorf("wrapResult(), error handleing res, %#v", err)

@@ -70,6 +70,14 @@ func fifoActor() *jsoffnet.Actor {
 		return fifo, nil
 	})
 
+	actor.On("fifo_count", func(params []interface{}) (interface{}, error) {
+		lock.RLock()
+		defer lock.RUnlock()
+
+		log.Infof("fifo count")
+		return len(fifo), nil
+	}, jsoffnet.WithSchemaJson(`{"description": "get the element count", "params": [], "returns": "integer"}`))
+
 	actor.OnTyped("fifo_get", func(at int) (interface{}, error) {
 		lock.RLock()
 		defer lock.RUnlock()
@@ -79,7 +87,7 @@ func fifoActor() *jsoffnet.Actor {
 			return nil, &jsoff.RPCError{Code: -400, Message: "index out of range"}
 		}
 		return fifo[at], nil
-	})
+	}, jsoffnet.WithSchemaJson(`{"description": "get an element at index", "type": "method", "params": ["integer"]}`))
 
 	actor.OnRequest("fifo_subscribe", func(req *jsoffnet.RPCRequest, params []interface{}) (interface{}, error) {
 		session := req.Session()

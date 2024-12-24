@@ -55,6 +55,14 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if discoverReqmsg, ok := msg.(*jsoff.RequestMessage); ok && discoverReqmsg.Method == "rpc.discover" {
+		discoverResult := jsoff.NewResultMessage(discoverReqmsg, map[string]any{
+			"methods": self.Actor.PublicSchemas(),
+		})
+		self.WriteMessage(w, discoverResult, 200)
+		return
+	}
+
 	req := NewRPCRequest(r.Context(), msg, TransportHTTP).WithHTTPRequest(r)
 	resmsg, err := self.Actor.Feed(req)
 	if err != nil {
