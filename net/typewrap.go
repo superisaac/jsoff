@@ -63,26 +63,26 @@ type FirstArgSpec interface {
 
 type ReqSpec struct{}
 
-func (self ReqSpec) Check(firstArgType reflect.Type) bool {
-	return firstArgType.Kind() == reflect.Ptr && firstArgType.String() == self.String()
+func (spec ReqSpec) Check(firstArgType reflect.Type) bool {
+	return firstArgType.Kind() == reflect.Ptr && firstArgType.String() == spec.String()
 }
-func (self ReqSpec) Value(req *RPCRequest) interface{} {
+func (spec ReqSpec) Value(req *RPCRequest) interface{} {
 	return req
 }
-func (self ReqSpec) String() string {
+func (spec ReqSpec) String() string {
 	return "*jsoffnet.RPCRequest"
 }
 
 type ContextSpec struct{}
 
-func (self ContextSpec) Check(firstArgType reflect.Type) bool {
+func (spec ContextSpec) Check(firstArgType reflect.Type) bool {
 	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
 	return firstArgType.Kind() == reflect.Interface && firstArgType.Implements(ctxType)
 }
-func (self ContextSpec) Value(req *RPCRequest) interface{} {
+func (spec ContextSpec) Value(req *RPCRequest) interface{} {
 	return req.Context()
 }
-func (self ContextSpec) String() string {
+func (spec ContextSpec) String() string {
 	return "context.Context"
 }
 

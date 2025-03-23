@@ -40,15 +40,15 @@ func NewVsockServer(serverCtx context.Context, actor *Actor) *VsockServer {
 	}
 }
 
-func (self *VsockServer) Start(rootCtx context.Context, port uint32) error {
+func (s *VsockServer) Start(rootCtx context.Context, port uint32) error {
 	listener, err := vsock.Listen(port, nil)
 	if err != nil {
 		return err
 	}
 
-	self.listener = listener
+	s.listener = listener
 	for {
-		if listener := self.listener; listener != nil {
+		if listener := s.listener; listener != nil {
 			conn, err := listener.Accept()
 			if err != nil {
 				var opErr *net.OpError
@@ -59,7 +59,7 @@ func (self *VsockServer) Start(rootCtx context.Context, port uint32) error {
 					return errors.Wrap(err, "vsock.Accept")
 				}
 			}
-			go self.processConnection(rootCtx, conn)
+			go s.processConnection(rootCtx, conn)
 		} else {
 			break
 		}
@@ -67,18 +67,18 @@ func (self *VsockServer) Start(rootCtx context.Context, port uint32) error {
 	return nil
 }
 
-func (self *VsockServer) Stop() {
-	if self.listener != nil {
-		self.listener.Close()
-		self.listener = nil
+func (s *VsockServer) Stop() {
+	if s.listener != nil {
+		s.listener.Close()
+		s.listener = nil
 	}
 }
 
-func (self *VsockServer) processConnection(rootCtx context.Context, conn net.Conn) {
+func (s *VsockServer) processConnection(rootCtx context.Context, conn net.Conn) {
 	decoder := json.NewDecoder(bufio.NewReader(conn))
 
 	session := &VsockSession{
-		server:      self,
+		server:      s,
 		rootCtx:     rootCtx,
 		conn:        conn,
 		decoder:     decoder,
@@ -88,21 +88,21 @@ func (self *VsockServer) processConnection(rootCtx context.Context, conn net.Con
 	}
 	defer func() {
 		conn.Close()
-		self.Actor.HandleClose(session)
+		s.Actor.HandleClose(session)
 	}()
 	session.wait()
 }
 
 // vsock session methods
-func (self *VsockSession) wait() {
-	connCtx, cancel := context.WithCancel(self.rootCtx)
+func (session *VsockSession) wait() {
+	connCtx, cancel := context.WithCancel(session.rootCtx)
 	defer cancel()
 
-	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
+	serverCtx, cancelServer := context.WithCancel(session.server.serverCtx)
 	defer cancelServer()
 
-	go self.sendLoop()
-	go self.recvLoop()
+	go session.sendLoop()
+	go session.recvLoop()
 
 	for {
 		select {
@@ -110,7 +110,7 @@ func (self *VsockSession) wait() {
 			return
 		case <-serverCtx.Done():
 			return
-		case err, ok := <-self.done:
+		case err, ok := <-session.done:
 			if ok && err != nil {
 				log.Warnf("websocket error %s", err)
 			}
@@ -119,69 +119,69 @@ func (self *VsockSession) wait() {
 	}
 }
 
-func (self *VsockSession) recvLoop() {
+func (session *VsockSession) recvLoop() {
 	for {
-		msg, err := jsoff.DecodeMessage(self.decoder)
+		msg, err := jsoff.DecodeMessage(session.decoder)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			} else {
-				self.done <- err
+				session.done <- err
 				return
 			}
 		}
-		go self.msgReceived(msg)
+		go session.msgReceived(msg)
 	}
 	// end of scanning
-	self.done <- nil
+	session.done <- nil
 	return
 }
 
-func (self *VsockSession) msgReceived(msg jsoff.Message) {
+func (session *VsockSession) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
-		self.rootCtx,
+		session.rootCtx,
 		msg,
-		TransportVsock).WithSession(self)
+		TransportVsock).WithSession(session)
 
-	resmsg, err := self.server.Actor.Feed(req)
+	resmsg, err := session.server.Actor.Feed(req)
 	if err != nil {
-		self.done <- errors.Wrap(err, "actor.Feed")
+		session.done <- errors.Wrap(err, "actor.Feed")
 		return
 	}
 	if resmsg != nil {
 		if resmsg.IsResultOrError() {
-			self.sendChannel <- resmsg
+			session.sendChannel <- resmsg
 		} else {
-			self.Send(resmsg)
+			session.Send(resmsg)
 		}
 	}
 }
 
-func (self *VsockSession) Send(msg jsoff.Message) {
-	self.sendChannel <- msg
+func (session *VsockSession) Send(msg jsoff.Message) {
+	session.sendChannel <- msg
 }
 
-func (self VsockSession) Context() context.Context {
-	return self.rootCtx
+func (session VsockSession) Context() context.Context {
+	return session.rootCtx
 }
 
-func (self VsockSession) SessionID() string {
-	return self.sessionId
+func (session VsockSession) SessionID() string {
+	return session.sessionId
 }
 
-func (self *VsockSession) sendLoop() {
-	ctx, cancel := context.WithCancel(self.rootCtx)
+func (session *VsockSession) sendLoop() {
+	ctx, cancel := context.WithCancel(session.rootCtx)
 	defer cancel()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msg, ok := <-self.sendChannel:
+		case msg, ok := <-session.sendChannel:
 			if !ok {
 				return
 			}
-			if self.decoder == nil {
+			if session.decoder == nil {
 				return
 			}
 			marshaled, err := jsoff.MessageBytes(msg)
@@ -191,11 +191,11 @@ func (self *VsockSession) sendLoop() {
 			}
 
 			marshaled = append(marshaled, []byte("\n")...)
-			if _, err := self.conn.Write(marshaled); err != nil {
+			if _, err := session.conn.Write(marshaled); err != nil {
 				log.Warnf("vsock writedata warning message %v\n", err)
 				return
 			}
-			//self.flusher.Flush()
+			//session.flusher.Flush()
 		}
 	}
 }

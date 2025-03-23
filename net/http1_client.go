@@ -40,13 +40,13 @@ func NewHttp1Client(serverUrl *url.URL, optlist ...ClientOptions) *Http1Client {
 	return &Http1Client{serverUrl: serverUrl, clientOptions: clientOptions}
 }
 
-func (self *Http1Client) ServerURL() *url.URL {
-	return self.serverUrl
+func (client *Http1Client) ServerURL() *url.URL {
+	return client.serverUrl
 }
 
-func (self *Http1Client) connect() {
-	self.connectOnce.Do(func() {
-		timeout := self.clientOptions.Timeout
+func (client *Http1Client) connect() {
+	client.connectOnce.Do(func() {
+		timeout := client.clientOptions.Timeout
 		if timeout <= 0 {
 			timeout = 5
 		}
@@ -55,21 +55,21 @@ func (self *Http1Client) connect() {
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     30 * time.Second,
 		}
-		if self.clientTLS != nil {
-			tr.TLSClientConfig = self.clientTLS
+		if client.clientTLS != nil {
+			tr.TLSClientConfig = client.clientTLS
 		}
-		self.httpClient = &http.Client{
+		client.httpClient = &http.Client{
 			Transport: tr,
 			Timeout:   time.Duration(timeout) * time.Second,
 		}
 	})
 }
 
-func (self *Http1Client) SetExtraHeader(h http.Header) {
-	self.extraHeader = h
+func (client *Http1Client) SetExtraHeader(h http.Header) {
+	client.extraHeader = h
 }
-func (self *Http1Client) SetClientTLSConfig(cfg *tls.Config) {
-	self.clientTLS = cfg
+func (client *Http1Client) SetClientTLSConfig(cfg *tls.Config) {
+	client.clientTLS = cfg
 }
 
 func (self *Http1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
@@ -88,16 +88,16 @@ func (self *Http1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.Reque
 	}
 }
 
-func (self *Http1Client) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
-	resmsg, err := self.request(rootCtx, reqmsg)
+func (client *Http1Client) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
+	resmsg, err := client.request(rootCtx, reqmsg)
 	if err != nil {
 		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
 	}
 	return resmsg, nil
 }
 
-func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
-	self.connect()
+func (client *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
+	client.connect()
 
 	traceId := reqmsg.TraceId()
 
@@ -112,7 +112,7 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl.String(), reader)
+	req, err := http.NewRequestWithContext(ctx, "POST", client.serverUrl.String(), reader)
 	if err != nil {
 		return nil, errors.Wrap(err, "http.NewRequestWithContext")
 	}
@@ -122,15 +122,15 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	if self.extraHeader != nil {
-		for k, vs := range self.extraHeader {
+	if client.extraHeader != nil {
+		for k, vs := range client.extraHeader {
 			for _, v := range vs {
 				req.Header.Add(k, v)
 			}
 		}
 	}
 
-	resp, err := self.httpClient.Do(req)
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		if os.IsTimeout(err) {
 			timeoutResp := &SimpleResponse{
@@ -155,7 +155,7 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 			Body:     buffer.Bytes(),
 		}
 		reqmsg.Log().WithFields(log.Fields{
-			"server": self.serverUrl.String(),
+			"server": client.serverUrl.String(),
 			"status": resp.StatusCode,
 		}).Warnf("abnormal response")
 		return nil, errors.Wrap(abnResp, "abnormal response")
@@ -181,8 +181,8 @@ func (self *Http1Client) request(rootCtx context.Context, reqmsg *jsoff.RequestM
 	return respmsg, nil
 }
 
-func (self *Http1Client) Send(rootCtx context.Context, msg jsoff.Message) error {
-	self.connect()
+func (client *Http1Client) Send(rootCtx context.Context, msg jsoff.Message) error {
+	client.connect()
 
 	traceId := msg.TraceId()
 	msg.SetTraceId("")
@@ -196,7 +196,7 @@ func (self *Http1Client) Send(rootCtx context.Context, msg jsoff.Message) error 
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", self.serverUrl.String(), reader)
+	req, err := http.NewRequestWithContext(ctx, "POST", client.serverUrl.String(), reader)
 	if err != nil {
 		return errors.Wrap(err, "http.NewRequestWithContext")
 	}
@@ -206,15 +206,15 @@ func (self *Http1Client) Send(rootCtx context.Context, msg jsoff.Message) error 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	if self.extraHeader != nil {
-		for k, vs := range self.extraHeader {
+	if client.extraHeader != nil {
+		for k, vs := range client.extraHeader {
 			for _, v := range vs {
 				req.Header.Add(k, v)
 			}
 		}
 	}
 
-	resp, err := self.httpClient.Do(req)
+	resp, err := client.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "http Do")
 	}
@@ -229,6 +229,6 @@ func (self *Http1Client) Send(rootCtx context.Context, msg jsoff.Message) error 
 	return nil
 }
 
-func (self *Http1Client) IsStreaming() bool {
+func (client *Http1Client) IsStreaming() bool {
 	return false
 }

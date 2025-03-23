@@ -16,8 +16,12 @@ type AuthInfo struct {
 	Settings map[string]interface{}
 }
 
+type authInfoKeyType int
+
+var authInfoKey authInfoKeyType
+
 func AuthInfoFromContext(ctx context.Context) (*AuthInfo, bool) {
-	if v := ctx.Value("authInfo"); v != nil {
+	if v := ctx.Value(authInfoKey); v != nil {
 		authinfo, ok := v.(*AuthInfo)
 		return authinfo, ok
 	}
@@ -73,20 +77,20 @@ func NewAuthHandler(authConfig *AuthConfig, next http.Handler) *AuthHandler {
 	}
 }
 
-func (self AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
-	if self.authConfig == nil {
+func (handler AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
+	if handler.authConfig == nil {
 		return nil, true
 	}
 
-	if self.authConfig.Jwt != nil && self.authConfig.Jwt.Secret != "" {
-		if authInfo, ok := self.jwtAuth(self.authConfig.Jwt, r); ok {
+	if handler.authConfig.Jwt != nil && handler.authConfig.Jwt.Secret != "" {
+		if authInfo, ok := handler.jwtAuth(handler.authConfig.Jwt, r); ok {
 			return authInfo, true
 		}
 	}
 
-	if self.authConfig.Basic != nil && len(self.authConfig.Basic) > 0 {
+	if len(handler.authConfig.Basic) > 0 {
 		if username, password, ok := r.BasicAuth(); ok {
-			for _, basicCfg := range self.authConfig.Basic {
+			for _, basicCfg := range handler.authConfig.Basic {
 				if basicCfg.Username == username && basicCfg.Password == password {
 					return &AuthInfo{
 						Username: username,
@@ -96,9 +100,9 @@ func (self AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
 		}
 	}
 
-	if self.authConfig.Bearer != nil && len(self.authConfig.Bearer) > 0 {
+	if len(handler.authConfig.Bearer) > 0 {
 		authHeader := r.Header.Get("Authorization")
-		for _, bearerCfg := range self.authConfig.Bearer {
+		for _, bearerCfg := range handler.authConfig.Bearer {
 			expect := fmt.Sprintf("Bearer %s", bearerCfg.Token)
 			if authHeader == expect {
 				username := bearerCfg.Username
@@ -115,7 +119,7 @@ func (self AuthHandler) TryAuth(r *http.Request) (*AuthInfo, bool) {
 	return nil, false
 }
 
-func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthInfo, bool) {
+func (handler *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthInfo, bool) {
 	// refers to https://qvault.io/cryptography/jwts-in-golang/
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -125,7 +129,7 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthI
 		var claims *jwtClaims
 		fromCache := false
 
-		if cached, ok := self.jwtCache.Get(authHeader); ok {
+		if cached, ok := handler.jwtCache.Get(authHeader); ok {
 			claims, _ = cached.(*jwtClaims)
 			fromCache = true
 		} else {
@@ -151,12 +155,12 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthI
 		if claims.ExpiresAt < time.Now().UTC().Unix() {
 			Logger(r).Warnf("claims expired %s", authHeader)
 			if fromCache {
-				self.jwtCache.Remove(authHeader)
+				handler.jwtCache.Remove(authHeader)
 			}
 			return nil, false
 		}
 		if !fromCache {
-			self.jwtCache.Add(authHeader, claims)
+			handler.jwtCache.Add(authHeader, claims)
 		}
 		return &AuthInfo{
 			Username: claims.Username,
@@ -165,13 +169,13 @@ func (self *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*AuthI
 	return nil, false
 }
 
-func (self *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if authInfo, ok := self.TryAuth(r); ok {
+func (handler *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if authInfo, ok := handler.TryAuth(r); ok {
 		if authInfo != nil {
-			ctx := context.WithValue(r.Context(), "authInfo", authInfo)
-			self.next.ServeHTTP(w, r.WithContext(ctx))
+			ctx := context.WithValue(r.Context(), authInfoKey, authInfo)
+			handler.next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
-			self.next.ServeHTTP(w, r)
+			handler.next.ServeHTTP(w, r)
 		}
 	} else {
 		w.WriteHeader(401)
@@ -180,28 +184,28 @@ func (self *AuthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Auth config
-func (self *AuthConfig) ValidateValues() error {
-	if self == nil {
+func (handler *AuthConfig) ValidateValues() error {
+	if handler == nil {
 		return nil
 	}
 
-	if self.Bearer != nil && len(self.Bearer) > 0 {
-		for _, bearerCfg := range self.Bearer {
+	if len(handler.Bearer) > 0 {
+		for _, bearerCfg := range handler.Bearer {
 			if bearerCfg.Token == "" {
 				return errors.New("bearer token is empty")
 			}
 		}
 	}
 
-	if self.Basic != nil && len(self.Basic) > 0 {
-		for _, basicCfg := range self.Basic {
+	if len(handler.Basic) > 0 {
+		for _, basicCfg := range handler.Basic {
 			if basicCfg.Username == "" || basicCfg.Password == "" {
 				return errors.New("basic username or password are empty")
 			}
 		}
 	}
 
-	if self.Jwt != nil && self.Jwt.Secret == "" {
+	if handler.Jwt != nil && handler.Jwt.Secret == "" {
 		return errors.New("jwt has no secret")
 	}
 	return nil

@@ -43,7 +43,7 @@ func NewWSHandler(serverCtx context.Context, actor *Actor) *WSHandler {
 	}
 }
 
-func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Warnf("ws upgrade failed %s", err)
@@ -54,7 +54,7 @@ func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 
 	session := &WSSession{
-		server:      self,
+		server:      h,
 		rootCtx:     r.Context(),
 		httpRequest: r,
 		ws:          ws,
@@ -63,22 +63,22 @@ func (self *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sessionId:   jsoff.NewUuid(),
 	}
 	defer func() {
-		self.Actor.HandleClose(session)
+		h.Actor.HandleClose(session)
 	}()
 	session.wait()
 	session.server = nil
 }
 
 // websocket session
-func (self *WSSession) wait() {
-	connCtx, cancel := context.WithCancel(self.rootCtx)
+func (session *WSSession) wait() {
+	connCtx, cancel := context.WithCancel(session.rootCtx)
 	defer cancel()
 
-	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
+	serverCtx, cancelServer := context.WithCancel(session.server.serverCtx)
 	defer cancelServer()
 
-	go self.sendLoop()
-	go self.recvLoop()
+	go session.sendLoop()
+	go session.recvLoop()
 
 	for {
 		select {
@@ -86,7 +86,7 @@ func (self *WSSession) wait() {
 			return
 		case <-serverCtx.Done():
 			return
-		case err, ok := <-self.done:
+		case err, ok := <-session.done:
 			if ok && err != nil {
 				log.Warnf("websocket error %s", err)
 			}
@@ -95,11 +95,11 @@ func (self *WSSession) wait() {
 	}
 }
 
-func (self *WSSession) recvLoop() {
+func (session *WSSession) recvLoop() {
 	for {
-		messageType, msgBytes, err := self.ws.ReadMessage()
+		messageType, msgBytes, err := session.ws.ReadMessage()
 		if err != nil {
-			self.done <- errors.Wrap(err, "ws.ReadMessage()")
+			session.done <- errors.Wrap(err, "ws.ReadMessage()")
 			return
 		}
 		if messageType != websocket.TextMessage {
@@ -107,66 +107,66 @@ func (self *WSSession) recvLoop() {
 			continue
 		}
 
-		if self.server.SpawnGoroutine {
-			go self.msgBytesReceived(msgBytes)
+		if session.server.SpawnGoroutine {
+			go session.msgBytesReceived(msgBytes)
 		} else {
-			self.msgBytesReceived(msgBytes)
+			session.msgBytesReceived(msgBytes)
 		}
 	}
 }
 
-func (self *WSSession) msgBytesReceived(msgBytes []byte) {
+func (session *WSSession) msgBytesReceived(msgBytes []byte) {
 	msg, err := jsoff.ParseBytes(msgBytes)
 	if err != nil {
 		log.Warnf("bad jsonrpc message %s", msgBytes)
-		self.done <- errors.New("bad jsonrpc message")
+		session.done <- errors.New("bad jsonrpc message")
 		return
 	}
 
 	req := NewRPCRequest(
-		self.rootCtx,
+		session.rootCtx,
 		msg,
-		TransportWebsocket).WithHTTPRequest(self.httpRequest).WithSession(self)
+		TransportWebsocket).WithHTTPRequest(session.httpRequest).WithSession(session)
 
-	resmsg, err := self.server.Actor.Feed(req)
+	resmsg, err := session.server.Actor.Feed(req)
 	if err != nil {
-		self.done <- errors.Wrap(err, "actor.Feed")
+		session.done <- errors.Wrap(err, "actor.Feed")
 		return
 	}
 	if resmsg != nil {
 		if resmsg.IsResultOrError() {
-			self.sendChannel <- resmsg
+			session.sendChannel <- resmsg
 		} else {
-			self.Send(resmsg)
+			session.Send(resmsg)
 		}
 	}
 }
 
-func (self *WSSession) Send(msg jsoff.Message) {
-	self.sendChannel <- msg
+func (session *WSSession) Send(msg jsoff.Message) {
+	session.sendChannel <- msg
 }
 
-func (self WSSession) Context() context.Context {
-	return self.rootCtx
+func (session WSSession) Context() context.Context {
+	return session.rootCtx
 }
 
-func (self WSSession) SessionID() string {
-	return self.sessionId
+func (session WSSession) SessionID() string {
+	return session.sessionId
 }
 
-func (self *WSSession) sendLoop() {
-	ctx, cancel := context.WithCancel(self.rootCtx)
+func (session *WSSession) sendLoop() {
+	ctx, cancel := context.WithCancel(session.rootCtx)
 	defer cancel()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msg, ok := <-self.sendChannel:
+		case msg, ok := <-session.sendChannel:
 			if !ok {
 				return
 			}
-			if self.ws == nil {
+			if session.ws == nil {
 				return
 			}
 			marshaled, err := jsoff.MessageBytes(msg)
@@ -175,7 +175,7 @@ func (self *WSSession) sendLoop() {
 				return
 			}
 
-			if err := self.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
+			if err := session.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
 				log.Warnf("write warning message %s", err)
 				return
 			}

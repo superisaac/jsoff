@@ -39,15 +39,15 @@ func NewTCPServer(serverCtx context.Context, actor *Actor) *TCPServer {
 	}
 }
 
-func (self *TCPServer) Start(rootCtx context.Context, bind string) error {
+func (s *TCPServer) Start(rootCtx context.Context, bind string) error {
 	listener, err := net.Listen("tcp", bind)
 	if err != nil {
 		return err
 	}
-	self.listener = listener
+	s.listener = listener
 
 	for {
-		if listener := self.listener; listener != nil {
+		if listener := s.listener; listener != nil {
 			conn, err := listener.Accept()
 			if err != nil {
 				var opErr *net.OpError
@@ -58,7 +58,7 @@ func (self *TCPServer) Start(rootCtx context.Context, bind string) error {
 					return errors.Wrap(err, "tcp.Accept")
 				}
 			}
-			go self.processConnection(rootCtx, conn)
+			go s.processConnection(rootCtx, conn)
 		} else {
 			break
 		}
@@ -66,18 +66,18 @@ func (self *TCPServer) Start(rootCtx context.Context, bind string) error {
 	return nil
 }
 
-func (self *TCPServer) Stop() {
-	if self.listener != nil {
-		self.listener.Close()
-		self.listener = nil
+func (s *TCPServer) Stop() {
+	if s.listener != nil {
+		s.listener.Close()
+		s.listener = nil
 	}
 }
 
-func (self *TCPServer) processConnection(rootCtx context.Context, conn net.Conn) {
+func (s *TCPServer) processConnection(rootCtx context.Context, conn net.Conn) {
 	decoder := json.NewDecoder(bufio.NewReader(conn))
 
 	session := &TCPSession{
-		server:      self,
+		server:      s,
 		rootCtx:     rootCtx,
 		conn:        conn,
 		decoder:     decoder,
@@ -87,21 +87,21 @@ func (self *TCPServer) processConnection(rootCtx context.Context, conn net.Conn)
 	}
 	defer func() {
 		conn.Close()
-		self.Actor.HandleClose(session)
+		s.Actor.HandleClose(session)
 	}()
 	session.wait()
 }
 
 // tcp session methods
-func (self *TCPSession) wait() {
-	connCtx, cancel := context.WithCancel(self.rootCtx)
+func (session *TCPSession) wait() {
+	connCtx, cancel := context.WithCancel(session.rootCtx)
 	defer cancel()
 
-	serverCtx, cancelServer := context.WithCancel(self.server.serverCtx)
+	serverCtx, cancelServer := context.WithCancel(session.server.serverCtx)
 	defer cancelServer()
 
-	go self.sendLoop()
-	go self.recvLoop()
+	go session.sendLoop()
+	go session.recvLoop()
 
 	for {
 		select {
@@ -109,7 +109,7 @@ func (self *TCPSession) wait() {
 			return
 		case <-serverCtx.Done():
 			return
-		case err, ok := <-self.done:
+		case err, ok := <-session.done:
 			if ok && err != nil {
 				log.Warnf("websocket error %s", err)
 			}
@@ -118,69 +118,68 @@ func (self *TCPSession) wait() {
 	}
 }
 
-func (self *TCPSession) recvLoop() {
+func (session *TCPSession) recvLoop() {
 	for {
-		msg, err := jsoff.DecodeMessage(self.decoder)
+		msg, err := jsoff.DecodeMessage(session.decoder)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
 			} else {
-				self.done <- err
+				session.done <- err
 				return
 			}
 		}
-		go self.msgReceived(msg)
+		go session.msgReceived(msg)
 	}
 	// end of scanning
-	self.done <- nil
-	return
+	session.done <- nil
 }
 
-func (self *TCPSession) msgReceived(msg jsoff.Message) {
+func (session *TCPSession) msgReceived(msg jsoff.Message) {
 	req := NewRPCRequest(
-		self.rootCtx,
+		session.rootCtx,
 		msg,
-		TransportTCP).WithSession(self)
+		TransportTCP).WithSession(session)
 
-	resmsg, err := self.server.Actor.Feed(req)
+	resmsg, err := session.server.Actor.Feed(req)
 	if err != nil {
-		self.done <- errors.Wrap(err, "actor.Feed")
+		session.done <- errors.Wrap(err, "actor.Feed")
 		return
 	}
 	if resmsg != nil {
 		if resmsg.IsResultOrError() {
-			self.sendChannel <- resmsg
+			session.sendChannel <- resmsg
 		} else {
-			self.Send(resmsg)
+			session.Send(resmsg)
 		}
 	}
 }
 
-func (self *TCPSession) Send(msg jsoff.Message) {
-	self.sendChannel <- msg
+func (session *TCPSession) Send(msg jsoff.Message) {
+	session.sendChannel <- msg
 }
 
-func (self TCPSession) SessionID() string {
-	return self.sessionId
+func (session TCPSession) SessionID() string {
+	return session.sessionId
 }
 
-func (self TCPSession) Context() context.Context {
-	return self.rootCtx
+func (session TCPSession) Context() context.Context {
+	return session.rootCtx
 }
 
-func (self *TCPSession) sendLoop() {
-	ctx, cancel := context.WithCancel(self.rootCtx)
+func (session *TCPSession) sendLoop() {
+	ctx, cancel := context.WithCancel(session.rootCtx)
 	defer cancel()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msg, ok := <-self.sendChannel:
+		case msg, ok := <-session.sendChannel:
 			if !ok {
 				return
 			}
-			if self.decoder == nil {
+			if session.decoder == nil {
 				return
 			}
 			marshaled, err := jsoff.MessageBytes(msg)
@@ -190,11 +189,11 @@ func (self *TCPSession) sendLoop() {
 			}
 
 			marshaled = append(marshaled, []byte("\n")...)
-			if _, err := self.conn.Write(marshaled); err != nil {
+			if _, err := session.conn.Write(marshaled); err != nil {
 				log.Warnf("tcp writedata warning message %v\n", err)
 				return
 			}
-			//self.flusher.Flush()
+			//session.flusher.Flush()
 		}
 	}
 }

@@ -73,47 +73,47 @@ type StreamingClient struct {
 	clientTLS *tls.Config
 }
 
-func (self *StreamingClient) SetExtraHeader(h http.Header) {
-	self.extraHeader = h
+func (client *StreamingClient) SetExtraHeader(h http.Header) {
+	client.extraHeader = h
 }
 
-func (self *StreamingClient) IsStreaming() bool {
+func (client *StreamingClient) IsStreaming() bool {
 	return true
 }
 
-func (self *StreamingClient) SetClientTLSConfig(cfg *tls.Config) {
-	self.clientTLS = cfg
+func (client *StreamingClient) SetClientTLSConfig(cfg *tls.Config) {
+	client.clientTLS = cfg
 }
 
-func (self *StreamingClient) ClientTLSConfig() *tls.Config {
-	return self.clientTLS
+func (client *StreamingClient) ClientTLSConfig() *tls.Config {
+	return client.clientTLS
 }
 
-func (self *StreamingClient) Log() *log.Entry {
+func (client *StreamingClient) Log() *log.Entry {
 	return log.WithFields(log.Fields{
-		"server": self.serverUrl.String(),
+		"server": client.serverUrl.String(),
 	})
 }
 
-func (self *StreamingClient) ServerURL() *url.URL {
-	return self.serverUrl
+func (client *StreamingClient) ServerURL() *url.URL {
+	return client.serverUrl
 }
 
-func (self *StreamingClient) InitStreaming(serverUrl *url.URL, transport Transport) {
-	self.serverUrl = serverUrl
-	self.transport = transport
-	self.sendChannel = nil
-	self.closeChannel = nil
+func (client *StreamingClient) InitStreaming(serverUrl *url.URL, transport Transport) {
+	client.serverUrl = serverUrl
+	client.transport = transport
+	client.sendChannel = nil
+	client.closeChannel = nil
 }
 
-func (self *StreamingClient) CloseChannel() chan error {
-	return self.closeChannel
+func (client *StreamingClient) CloseChannel() chan error {
+	return client.closeChannel
 }
 
 // wait connection close and return error
-func (self *StreamingClient) Wait() error {
-	if self.closeChannel != nil {
-		err := <-self.closeChannel
+func (client *StreamingClient) Wait() error {
+	if client.closeChannel != nil {
+		err := <-client.closeChannel
 		return err
 	} else {
 		// client not connected, just return
@@ -121,136 +121,136 @@ func (self *StreamingClient) Wait() error {
 	}
 }
 
-func (self *StreamingClient) Close() {
-	if self.Connected() {
-		self.Reset(nil)
+func (client *StreamingClient) Close() {
+	if client.Connected() {
+		client.Reset(nil)
 	}
 }
 
-func (self *StreamingClient) Reset(err error) {
-	if self.cancelFunc != nil {
-		self.cancelFunc()
-		self.cancelFunc = nil
+func (client *StreamingClient) Reset(err error) {
+	if client.cancelFunc != nil {
+		client.cancelFunc()
+		client.cancelFunc = nil
 	}
 
-	if self.closeChannel != nil {
-		self.closeChannel <- err
-		self.closeChannel = nil
+	if client.closeChannel != nil {
+		client.closeChannel <- err
+		client.closeChannel = nil
 	}
-	self.transport.Close()
-	self.sendChannel = nil
+	client.transport.Close()
+	client.sendChannel = nil
 }
 
-func (self *StreamingClient) OnMessage(handler MessageHandler) error {
-	if self.messageHandler != nil {
+func (client *StreamingClient) OnMessage(handler MessageHandler) error {
+	if client.messageHandler != nil {
 		return errors.New("message handler already exist!")
 	}
-	self.messageHandler = handler
+	client.messageHandler = handler
 	return nil
 }
 
-func (self *StreamingClient) OnConnected(handler ConnectedHandler) error {
-	if self.connectedHandler != nil {
+func (client *StreamingClient) OnConnected(handler ConnectedHandler) error {
+	if client.connectedHandler != nil {
 		return errors.New("connected handler already exist!")
 	}
-	self.connectedHandler = handler
+	client.connectedHandler = handler
 	return nil
 }
 
-func (self *StreamingClient) OnClose(handler CloseHandler) error {
-	if self.closeHandler != nil {
+func (client *StreamingClient) OnClose(handler CloseHandler) error {
+	if client.closeHandler != nil {
 		return errors.New("close handler already exist!")
 	}
-	self.closeHandler = handler
+	client.closeHandler = handler
 	return nil
 }
 
-func (self *StreamingClient) Connect(rootCtx context.Context) error {
-	self.connectLock.Lock()
-	defer self.connectLock.Unlock()
+func (client *StreamingClient) Connect(rootCtx context.Context) error {
+	client.connectLock.Lock()
+	defer client.connectLock.Unlock()
 
-	if !self.transport.Connected() {
-		if err := self.transport.Connect(rootCtx, self.serverUrl, self.extraHeader); err != nil {
-			//self.connectErr = err
+	if !client.transport.Connected() {
+		if err := client.transport.Connect(rootCtx, client.serverUrl, client.extraHeader); err != nil {
+			//client.connectErr = err
 			return err
 		}
-		if self.connectedHandler != nil {
-			self.connectedHandler()
+		if client.connectedHandler != nil {
+			client.connectedHandler()
 		}
 		connCtx, cancel := context.WithCancel(rootCtx)
-		self.cancelFunc = cancel
-		self.sendChannel = make(chan jsoff.Message, 100)
-		self.closeChannel = make(chan error, 10)
-		go self.sendLoop(connCtx)
-		go self.recvLoop()
+		client.cancelFunc = cancel
+		client.sendChannel = make(chan jsoff.Message, 100)
+		client.closeChannel = make(chan error, 10)
+		go client.sendLoop(connCtx)
+		go client.recvLoop()
 	} else {
-		self.Log().Debug("client already connected")
+		client.Log().Debug("client already connected")
 	}
 	return nil
 }
 
-func (self *StreamingClient) handleError(err error) {
+func (client *StreamingClient) handleError(err error) {
 	if errors.Is(err, TransportClosed) {
-		self.Log().Debug("transport closed")
+		client.Log().Debug("transport closed")
 	}
-	self.Reset(err)
-	if self.closeHandler != nil {
-		self.closeHandler()
-		self.closeHandler = nil
+	client.Reset(err)
+	if client.closeHandler != nil {
+		client.closeHandler()
+		client.closeHandler = nil
 	}
 }
 
-func (self *StreamingClient) Connected() bool {
-	return self.transport.Connected()
+func (client *StreamingClient) Connected() bool {
+	return client.transport.Connected()
 }
 
-func (self *StreamingClient) sendLoop(connCtx context.Context) {
-	//defer self.Reset(nil)
+func (client *StreamingClient) sendLoop(connCtx context.Context) {
+	//defer client.Reset(nil)
 	defer func() {
-		self.Log().Debug("sendLoop stop")
+		client.Log().Debug("sendLoop stop")
 	}()
 	ctx, cancel := context.WithCancel(connCtx)
 	defer cancel()
 
-	self.Log().Debug("sendLoop start")
+	client.Log().Debug("sendLoop start")
 	for {
-		if !self.transport.Connected() {
+		if !client.transport.Connected() {
 			return
 		}
 		select {
 		case <-ctx.Done():
-			self.Log().Debug("ctx Done")
-			self.Close()
+			client.Log().Debug("ctx Done")
+			client.Close()
 			return
-		case msg, ok := <-self.sendChannel:
+		case msg, ok := <-client.sendChannel:
 			if !ok {
 				return
 			}
-			if !self.transport.Connected() {
+			if !client.transport.Connected() {
 				return
 			}
-			err := self.transport.WriteMessage(msg)
+			err := client.transport.WriteMessage(msg)
 			if err != nil {
-				self.Log().Warnf("write msg error %s", err)
-				self.handleError(err)
+				client.Log().Warnf("write msg error %s", err)
+				client.handleError(err)
 				return
 			}
 		}
 	}
 }
 
-func (self *StreamingClient) recvLoop() {
-	self.Log().Debug("recvLoop start")
+func (client *StreamingClient) recvLoop() {
+	client.Log().Debug("recvLoop start")
 	defer func() {
-		self.Log().Debug("recvLoop stop")
+		client.Log().Debug("recvLoop stop")
 	}()
 	for {
-		if !self.transport.Connected() {
+		if !client.transport.Connected() {
 			return
 		}
-		msg, readed, err := self.transport.ReadMessage()
+		msg, readed, err := client.transport.ReadMessage()
 		if err != nil {
-			self.handleError(err)
+			client.handleError(err)
 			return
 		}
 		if !readed {
@@ -259,23 +259,23 @@ func (self *StreamingClient) recvLoop() {
 
 		// assert msg != nil
 		if !msg.IsResultOrError() {
-			if self.messageHandler != nil {
-				self.messageHandler(msg)
+			if client.messageHandler != nil {
+				client.messageHandler(msg)
 			} else {
 				msg.Log().Debug("no message handler found")
 			}
 		} else {
-			self.handleResult(msg)
+			client.handleResult(msg)
 		}
 	}
 }
 
-func (self *StreamingClient) handleResult(msg jsoff.Message) {
+func (client *StreamingClient) handleResult(msg jsoff.Message) {
 	msgId := msg.MustId()
-	v, loaded := self.pendingRequests.LoadAndDelete(msgId)
+	v, loaded := client.pendingRequests.LoadAndDelete(msgId)
 	if !loaded {
-		if self.messageHandler != nil {
-			self.messageHandler(msg)
+		if client.messageHandler != nil {
+			client.messageHandler(msg)
 		}
 		return
 	}
@@ -290,25 +290,19 @@ func (self *StreamingClient) handleResult(msg jsoff.Message) {
 	}
 }
 
-func (self *StreamingClient) expire(k interface{}, after time.Duration) {
-	// ctx, cancel := context.WithCancel(rootCtx)
-	// defer cancel()
-	select {
-	// case <- ctx.Done():
-	// 	return
-	case <-time.After(after):
-		v, loaded := self.pendingRequests.LoadAndDelete(k)
-		if loaded {
-			if pending, ok := v.(*pendingRequest); ok {
-				timeout := jsoff.ErrTimeout.ToMessage(pending.reqmsg)
-				pending.resultChannel <- timeout
-			}
+func (client *StreamingClient) expire(k interface{}, after time.Duration) {
+	time.Sleep(after)
+	v, loaded := client.pendingRequests.LoadAndDelete(k)
+	if loaded {
+		if pending, ok := v.(*pendingRequest); ok {
+			timeout := jsoff.ErrTimeout.ToMessage(pending.reqmsg)
+			pending.resultChannel <- timeout
 		}
 	}
 }
 
-func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
-	resmsg, err := self.Call(rootCtx, reqmsg)
+func (client *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
+	resmsg, err := client.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
 	}
@@ -323,23 +317,23 @@ func (self *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.R
 	}
 }
 
-func (self *StreamingClient) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
-	resmsg, err := self.request(rootCtx, reqmsg)
+func (client *StreamingClient) Call(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
+	resmsg, err := client.request(rootCtx, reqmsg)
 	if err != nil {
 		return resmsg, errors.Wrapf(err, "RPC(%s)", reqmsg.Method)
 	}
 	return resmsg, nil
 }
 
-func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
-	err := self.Connect(rootCtx)
+func (client *StreamingClient) request(rootCtx context.Context, reqmsg *jsoff.RequestMessage) (jsoff.Message, error) {
+	err := client.Connect(rootCtx)
 	if err != nil {
 		return nil, err
 	}
 	ch := make(chan jsoff.Message, 10)
 
 	sendmsg := reqmsg
-	if _, loaded := self.pendingRequests.Load(reqmsg.Id); loaded {
+	if _, loaded := client.pendingRequests.Load(reqmsg.Id); loaded {
 		sendmsg = reqmsg.Clone(jsoff.NewUuid())
 	}
 
@@ -348,17 +342,17 @@ func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jsoff.Requ
 		resultChannel: ch,
 		expire:        time.Now().Add(time.Second * 10),
 	}
-	self.pendingRequests.Store(sendmsg.Id, p)
+	client.pendingRequests.Store(sendmsg.Id, p)
 
-	err = self.Send(rootCtx, sendmsg)
+	err = client.Send(rootCtx, sendmsg)
 	if err != nil {
 		return nil, err
 	}
-	go self.expire(sendmsg.Id, time.Second*10)
-	if closeChannel := self.closeChannel; closeChannel != nil {
+	go client.expire(sendmsg.Id, time.Second*10)
+	if closeChannel := client.closeChannel; closeChannel != nil {
 		select {
 		case <-closeChannel:
-			self.closeChannel = nil
+			client.closeChannel = nil
 			return nil, TransportClosed
 		case resmsg, ok := <-ch:
 			if !ok {
@@ -375,11 +369,11 @@ func (self *StreamingClient) request(rootCtx context.Context, reqmsg *jsoff.Requ
 	}
 }
 
-func (self *StreamingClient) Send(rootCtx context.Context, msg jsoff.Message) error {
-	err := self.Connect(rootCtx)
+func (client *StreamingClient) Send(rootCtx context.Context, msg jsoff.Message) error {
+	err := client.Connect(rootCtx)
 	if err != nil {
 		return err
 	}
-	self.sendChannel <- msg
+	client.sendChannel <- msg
 	return nil
 }

@@ -12,8 +12,8 @@ type WrappedResponse struct {
 	Body     []byte
 }
 
-func (self WrappedResponse) Error() string {
-	return fmt.Sprintf("wrapped response %d", self.Response.StatusCode)
+func (resp WrappedResponse) Error() string {
+	return fmt.Sprintf("wrapped response %d", resp.Response.StatusCode)
 }
 
 // Simple HTTP response to instant return
@@ -22,6 +22,6 @@ type SimpleResponse struct {
 	Body []byte
 }
 
-func (self SimpleResponse) Error() string {
-	return fmt.Sprintf("%d/%s", self.Code, self.Body)
+func (resp SimpleResponse) Error() string {
+	return fmt.Sprintf("%d/%s", resp.Code, resp.Body)
 }

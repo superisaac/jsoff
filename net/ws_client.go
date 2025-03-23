@@ -34,40 +34,40 @@ func NewWSClient(serverUrl *url.URL) *WSClient {
 	return c
 }
 
-func (self *WSClient) String() string {
-	return fmt.Sprintf("websocket client %s", self.serverUrl)
+func (client *WSClient) String() string {
+	return fmt.Sprintf("websocket client %s", client.serverUrl)
 }
 
 // websocket transport methods
-func (self *wsTransport) Close() {
-	if self.ws != nil {
-		self.ws.Close()
-		self.ws = nil
+func (t *wsTransport) Close() {
+	if t.ws != nil {
+		t.ws.Close()
+		t.ws = nil
 	}
 }
 
-func (self wsTransport) Connected() bool {
-	return self.ws != nil
+func (t wsTransport) Connected() bool {
+	return t.ws != nil
 }
 
-func (self *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
+func (t *wsTransport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
 	dailer := websocket.DefaultDialer
-	dailer.TLSClientConfig = self.client.ClientTLSConfig()
+	dailer.TLSClientConfig = t.client.ClientTLSConfig()
 	ws, _, err := dailer.Dial(serverUrl.String(), header)
 	if err != nil {
 		var opErr *net.OpError
 		if errors.As(err, &opErr) {
-			self.client.Log().Infof("websocket operror %s", opErr)
+			t.client.Log().Infof("websocket operror %s", opErr)
 			return TransportConnectFailed
 		}
 		return errors.Wrap(err, "wstransport.connect")
 	}
-	self.ws = ws
+	t.ws = ws
 	return nil
 }
 
-func (self *wsTransport) handleWebsocketError(err error) error {
-	logger := self.client.Log()
+func (t *wsTransport) handleWebsocketError(err error) error {
+	logger := t.client.Log()
 	var closeErr *websocket.CloseError
 	if errors.Is(err, io.EOF) {
 		logger.Infof("websocket conn failed")
@@ -81,22 +81,22 @@ func (self *wsTransport) handleWebsocketError(err error) error {
 	return errors.Wrap(err, "handleWebsocketError")
 }
 
-func (self *wsTransport) WriteMessage(msg jsoff.Message) error {
+func (t *wsTransport) WriteMessage(msg jsoff.Message) error {
 	marshaled, err := jsoff.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
 
-	if err := self.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
-		return self.handleWebsocketError(err)
+	if err := t.ws.WriteMessage(websocket.TextMessage, marshaled); err != nil {
+		return t.handleWebsocketError(err)
 	}
 	return nil
 }
 
-func (self *wsTransport) ReadMessage() (jsoff.Message, bool, error) {
-	messageType, msgBytes, err := self.ws.ReadMessage()
+func (t *wsTransport) ReadMessage() (jsoff.Message, bool, error) {
+	messageType, msgBytes, err := t.ws.ReadMessage()
 	if err != nil {
-		return nil, false, self.handleWebsocketError(err)
+		return nil, false, t.handleWebsocketError(err)
 	}
 	if messageType != websocket.TextMessage {
 		return nil, false, nil
@@ -104,7 +104,7 @@ func (self *wsTransport) ReadMessage() (jsoff.Message, bool, error) {
 
 	msg, err := jsoff.ParseBytes(msgBytes)
 	if err != nil {
-		self.client.Log().Warnf("bad jsonrpc message %s", msgBytes)
+		t.client.Log().Warnf("bad jsonrpc message %s", msgBytes)
 		return nil, false, err
 	}
 	return msg, true, nil

@@ -57,9 +57,9 @@ func NewHttp2Client(serverUrl *url.URL) *Http2Client {
 	return c
 }
 
-func (self *Http2Client) HTTPClient() *http.Client {
-	self.clientOnce.Do(func() {
-		if self.UseHttp2C {
+func (t *Http2Client) HTTPClient() *http.Client {
+	t.clientOnce.Do(func() {
+		if t.UseHttp2C {
 			// refer to https://www.mailgun.com/blog/http-2-cleartext-h2c-client-example-go/
 			trans := &http2.Transport{
 				AllowHTTP: true,
@@ -69,44 +69,44 @@ func (self *Http2Client) HTTPClient() *http.Client {
 					return net.Dial(network, addr)
 				},
 			}
-			self.httpClient = &http.Client{
+			t.httpClient = &http.Client{
 				Transport: trans,
 			}
 		} else {
 			trans := &http2.Transport{
 				AllowHTTP: true,
 				//WriteByteTimeout: time.Second * 15,
-				TLSClientConfig: self.ClientTLSConfig(),
+				TLSClientConfig: t.ClientTLSConfig(),
 			}
 
-			self.httpClient = &http.Client{
+			t.httpClient = &http.Client{
 				Transport: trans,
 			}
 		}
 	})
-	return self.httpClient
+	return t.httpClient
 }
 
-func (self *Http2Client) String() string {
-	return fmt.Sprintf("http2 client %s", self.serverUrl)
+func (client *Http2Client) String() string {
+	return fmt.Sprintf("http2 client %s", client.serverUrl)
 }
 
 // http2 transport methods
-func (self *h2Transport) Close() {
-	if self.resp != nil {
-		self.resp.Body.Close()
-		self.resp = nil
-		self.writer = nil
-		self.flusher = nil
+func (t *h2Transport) Close() {
+	if t.resp != nil {
+		t.resp.Body.Close()
+		t.resp = nil
+		t.writer = nil
+		t.flusher = nil
 		//self.decoder = nil
 	}
 }
 
-func (self h2Transport) Connected() bool {
-	return self.resp != nil
+func (t h2Transport) Connected() bool {
+	return t.resp != nil
 }
 
-func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
+func (t *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
 	pipeReader, pipeWriter := io.Pipe()
 
 	req := &http.Request{
@@ -116,18 +116,18 @@ func (self *h2Transport) Connect(rootCtx context.Context, serverUrl *url.URL, he
 		Body:   pipeReader,
 	}
 
-	resp, err := self.client.HTTPClient().Do(req)
+	resp, err := t.client.HTTPClient().Do(req)
 	if err != nil {
-		return self.handleHttp2Error(err)
+		return t.handleHttp2Error(err)
 	}
-	self.writer = pipeWriter
-	self.resp = resp
-	self.decoder = json.NewDecoder(resp.Body)
+	t.writer = pipeWriter
+	t.resp = resp
+	t.decoder = json.NewDecoder(resp.Body)
 	return nil
 }
 
-func (self *h2Transport) handleHttp2Error(err error) error {
-	logger := self.client.Log()
+func (t *h2Transport) handleHttp2Error(err error) error {
+	logger := t.client.Log()
 	var urlErr *url.Error
 	if errors.Is(err, io.EOF) {
 		logger.Debugf("h2 conn failed")
@@ -141,30 +141,30 @@ func (self *h2Transport) handleHttp2Error(err error) error {
 	return errors.Wrap(err, "h2transport.handleHttp2Error")
 }
 
-func (self *h2Transport) WriteMessage(msg jsoff.Message) error {
+func (t *h2Transport) WriteMessage(msg jsoff.Message) error {
 	marshaled, err := jsoff.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
 
 	marshaled = append(marshaled, []byte("\n")...)
-	if _, err := self.writer.Write(marshaled); err != nil {
-		return self.handleHttp2Error(err)
+	if _, err := t.writer.Write(marshaled); err != nil {
+		return t.handleHttp2Error(err)
 	}
 	return nil
 }
 
-func (self *h2Transport) ReadMessage() (jsoff.Message, bool, error) {
-	msg, err := jsoff.DecodeMessage(self.decoder)
+func (t *h2Transport) ReadMessage() (jsoff.Message, bool, error) {
+	msg, err := jsoff.DecodeMessage(t.decoder)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, false, TransportClosed
 		} else if strings.Contains(err.Error(), "read/write on closed pipe") {
 			return nil, false, TransportClosed
 		}
-		self.client.Log().Warnf(
+		t.client.Log().Warnf(
 			"bad jsonrpc message %s %s, at pos %d",
-			reflect.TypeOf(err), err, self.decoder.InputOffset())
+			reflect.TypeOf(err), err, t.decoder.InputOffset())
 		return nil, false, err
 	}
 	return msg, true, nil

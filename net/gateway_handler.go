@@ -37,28 +37,26 @@ func NewGatewayHandler(serverCtx context.Context, actor *Actor, insecure bool) *
 	return sh
 }
 
-func (self *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *GatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.ProtoAtLeast(2, 0) {
 		// http2 check by proto
-		self.h2Handler.ServeHTTP(w, r)
+		handler.h2Handler.ServeHTTP(w, r)
 		return
 	}
 
 	upgradeHeader := r.Header.Get("Upgrade")
 	if upgradeHeader == "websocket" {
 		// maybe websocket handler
-		self.wsHandler.ServeHTTP(w, r)
+		handler.wsHandler.ServeHTTP(w, r)
 		return
 	}
 
 	if upgradeHeader == "h2c" {
 		// maybe http2c handler
-		self.h2Handler.ServeHTTP(w, r)
+		handler.h2Handler.ServeHTTP(w, r)
 		return
 	}
 
 	// fail over to http1 handler
-	self.h1Handler.ServeHTTP(w, r)
-	return
-
+	handler.h1Handler.ServeHTTP(w, r)
 }

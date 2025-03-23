@@ -24,13 +24,13 @@ func NewHttp1Handler(actor *Actor) *Http1Handler {
 	}
 }
 
-func (self Http1Handler) WriteMessage(w http.ResponseWriter, msg jsoff.Message, code int) {
+func (handler Http1Handler) WriteMessage(w http.ResponseWriter, msg jsoff.Message, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(jsoff.MustMessageBytes(msg))
 }
 
-func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only support POST
 	if r.Method != "POST" {
 		jsoff.ErrorResponse(w, r, errors.New("method not allowed"), http.StatusMethodNotAllowed, "Method not allowed")
@@ -43,7 +43,7 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//jsoff.ErrorResponse(w, r, err, 400, "Bad request")
 		errMsg := jsoff.NewErrorMessage(nil, jsoff.ErrInvalidRequest)
-		self.WriteMessage(w, errMsg, 400)
+		handler.WriteMessage(w, errMsg, 400)
 		return
 	}
 
@@ -51,20 +51,20 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		//	jsoff.ErrorResponse(w, r, err, 400, "Bad jsonrpc request")
 		errMsg := jsoff.NewErrorMessage(nil, jsoff.ErrParseMessage)
-		self.WriteMessage(w, errMsg, 400)
+		handler.WriteMessage(w, errMsg, 400)
 		return
 	}
 
 	if discoverReqmsg, ok := msg.(*jsoff.RequestMessage); ok && discoverReqmsg.Method == "rpc.discover" {
 		discoverResult := jsoff.NewResultMessage(discoverReqmsg, map[string]any{
-			"methods": self.Actor.PublicSchemas(),
+			"methods": handler.Actor.PublicSchemas(),
 		})
-		self.WriteMessage(w, discoverResult, 200)
+		handler.WriteMessage(w, discoverResult, 200)
 		return
 	}
 
 	req := NewRPCRequest(r.Context(), msg, TransportHTTP).WithHTTPRequest(r)
-	resmsg, err := self.Actor.Feed(req)
+	resmsg, err := handler.Actor.Feed(req)
 	if err != nil {
 		var simpleResp *SimpleResponse
 		var upResp *WrappedResponse
@@ -125,6 +125,6 @@ func (self *Http1Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write(data)
 	} else {
 		okMsg := jsoff.NewResultMessage(nil, "ok")
-		self.WriteMessage(w, okMsg, 200)
+		handler.WriteMessage(w, okMsg, 200)
 	}
 } // Server.ServeHTTP

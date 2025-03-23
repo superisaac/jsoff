@@ -76,7 +76,7 @@ func TestServerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewHttp1Handler(nil)
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -89,6 +89,7 @@ func TestServerClient(t *testing.T) {
 
 	// request a GET method
 	resp, err := http.Get("http://127.0.0.1:28000")
+	assert.Nil(err)
 	assert.Equal(http.StatusMethodNotAllowed, resp.StatusCode)
 	respData, _ := io.ReadAll(resp.Body)
 	assert.Equal("Method not allowed", string(respData))
@@ -96,7 +97,7 @@ func TestServerClient(t *testing.T) {
 	client := NewHttp1Client(urlParse("http://127.0.0.1:28000"))
 
 	// right request
-	params := [](interface{}){"hello001"}
+	params := []any{"hello001"}
 	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)

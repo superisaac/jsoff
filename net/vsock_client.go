@@ -39,23 +39,23 @@ func NewVsockClient(serverUrl *url.URL) *VsockClient {
 	return c
 }
 
-func (self *VsockClient) String() string {
-	return fmt.Sprintf("vsock client %s", self.serverUrl)
+func (client *VsockClient) String() string {
+	return fmt.Sprintf("vsock client %s", client.serverUrl)
 }
 
 // websocket transport methods
-func (self *vsockTransport) Close() {
-	if self.conn != nil {
-		self.conn.Close()
-		self.conn = nil
+func (t *vsockTransport) Close() {
+	if t.conn != nil {
+		t.conn.Close()
+		t.conn = nil
 	}
 }
 
-func (self vsockTransport) Connected() bool {
-	return self.conn != nil
+func (t vsockTransport) Connected() bool {
+	return t.conn != nil
 }
 
-func (self *vsockTransport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
+func (t *vsockTransport) Connect(rootCtx context.Context, serverUrl *url.URL, header http.Header) error {
 	// serverUrl is in the form of "vsock://<contextId>:<port>"
 	contextID, err := strconv.ParseUint(serverUrl.Hostname(), 10, 32)
 	if err != nil {
@@ -69,18 +69,18 @@ func (self *vsockTransport) Connect(rootCtx context.Context, serverUrl *url.URL,
 	if err != nil {
 		var opErr *net.OpError
 		if errors.As(err, &opErr) {
-			self.client.Log().Infof("vsock operror %s", opErr)
+			t.client.Log().Infof("vsock operror %s", opErr)
 			return TransportConnectFailed
 		}
 		return errors.Wrap(err, "vsock.connect")
 	}
-	self.conn = conn
-	self.decoder = json.NewDecoder(bufio.NewReader(conn))
+	t.conn = conn
+	t.decoder = json.NewDecoder(bufio.NewReader(conn))
 	return nil
 }
 
-func (self *vsockTransport) handleTCPError(err error) error {
-	logger := self.client.Log()
+func (t *vsockTransport) handleTCPError(err error) error {
+	logger := t.client.Log()
 	if errors.Is(err, io.EOF) {
 		logger.Infof("vsock conn failed")
 		return TransportClosed
@@ -90,29 +90,29 @@ func (self *vsockTransport) handleTCPError(err error) error {
 	return errors.Wrap(err, "handleTCPError")
 }
 
-func (self *vsockTransport) WriteMessage(msg jsoff.Message) error {
+func (t *vsockTransport) WriteMessage(msg jsoff.Message) error {
 	marshaled, err := jsoff.MessageBytes(msg)
 	if err != nil {
 		return err
 	}
 
-	if _, err := self.conn.Write(marshaled); err != nil {
-		return self.handleTCPError(err)
+	if _, err := t.conn.Write(marshaled); err != nil {
+		return t.handleTCPError(err)
 	}
 	return nil
 }
 
-func (self *vsockTransport) ReadMessage() (jsoff.Message, bool, error) {
-	msg, err := jsoff.DecodeMessage(self.decoder)
+func (t *vsockTransport) ReadMessage() (jsoff.Message, bool, error) {
+	msg, err := jsoff.DecodeMessage(t.decoder)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, false, TransportClosed
 		} else if strings.Contains(err.Error(), "read/write on closed pipe") {
 			return nil, false, TransportClosed
 		}
-		self.client.Log().Warnf(
+		t.client.Log().Warnf(
 			"bad jsonrpc message %s %s, at pos %d",
-			reflect.TypeOf(err), err, self.decoder.InputOffset())
+			reflect.TypeOf(err), err, t.decoder.InputOffset())
 		return nil, false, err
 	}
 	return msg, true, nil
