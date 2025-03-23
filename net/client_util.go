@@ -8,19 +8,19 @@ import (
 
 type HeaderFlags []string
 
-func (self *HeaderFlags) String() string {
+func (flag *HeaderFlags) String() string {
 	return "header flags"
 }
 
-func (self *HeaderFlags) Set(value string) error {
-	*self = append(*self, value)
+func (flag *HeaderFlags) Set(value string) error {
+	*flag = append(*flag, value)
 	return nil
 }
 
-func (self *HeaderFlags) Parse() (http.Header, error) {
+func (flag *HeaderFlags) Parse() (http.Header, error) {
 	header := make(http.Header)
-	for _, hr := range *self {
-		arr := strings.SplitN(hr, "=", 2)
+	for _, hr := range *flag {
+		arr := strings.SplitN(hr, ":", 2)
 		if len(arr) != 2 {
 			return nil, errors.New("invalid http header")
 		}

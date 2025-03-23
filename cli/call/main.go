@@ -15,7 +15,7 @@ func main() {
 	cliFlags := flag.NewFlagSet("jsonrpc-call", flag.ExitOnError)
 	pServerUrl := cliFlags.String("c", "", "jsonrpc server url, https? or wss? prefixed, can be in env JSONRPC_CONNECT, default is http://127.0.0.1:9990")
 	var headerFlags jsoffnet.HeaderFlags
-	cliFlags.Var(&headerFlags, "header", "attached http headers")
+	cliFlags.Var(&headerFlags, "header", "attached http headers, ie \"Authorization: Bearer sometoken\"")
 
 	pDumpHeader := cliFlags.Bool("dumpheader", false, "dump response headers")
 
