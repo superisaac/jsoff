@@ -11,13 +11,13 @@ import (
 )
 
 func fifoActor() *jsoffnet.Actor {
-	fifo := make([]interface{}, 0)
+	fifo := make([]any, 0)
 	lock := sync.RWMutex{}
 
 	subs := map[string]jsoffnet.RPCSession{}
 	actor := jsoffnet.NewActor()
 
-	actor.On("example_echo", func(params []interface{}) (interface{}, error) {
+	actor.On("example_echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -29,7 +29,7 @@ func fifoActor() *jsoffnet.Actor {
 		panic("just panic")
 	})
 
-	actor.On("fifo_push", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_push", func(params []any) (any, error) {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -41,7 +41,7 @@ func fifoActor() *jsoffnet.Actor {
 		for _, elem := range params {
 			ntf := jsoff.NewNotifyMessage(
 				"fifo_subscription",
-				[]interface{}{elem})
+				[]any{elem})
 			for _, session := range subs {
 				log.Infof("push to %s", session.SessionID())
 				session.Send(ntf)
@@ -50,7 +50,7 @@ func fifoActor() *jsoffnet.Actor {
 		return "ok", nil
 	})
 
-	actor.On("fifo_pop", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_pop", func(params []any) (any, error) {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -62,7 +62,7 @@ func fifoActor() *jsoffnet.Actor {
 		return "ok", nil
 	})
 
-	actor.On("fifo_list", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_list", func(params []any) (any, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -70,7 +70,7 @@ func fifoActor() *jsoffnet.Actor {
 		return fifo, nil
 	})
 
-	actor.On("fifo_count", func(params []interface{}) (interface{}, error) {
+	actor.On("fifo_count", func(params []any) (any, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -78,7 +78,7 @@ func fifoActor() *jsoffnet.Actor {
 		return len(fifo), nil
 	}, jsoffnet.WithSchemaJson(`{"description": "get the element count", "params": [], "returns": "integer"}`))
 
-	actor.OnTyped("fifo_get", func(at int) (interface{}, error) {
+	actor.OnTyped("fifo_get", func(at int) (any, error) {
 		lock.RLock()
 		defer lock.RUnlock()
 
@@ -89,7 +89,7 @@ func fifoActor() *jsoffnet.Actor {
 		return fifo[at], nil
 	}, jsoffnet.WithSchemaJson(`{"description": "get an element at index", "type": "method", "params": ["integer"]}`))
 
-	actor.OnRequest("fifo_subscribe", func(req *jsoffnet.RPCRequest, params []interface{}) (interface{}, error) {
+	actor.OnRequest("fifo_subscribe", func(req *jsoffnet.RPCRequest, params []any) (any, error) {
 		session := req.Session()
 		if session == nil {
 			return "no sesion", nil

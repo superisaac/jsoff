@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func MarshalJson(data interface{}) (string, error) {
+func MarshalJson(data any) (string, error) {
 	marshaled, err := json.Marshal(data)
 	if err != nil {
 		return "", err
@@ -23,7 +23,7 @@ func MarshalJson(data interface{}) (string, error) {
 	return string(marshaled), nil
 }
 
-func GuessJson(input string) (interface{}, error) {
+func GuessJson(input string) (any, error) {
 	if len(input) == 0 {
 		return "", nil
 	}
@@ -55,7 +55,7 @@ func GuessJson(input string) (interface{}, error) {
 		}
 		defer f.Close()
 
-		var v interface{}
+		var v any
 		dec := json.NewDecoder(f)
 		dec.UseNumber()
 		err = dec.Decode(&v)
@@ -65,7 +65,7 @@ func GuessJson(input string) (interface{}, error) {
 		return v, nil
 	case '[':
 		// maybe a list
-		var arr []interface{}
+		var arr []any
 		dec := json.NewDecoder(strings.NewReader(input))
 		dec.UseNumber()
 		err := dec.Decode(&arr)
@@ -75,7 +75,7 @@ func GuessJson(input string) (interface{}, error) {
 		return arr, nil
 	case '{':
 		// maybe an object
-		var m map[string]interface{}
+		var m map[string]any
 		dec := json.NewDecoder(strings.NewReader(input))
 		dec.UseNumber()
 		err := dec.Decode(&m)
@@ -98,8 +98,8 @@ func GuessJson(input string) (interface{}, error) {
 	}
 }
 
-func GuessJsonArray(inputArr []string) ([]interface{}, error) {
-	var arr []interface{}
+func GuessJsonArray(inputArr []string) ([]any, error) {
+	var arr []any
 	for _, input := range inputArr {
 		v, err := GuessJson(input)
 		if err != nil {
@@ -120,7 +120,7 @@ func NewUuid() string {
 	return strings.ReplaceAll(uuid.New().String(), "-", "")
 }
 
-func DecodeInterface(input interface{}, output interface{}) error {
+func DecodeInterface(input any, output any) error {
 	config := &mapstructure.DecoderConfig{
 		Metadata: nil,
 		TagName:  "json",
@@ -134,7 +134,7 @@ func DecodeInterface(input interface{}, output interface{}) error {
 }
 
 // / Convert params to a struct field by field
-func DecodeParams(params []interface{}, outputPtr interface{}) error {
+func DecodeParams(params []any, outputPtr any) error {
 	ptrType := reflect.TypeOf(outputPtr)
 	if ptrType.Kind() != reflect.Ptr {
 		return errors.New("output is not a pointer")
@@ -179,14 +179,14 @@ func DecodeParams(params []interface{}, outputPtr interface{}) error {
 
 type Bigint big.Int
 
-func (self Bigint) MarshalJSON() ([]byte, error) {
-	bi := big.Int(self)
+func (bn Bigint) MarshalJSON() ([]byte, error) {
+	bi := big.Int(bn)
 	return []byte(fmt.Sprintf(`"%s"`, bi.String())), nil
 }
 
-func (self *Bigint) UnmarshalJSON(data []byte) error {
+func (bn *Bigint) UnmarshalJSON(data []byte) error {
 	sd := string(data)
-	bi := (*big.Int)(self)
+	bi := (*big.Int)(bn)
 
 	if strings.HasPrefix(sd, `"`) {
 		// string repr
@@ -197,14 +197,14 @@ func (self *Bigint) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (self *Bigint) Value() *big.Int {
-	return (*big.Int)(self)
+func (bn *Bigint) Value() *big.Int {
+	return (*big.Int)(bn)
 }
 
-func (self *Bigint) String() string {
-	return self.Value().String()
+func (bn *Bigint) String() string {
+	return bn.Value().String()
 }
 
-func (self *Bigint) Load(repr string) {
-	self.Value().SetString(repr, 10)
+func (bn *Bigint) Load(repr string) {
+	bn.Value().SetString(repr, 10)
 }

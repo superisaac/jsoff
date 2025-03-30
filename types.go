@@ -18,9 +18,9 @@ const (
 
 // RPC error object
 type RPCError struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 // The abstract interface of JSONRPC message. refer to
@@ -47,7 +47,7 @@ type Message interface {
 
 	// Returns template structures, this structure can be used to
 	// marshal and turn into map
-	Interface() interface{}
+	Interface() any
 
 	// MustXX are convenience methods to make code cleaner by
 	// avoiding frequent type casting, Note that there will be
@@ -56,7 +56,7 @@ type Message interface {
 
 	// MustId returns the Id field of a message, will panic when
 	// message is a Notify
-	MustId() interface{}
+	MustId() any
 
 	// MustMethod returns the method of a message, will panic when
 	// message is an Result or Error.
@@ -64,18 +64,18 @@ type Message interface {
 
 	// MustParams returns the params of a message, will panic when
 	// message is a Result or Error
-	MustParams() []interface{}
+	MustParams() []any
 
 	// MustResult returns the result field of a message, will
 	// panic when the message is not a Result
-	MustResult() interface{}
+	MustResult() any
 
 	// MustError returns the error field of a message, will panic
 	// when the message is not an Error
 	MustError() *RPCError
 
 	// Clone the message with a new Id
-	ReplaceId(interface{}) Message
+	ReplaceId(id any) Message
 
 	// Log returns a Logger object with message specific
 	// infomations attached.
@@ -91,9 +91,9 @@ type BaseMessage struct {
 // Request message kind
 type RequestMessage struct {
 	BaseMessage
-	Id            interface{}
+	Id            any
 	Method        string
-	Params        []interface{}
+	Params        []any
 	paramsAreList bool
 
 	// request specific fields
@@ -103,7 +103,7 @@ type RequestMessage struct {
 type NotifyMessage struct {
 	BaseMessage
 	Method        string
-	Params        []interface{}
+	Params        []any
 	paramsAreList bool
 }
 
@@ -115,8 +115,8 @@ type ResponseMessage interface {
 // Result message kind
 type ResultMessage struct {
 	BaseMessage
-	Id     interface{}
-	Result interface{}
+	Id     any
+	Result any
 
 	responseHeader http.Header
 }
@@ -124,7 +124,7 @@ type ResultMessage struct {
 // Error message kind
 type ErrorMessage struct {
 	BaseMessage
-	Id    interface{}
+	Id    any
 	Error *RPCError
 
 	responseHeader http.Header

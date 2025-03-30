@@ -14,7 +14,7 @@ func typeIsStruct(tp reflect.Type) bool {
 		(tp.Kind() == reflect.Ptr && typeIsStruct(tp.Elem())))
 }
 
-func interfaceToValue(a interface{}, outputType reflect.Type) (reflect.Value, error) {
+func interfaceToValue(a any, outputType reflect.Type) (reflect.Value, error) {
 	output := reflect.Zero(outputType).Interface()
 	config := &mapstructure.DecoderConfig{
 		Metadata: nil,
@@ -32,10 +32,10 @@ func interfaceToValue(a interface{}, outputType reflect.Type) (reflect.Value, er
 	return reflect.ValueOf(output), nil
 }
 
-func valueToInterface(tp reflect.Type, val reflect.Value) (interface{}, error) {
-	var output interface{}
+func valueToInterface(tp reflect.Type, val reflect.Value) (any, error) {
+	var output any
 	if typeIsStruct(tp) {
-		output = make(map[string]interface{})
+		output = make(map[string]any)
 	} else {
 		output = reflect.Zero(tp).Interface()
 	}
@@ -57,7 +57,7 @@ func valueToInterface(tp reflect.Type, val reflect.Value) (interface{}, error) {
 
 type FirstArgSpec interface {
 	Check(firstArgType reflect.Type) bool
-	Value(req *RPCRequest) interface{}
+	Value(req *RPCRequest) any
 	String() string
 }
 
@@ -66,7 +66,7 @@ type ReqSpec struct{}
 func (spec ReqSpec) Check(firstArgType reflect.Type) bool {
 	return firstArgType.Kind() == reflect.Ptr && firstArgType.String() == spec.String()
 }
-func (spec ReqSpec) Value(req *RPCRequest) interface{} {
+func (spec ReqSpec) Value(req *RPCRequest) any {
 	return req
 }
 func (spec ReqSpec) String() string {
@@ -79,14 +79,14 @@ func (spec ContextSpec) Check(firstArgType reflect.Type) bool {
 	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
 	return firstArgType.Kind() == reflect.Interface && firstArgType.Implements(ctxType)
 }
-func (spec ContextSpec) Value(req *RPCRequest) interface{} {
+func (spec ContextSpec) Value(req *RPCRequest) any {
 	return req.Context()
 }
 func (spec ContextSpec) String() string {
 	return "context.Context"
 }
 
-func wrapTyped(tfunc interface{}, firstArgSpec FirstArgSpec) (RequestCallback, error) {
+func wrapTyped(tfunc any, firstArgSpec FirstArgSpec) (RequestCallback, error) {
 
 	funcType := reflect.TypeOf(tfunc)
 	if funcType.Kind() != reflect.Func {
@@ -122,7 +122,7 @@ func wrapTyped(tfunc interface{}, firstArgSpec FirstArgSpec) (RequestCallback, e
 		return nil, errors.New("second output does not implement error")
 	}
 
-	handler := func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	handler := func(req *RPCRequest, params []any) (any, error) {
 		// check inputs
 		if numIn > len(params)+firstArgNum {
 			return nil, jsoff.ParamsError("no enough params size")

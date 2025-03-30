@@ -16,13 +16,13 @@ func stringInList(a string, candidates ...string) bool {
 }
 
 // util functions
-func convertTypeMap(maybeType interface{}) (map[string]interface{}, bool) {
+func convertTypeMap(maybeType any) (map[string]any, bool) {
 	if typeStr, ok := maybeType.(string); ok && stringInList(typeStr, "string", "number", "integer", "bool", "null") {
 		// type is single string, build a simle map
-		typeMap := map[string](interface{}){"type": typeStr}
+		typeMap := map[string]any{"type": typeStr}
 		return typeMap, true
 	}
-	if typeMap, ok := maybeType.(map[string]interface{}); ok {
+	if typeMap, ok := maybeType.(map[string]any); ok {
 		// type is map
 		if _, ok := typeMap["type"]; !ok {
 			// type field missing, guess it's type
@@ -48,30 +48,30 @@ func convertTypeMap(maybeType interface{}) (map[string]interface{}, bool) {
 	}
 }
 
-func convertAttrMap(node map[string]interface{}, attrName string, optional bool) (map[string]interface{}, bool) {
+func convertAttrMap(node map[string]any, attrName string, optional bool) (map[string]any, bool) {
 	if v, ok := node[attrName]; ok {
 		return convertTypeMap(v)
 	} else if optional {
-		return map[string](interface{}){}, true
+		return map[string]any{}, true
 	}
 	return nil, false
 }
 
-func convertAttrList(node map[string]interface{}, attrName string, optional bool) ([]interface{}, bool) {
+func convertAttrList(node map[string]any, attrName string, optional bool) ([]any, bool) {
 	if v, ok := node[attrName]; ok {
 		// has attribute
-		if aList, ok := v.([]interface{}); ok {
+		if aList, ok := v.([]any); ok {
 			// attribute is an array
 
 			return aList, ok
 		}
 	} else if optional {
-		return [](interface{}){}, true
+		return []any{}, true
 	}
 	return nil, false
 }
 
-func convertAttrBool(node map[string]interface{}, attrName string, optional bool) (bool, bool) {
+func convertAttrBool(node map[string]any, attrName string, optional bool) (bool, bool) {
 	if v, ok := node[attrName]; ok {
 		if bf, ok := v.(bool); ok {
 			return bf, true
@@ -82,7 +82,7 @@ func convertAttrBool(node map[string]interface{}, attrName string, optional bool
 	return false, false
 }
 
-func convertAttrInt(node map[string]interface{}, attrName string, optional bool) (int, bool) {
+func convertAttrInt(node map[string]any, attrName string, optional bool) (int, bool) {
 	if v, ok := node[attrName]; ok {
 		if intv, ok := v.(int); ok {
 			return intv, ok
@@ -100,7 +100,7 @@ func convertAttrInt(node map[string]interface{}, attrName string, optional bool)
 	return 0, false
 }
 
-func convertAttrFloat(node map[string]interface{}, attrName string, optional bool) (float64, bool) {
+func convertAttrFloat(node map[string]any, attrName string, optional bool) (float64, bool) {
 	if v, ok := node[attrName]; ok {
 		if n, ok := v.(int); ok {
 			return float64(n), true
@@ -120,9 +120,9 @@ func convertAttrFloat(node map[string]interface{}, attrName string, optional boo
 	return 0, false
 }
 
-func convertAttrMapOfMap(node map[string](interface{}), attrName string, optional bool) (map[string](map[string]interface{}), bool) {
+func convertAttrMapOfMap(node map[string]any, attrName string, optional bool) (map[string](map[string]any), bool) {
 	if mm, ok := convertAttrMap(node, attrName, false); ok {
-		resMap := make(map[string](map[string]interface{}))
+		resMap := make(map[string](map[string]any))
 		for name, value := range mm {
 			mv, ok := convertTypeMap(value)
 			if !ok {
@@ -132,16 +132,16 @@ func convertAttrMapOfMap(node map[string](interface{}), attrName string, optiona
 		}
 		return resMap, true
 	} else if optional {
-		return map[string](map[string]interface{}){}, true
+		return map[string](map[string]any){}, true
 	} else {
 		return nil, false
 	}
 }
 
-func convertAttrListOfMap(node map[string]interface{}, attrName string, optional bool) ([](map[string]interface{}), bool) {
+func convertAttrListOfMap(node map[string]any, attrName string, optional bool) ([](map[string]any), bool) {
 	if v, ok := node[attrName]; ok {
-		if aList, ok := v.([]interface{}); ok {
-			arr := make([](map[string]interface{}), 0)
+		if aList, ok := v.([]any); ok {
+			arr := make([](map[string]any), 0)
 			for _, item := range aList {
 				itemMap, ok := convertTypeMap(item)
 				if !ok {
@@ -152,14 +152,14 @@ func convertAttrListOfMap(node map[string]interface{}, attrName string, optional
 			return arr, true
 		}
 	} else if optional {
-		return [](map[string]interface{}){}, true
+		return [](map[string]any){}, true
 	}
 	return nil, false
 }
 
-func convertAttrListOfString(node map[string]interface{}, attrName string, optional bool) ([]string, bool) {
+func convertAttrListOfString(node map[string]any, attrName string, optional bool) ([]string, bool) {
 	if v, ok := node[attrName]; ok {
-		if aList, ok := v.([]interface{}); ok {
+		if aList, ok := v.([]any); ok {
 			arr := make([]string, 0)
 			for _, item := range aList {
 				strItem, ok := item.(string)

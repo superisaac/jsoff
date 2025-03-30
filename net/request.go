@@ -29,7 +29,7 @@ type RPCRequest struct {
 	msg           jsoff.Message
 	transportType string
 	r             *http.Request
-	data          interface{} // arbitrary data
+	data          any // arbitrary data
 	session       RPCSession
 }
 
@@ -70,7 +70,7 @@ func (req RPCRequest) HttpRequest() *http.Request {
 	return req.r
 }
 
-func (req RPCRequest) Data() interface{} {
+func (req RPCRequest) Data() any {
 	return req.data
 }
 
@@ -86,11 +86,11 @@ func (req RPCRequest) Log() *log.Entry {
 }
 
 // handler func
-type RequestCallback func(req *RPCRequest, params []interface{}) (interface{}, error)
+type RequestCallback func(req *RPCRequest, params []any) (any, error)
 
-type ContextedMsgCallback func(ctx context.Context, params []interface{}) (interface{}, error)
-type MsgCallback func(params []interface{}) (interface{}, error)
-type MissingCallback func(req *RPCRequest) (interface{}, error)
+type ContextedMsgCallback func(ctx context.Context, params []any) (any, error)
+type MsgCallback func(params []any) (any, error)
+type MissingCallback func(req *RPCRequest) (any, error)
 
 // type CloseCallback func(r *http.Request, session RPCSession)
 type CloseCallback func(session RPCSession)
@@ -154,7 +154,7 @@ func (a *Actor) AddChild(child *Actor) {
 // register a method handler
 func (a *Actor) On(method string, callback MsgCallback, setters ...HandlerSetter) {
 
-	reqcb := func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	reqcb := func(req *RPCRequest, params []any) (any, error) {
 		return callback(params)
 	}
 	err := a.OnRequest(method, reqcb, setters...)
@@ -165,7 +165,7 @@ func (a *Actor) On(method string, callback MsgCallback, setters ...HandlerSetter
 
 func (a *Actor) OnContext(method string, callback ContextedMsgCallback, setters ...HandlerSetter) {
 
-	reqcb := func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	reqcb := func(req *RPCRequest, params []any) (any, error) {
 		return callback(req.Context(), params)
 	}
 	err := a.OnRequest(method, reqcb, setters...)
@@ -190,7 +190,7 @@ func (a *Actor) OnRequest(method string, callback RequestCallback, setters ...Ha
 }
 
 // register a typed method handler
-func (a *Actor) OnTyped(method string, typedHandler interface{}, setters ...HandlerSetter) {
+func (a *Actor) OnTyped(method string, typedHandler any, setters ...HandlerSetter) {
 	handler, err := wrapTyped(typedHandler, nil)
 	if err != nil {
 		panic(err)
@@ -201,7 +201,7 @@ func (a *Actor) OnTyped(method string, typedHandler interface{}, setters ...Hand
 	}
 }
 
-func (a *Actor) OnTypedRequest(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+func (a *Actor) OnTypedRequest(method string, typedHandler any, setters ...HandlerSetter) error {
 	//firstArg := reflect.TypeOf(&RPCRequest{})
 	handler, err := wrapTyped(typedHandler, &ReqSpec{})
 	if err != nil {
@@ -210,7 +210,7 @@ func (a *Actor) OnTypedRequest(method string, typedHandler interface{}, setters 
 	return a.OnRequest(method, handler, setters...)
 }
 
-func (a *Actor) OnTypedContext(method string, typedHandler interface{}, setters ...HandlerSetter) error {
+func (a *Actor) OnTypedContext(method string, typedHandler any, setters ...HandlerSetter) error {
 	//firstArgSpec := reflect.TypeOf((*context.Context)(nil)).Elem()
 	handler, err := wrapTyped(typedHandler, &ContextSpec{})
 	if err != nil {
@@ -378,7 +378,7 @@ func (a *Actor) Feed(req *RPCRequest) (jsoff.Message, error) {
 	return nil, nil
 }
 
-func (a Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []interface{}) (resmsg0 jsoff.Message, err0 error) {
+func (a Actor) recoverCallHandler(handler *MethodHandler, req *RPCRequest, params []any) (resmsg0 jsoff.Message, err0 error) {
 	if a.RecoverFromPanic {
 		defer func() {
 			if r := recover(); r != nil {
@@ -411,7 +411,7 @@ func (a Actor) recoverCallMissingHandler(req *RPCRequest) (resmsg0 jsoff.Message
 	return a.wrapResult(res, err, req.Msg())
 }
 
-func (a Actor) wrapResult(res interface{}, err error, msg jsoff.Message) (jsoff.Message, error) {
+func (a Actor) wrapResult(res any, err error, msg jsoff.Message) (jsoff.Message, error) {
 	if !msg.IsRequest() {
 		if err != nil {
 			msg.Log().Errorf("wrapResult(), error handleing res, %#v", err)

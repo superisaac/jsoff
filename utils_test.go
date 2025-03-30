@@ -16,7 +16,7 @@ func TestDecode(t *testing.T) {
 	assert := assert.New(t)
 
 	var v vt1
-	err := DecodeInterface(map[string]interface{}{
+	err := DecodeInterface(map[string]any{
 		"user_name": "boy",
 		"a":         5,
 	}, &v)
@@ -43,10 +43,10 @@ type tst struct {
 func TestDecodeParams(t *testing.T) {
 	assert := assert.New(t)
 
-	params := [](interface{}){
+	params := []any{
 		109,
 		"hello",
-		map[string](interface{}){
+		map[string]any{
 			"h": "hidden",
 			"j": 688}}
 
@@ -61,12 +61,12 @@ func TestDecodeParams(t *testing.T) {
 	assert.Equal(688, output.C.J)
 	assert.Equal("", output.D)
 
-	params1 := []interface{}{}
+	params1 := []any{}
 	output1 := 999
 	err1 := DecodeParams(params1, &output1)
 	assert.Equal("output is not pointer of struct", err1.Error())
 
-	params2 := [](interface{}){"hello"}
+	params2 := []any{"hello"}
 	output2 := tst{}
 	err2 := DecodeParams(params2, &output2)
 	assert.NotNil(err2)
@@ -80,16 +80,16 @@ func TestGuessJson(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("", v1)
 
-	v1_0, err := GuessJson("5")
+	v1_0, _ := GuessJson("5")
 	assert.Equal(int64(5), v1_0)
 
-	v1_1, err := GuessJson("-5")
+	v1_1, _ := GuessJson("-5")
 	assert.Equal(int64(-5), v1_1)
 
-	v1_2, err := GuessJson("-5.78389383")
+	v1_2, _ := GuessJson("-5.78389383")
 	assert.InDelta(float64(-5.78389383), v1_2, 0.0001)
 
-	v2, err := GuessJson("false")
+	v2, _ := GuessJson("false")
 	assert.Equal(false, v2)
 
 	_, err = GuessJson("[aaa")
@@ -98,33 +98,33 @@ func TestGuessJson(t *testing.T) {
 	_, err = GuessJson("{aaa")
 	assert.Contains(err.Error(), "invalid character")
 
-	v3, err := GuessJson(`{"abc": 5}`)
-	map3 := v3.(map[string]interface{})
+	v3, _ := GuessJson(`{"abc": 5}`)
+	map3 := v3.(map[string]any)
 	assert.NotNil(map3)
 	assert.Equal(json.Number("5"), map3["abc"])
 
-	v4, err := GuessJsonArray([]string{"5", "hahah", `{"ccc": 6}`})
+	v4, _ := GuessJsonArray([]string{"5", "hahah", `{"ccc": 6}`})
 	assert.Equal(3, len(v4))
 	assert.Equal(int64(5), v4[0])
 	assert.Equal("hahah", v4[1])
 
-	v5, err := GuessJson(`["abc", 666.99, {"kic": 5}]`)
-	arr5 := v5.([]interface{})
+	v5, _ := GuessJson(`["abc", 666.99, {"kic": 5}]`)
+	arr5 := v5.([]any)
 	assert.Equal(3, len(arr5))
 	assert.Equal("abc", arr5[0])
 	assert.Equal(json.Number("666.99"), arr5[1])
 
-	v6, err := GuessJson(`"666"`)
+	v6, _ := GuessJson(`"666"`)
 	s6 := v6.(string)
 	assert.Equal("666", s6)
 
-	v7, err := GuessJson(`"-666.999"`)
+	v7, _ := GuessJson(`"-666.999"`)
 	s7 := v7.(string)
 	assert.Equal("-666.999", s7)
 
 	v8, err := GuessJson(`@testdata/guess.json`)
 	assert.Nil(err)
-	m8 := v8.(map[string]interface{})
+	m8 := v8.(map[string]any)
 	assert.Equal("ttt", m8["aaa"])
 	assert.Equal(json.Number("789"), m8["bbb"])
 
@@ -134,7 +134,7 @@ func TestGuessJson(t *testing.T) {
 
 	v11, err := GuessJson("[166, null, \"hello\"]")
 	assert.Nil(err)
-	arr11 := v11.([]interface{})
+	arr11 := v11.([]any)
 	assert.Equal(json.Number("166"), arr11[0])
 	assert.Nil(arr11[1])
 	assert.Equal("hello", arr11[2])

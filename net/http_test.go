@@ -107,7 +107,7 @@ func TestServerClient(t *testing.T) {
 	assert.Equal("hello001", res)
 
 	// method not found
-	params1 := [](interface{}){"hello002"}
+	params1 := []any{"hello002"}
 	reqmsg1 := jsoff.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
@@ -123,7 +123,7 @@ func TestMissing(t *testing.T) {
 	defer cancel()
 
 	server := NewHttp1Handler(nil)
-	err := server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
+	err := server.Actor.OnMissing(func(req *RPCRequest) (any, error) {
 		msg := req.Msg()
 		assert.True(msg.IsNotify())
 		assert.Equal("testnotify", msg.MustMethod())
@@ -136,7 +136,7 @@ func TestMissing(t *testing.T) {
 
 	client := NewHttp1Client(urlParse("http://127.0.0.1:28003"))
 	// right request
-	params := [](interface{}){"hello003"}
+	params := []any{"hello003"}
 	ntfmsg := jsoff.NewNotifyMessage("testnotify", params)
 
 	err = client.Send(rootCtx, ntfmsg)
@@ -176,7 +176,7 @@ func TestTypedServerClient(t *testing.T) {
 	client := NewHttp1Client(urlParse("http://127.0.0.1:28001"))
 
 	// right request
-	params := [](interface{}){"hello004"}
+	params := []any{"hello004"}
 	reqmsg := jsoff.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
@@ -186,7 +186,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.Equal("hello004", res)
 
 	// type mismatch
-	params1 := [](interface{}){true}
+	params1 := []any{true}
 	reqmsg1 := jsoff.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
@@ -196,7 +196,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.Equal(-32602, errbody1.Code) // params error
 	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
 	// test params size
-	params2 := [](interface{}){}
+	params2 := []any{}
 	reqmsg2 := jsoff.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
@@ -207,7 +207,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.Equal("no enough params size", errbody2.Message)
 
 	// test add 2 numbers
-	params3 := [](interface{}){6, 3}
+	params3 := []any{6, 3}
 	reqmsg3 := jsoff.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
@@ -216,7 +216,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.Equal(json.Number("9"), res3)
 
 	// test add 2 numbers with typing mismatch
-	params4 := [](interface{}){"6", 4}
+	params4 := []any{"6", 4}
 	reqmsg4 := jsoff.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
@@ -226,7 +226,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.True(strings.Contains(errbody4.Message, "got unconvertible type"))
 
 	// test add 2 numbers with typing mismatch
-	params5 := [](interface{}){"6", 5}
+	params5 := []any{"6", 5}
 	reqmsg5 := jsoff.NewRequestMessage(5, "add", params5)
 	var res5 int
 	err5 := client.UnwrapCall(rootCtx, reqmsg5, &res5)
@@ -237,7 +237,7 @@ func TestTypedServerClient(t *testing.T) {
 	assert.True(strings.Contains(errbody5.Message, "got unconvertible type"))
 
 	// correct unwrapcall
-	params6 := [](interface{}){8, 99}
+	params6 := []any{8, 99}
 	reqmsg6 := jsoff.NewRequestMessage(6, "add", params6)
 	var res6 int
 	err6 := client.UnwrapCall(rootCtx, reqmsg6, &res6)
@@ -253,7 +253,7 @@ func TestHandlerSchema(t *testing.T) {
 
 	server := NewHttp1Handler(nil)
 	server.Actor.ValidateSchema = true
-	server.Actor.On("add2num", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("add2num", func(params []any) (any, error) {
 		var tp struct {
 			A int
 			B int
@@ -272,13 +272,13 @@ func TestHandlerSchema(t *testing.T) {
 
 	// right request
 	reqmsg := jsoff.NewRequestMessage(
-		1, "add2num", []interface{}{5, 8})
+		1, "add2num", []any{5, 8})
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.Equal(json.Number("13"), resmsg.MustResult())
 
 	reqmsg2 := jsoff.NewRequestMessage(
-		2, "add2num", []interface{}{"12", "a str"})
+		2, "add2num", []any{"12", "a str"})
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.Equal(jsoff.ErrInvalidSchema.Code, resmsg2.MustError().Code)
@@ -293,7 +293,7 @@ func TestPassingHeader(t *testing.T) {
 
 	server := NewHttp1Handler(nil)
 	server.Actor.ValidateSchema = true
-	server.Actor.OnRequest("echoHeader", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.OnRequest("echoHeader", func(req *RPCRequest, params []any) (any, error) {
 		// echo the http reader X-Input back to client
 		r := req.HttpRequest()
 		resp := r.Header.Get("X-Input")
@@ -329,7 +329,7 @@ func TestGatewayHandler(t *testing.T) {
 	defer cancel()
 
 	server := NewGatewayHandler(rootCtx, nil, false)
-	server.Actor.On("echoAny", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echoAny", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -344,7 +344,7 @@ func TestGatewayHandler(t *testing.T) {
 	client.SetClientTLSConfig(clientTLS())
 
 	reqmsg := jsoff.NewRequestMessage(
-		1, "echoAny", []interface{}{1991, 1992})
+		1, "echoAny", []any{1991, 1992})
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.Equal(json.Number("1991"), resmsg.MustResult())
@@ -354,7 +354,7 @@ func TestGatewayHandler(t *testing.T) {
 	client1.SetClientTLSConfig(clientTLS())
 
 	reqmsg1 := jsoff.NewRequestMessage(
-		1001, "echoAny", []interface{}{8888})
+		1001, "echoAny", []any{8888})
 	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
 	assert.Equal(json.Number("8888"), resmsg1.MustResult())
@@ -364,7 +364,7 @@ func TestGatewayHandler(t *testing.T) {
 	client2.SetClientTLSConfig(clientTLS())
 
 	reqmsg2 := jsoff.NewRequestMessage(
-		2002, "echoAny", []interface{}{8886})
+		2002, "echoAny", []any{8886})
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
 	assert.Equal(json.Number("8886"), resmsg2.MustResult())
@@ -378,7 +378,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	defer cancel()
 
 	server := NewGatewayHandler(rootCtx, nil, true) // Insecure way
-	server.Actor.On("echoAny", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echoAny", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -399,7 +399,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	assert.True(ok)
 
 	reqmsg := jsoff.NewRequestMessage(
-		1, "echoAny", []interface{}{1991, 1992})
+		1, "echoAny", []any{1991, 1992})
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	assert.Nil(err)
 	assert.Equal(json.Number("1991"), resmsg.MustResult())
@@ -412,7 +412,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	assert.True(ok1)
 
 	reqmsg1 := jsoff.NewRequestMessage(
-		1001, "echoAny", []interface{}{8888})
+		1001, "echoAny", []any{8888})
 	resmsg1, err1 := client1.Call(rootCtx, reqmsg1)
 	assert.Nil(err1)
 	assert.Equal(json.Number("8888"), resmsg1.MustResult())
@@ -426,7 +426,7 @@ func TestInsecureGatewayHandler(t *testing.T) {
 	assert.True(ok2)
 
 	reqmsg2 := jsoff.NewRequestMessage(
-		2002, "echoAny", []interface{}{8886})
+		2002, "echoAny", []any{8886})
 
 	resmsg2, err2 := client2.Call(rootCtx, reqmsg2)
 	assert.Nil(err2)
@@ -443,7 +443,7 @@ func TestAuthorization(t *testing.T) {
 	assert.False(ok)
 
 	server := NewHttp1Handler(nil)
-	server.Actor.OnRequest("greeting", func(req *RPCRequest, params []interface{}) (interface{}, error) {
+	server.Actor.OnRequest("greeting", func(req *RPCRequest, params []any) (any, error) {
 		if authInfo, ok := AuthInfoFromContext(req.Context()); ok {
 			return fmt.Sprintf("hello: %s", authInfo.Username), nil
 		} else {
@@ -552,7 +552,7 @@ func TestJwtAuthorization(t *testing.T) {
 	// jwt auth
 	claims := jwtClaims{
 		Username: "jake",
-		Settings: map[string]interface{}{"namespace": "jail"},
+		Settings: map[string]any{"namespace": "jail"},
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour).Unix(),
 			Issuer:    "jsoff.com",
@@ -588,7 +588,7 @@ func TestActors(t *testing.T) {
 	actor1 := NewActor()
 	main_actor.AddChild(actor1)
 
-	actor1.On("add2num", func(params []interface{}) (interface{}, error) {
+	actor1.On("add2num", func(params []any) (any, error) {
 		var tp struct {
 			A int
 			B int
@@ -600,7 +600,7 @@ func TestActors(t *testing.T) {
 		return tp.A + tp.B, nil
 	}, WithSchemaYaml(addSchemaYaml))
 
-	main_actor.On("echo", func(params []interface{}) (interface{}, error) {
+	main_actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {

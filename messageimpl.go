@@ -12,26 +12,26 @@ import (
 )
 
 // WithData create clone this RPCError object with data attached
-func (self *RPCError) WithData(data interface{}) *RPCError {
-	return &RPCError{self.Code, self.Message, data}
+func (e *RPCError) WithData(data any) *RPCError {
+	return &RPCError{e.Code, e.Message, data}
 }
 
 // String representation of RPCError object
-func (self *RPCError) Error() string {
-	return fmt.Sprintf("code=%d, message=%s, data=%s", self.Code, self.Message, self.Data)
+func (e *RPCError) Error() string {
+	return fmt.Sprintf("code=%d, message=%s, data=%s", e.Code, e.Message, e.Data)
 }
 
 // Convert RPCError to ErrorMessage,  reqmsg is the original
 // RequestMessage instance, the ErrorMessage will copy reqmsg's id
 // property.
-func (self RPCError) ToMessage(reqmsg *RequestMessage) *ErrorMessage {
-	return RPCErrorMessage(reqmsg, self.Code, self.Message, self.Data)
+func (e RPCError) ToMessage(reqmsg *RequestMessage) *ErrorMessage {
+	return RPCErrorMessage(reqmsg, e.Code, e.Message, e.Data)
 }
 
 // Convert RPCError to ErrorMessage, reqId and traceId can be used to
 // compose the result error message
-func (self RPCError) ToMessageFromId(reqId interface{}, traceId string) *ErrorMessage {
-	return RPCErrorMessageFromId(reqId, traceId, self.Code, self.Message, self.Data)
+func (e RPCError) ToMessageFromId(reqId any, traceId string) *ErrorMessage {
+	return RPCErrorMessageFromId(reqId, traceId, e.Code, e.Message, e.Data)
 }
 
 // Create a new instance of ErrMessageType
@@ -42,35 +42,35 @@ func NewErrMsgType(additional string) *RPCError {
 }
 
 // IsRequest() returns if the message is a RequestMessage
-func (self BaseMessage) IsRequest() bool {
-	return self.kind == MKRequest
+func (msg BaseMessage) IsRequest() bool {
+	return msg.kind == MKRequest
 }
 
 // IsNotify() returns if the message is a NotifyMessage
-func (self BaseMessage) IsNotify() bool {
-	return self.kind == MKNotify
+func (msg BaseMessage) IsNotify() bool {
+	return msg.kind == MKNotify
 }
 
 // IsResponse() returns if the message is a RequestMessage or
 // NotifyMessage
-func (self BaseMessage) IsResponse() bool {
-	return self.IsRequest() || self.IsNotify()
+func (msg BaseMessage) IsResponse() bool {
+	return msg.IsRequest() || msg.IsNotify()
 }
 
 // IsResult() returns if the message is a ResultMessage
-func (self BaseMessage) IsResult() bool {
-	return self.kind == MKResult
+func (msg BaseMessage) IsResult() bool {
+	return msg.kind == MKResult
 }
 
 // IsError() returns if the message is a ErrorMessage
-func (self BaseMessage) IsError() bool {
-	return self.kind == MKError
+func (msg BaseMessage) IsError() bool {
+	return msg.kind == MKError
 }
 
 // IsResultOrError() returns if the message is a ResultMessage or
 // ErrorMessage
-func (self BaseMessage) IsResultOrError() bool {
-	return self.IsResult() || self.IsError()
+func (msg BaseMessage) IsResultOrError() bool {
+	return msg.IsResult() || msg.IsError()
 }
 
 // Message methods
@@ -105,15 +105,15 @@ func MustMessageBytes(msg Message) []byte {
 	return bytes
 }
 
-func MessageMap(msg Message) (map[string]interface{}, error) {
+func MessageMap(msg Message) (map[string]any, error) {
 	v := msg.Interface()
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	err := DecodeInterface(v, &m)
 	if err != nil {
 		return nil, err
 	} else {
 		if v, found := m["id"]; found {
-			if vObj, ok := v.(map[string]interface{}); ok {
+			if vObj, ok := v.(map[string]any); ok {
 				if msgId, ok := vObj["Value"]; ok {
 					m["id"] = msgId
 				}
@@ -123,190 +123,190 @@ func MessageMap(msg Message) (map[string]interface{}, error) {
 	}
 }
 
-func (self *BaseMessage) SetTraceId(traceId string) {
-	self.traceId = traceId
+func (msg *BaseMessage) SetTraceId(traceId string) {
+	msg.traceId = traceId
 }
 
-func (self BaseMessage) TraceId() string {
-	return self.traceId
+func (msg BaseMessage) TraceId() string {
+	return msg.traceId
 }
 
 // Log
-func (self RequestMessage) Log() *log.Entry {
+func (msg RequestMessage) Log() *log.Entry {
 	return log.WithFields(log.Fields{
-		"traceid": self.traceId,
+		"traceid": msg.traceId,
 		"msgtype": "request",
-		"msgid":   self.Id,
-		"method":  self.Method,
+		"msgid":   msg.Id,
+		"method":  msg.Method,
 	})
 }
-func (self NotifyMessage) Log() *log.Entry {
+func (msg NotifyMessage) Log() *log.Entry {
 	return log.WithFields(log.Fields{
-		"traceid": self.traceId,
+		"traceid": msg.traceId,
 		"msgtype": "notify",
-		"method":  self.Method,
+		"method":  msg.Method,
 	})
 }
-func (self ResultMessage) Log() *log.Entry {
+func (msg ResultMessage) Log() *log.Entry {
 	return log.WithFields(log.Fields{
-		"traceid": self.traceId,
+		"traceid": msg.traceId,
 		"msgtype": "result",
-		"msgid":   self.Id,
+		"msgid":   msg.Id,
 	})
 }
 
-func (self ErrorMessage) Log() *log.Entry {
+func (msg ErrorMessage) Log() *log.Entry {
 	return log.WithFields(log.Fields{
-		"traceid": self.traceId,
+		"traceid": msg.traceId,
 		"msgtype": "error",
-		"msgid":   self.Id,
+		"msgid":   msg.Id,
 	})
 }
 
-func (self RequestMessage) ReplaceId(newId interface{}) Message {
-	return self.Clone(newId)
+func (msg RequestMessage) ReplaceId(newId any) Message {
+	return msg.Clone(newId)
 }
 
-func (self NotifyMessage) ReplaceId(newId interface{}) Message {
+func (msg NotifyMessage) ReplaceId(newId any) Message {
 	panic(NewErrMsgType("ReplaceId"))
 }
 
-func (self ResultMessage) ReplaceId(newId interface{}) Message {
-	resmsg := rawResultMessage(newId, self.Result, self.responseHeader)
-	resmsg.SetTraceId(self.TraceId())
+func (msg ResultMessage) ReplaceId(newId any) Message {
+	resmsg := rawResultMessage(newId, msg.Result, msg.responseHeader)
+	resmsg.SetTraceId(msg.TraceId())
 	return resmsg
 }
 
-func (self ErrorMessage) ReplaceId(newId interface{}) Message {
-	errmsg := rawErrorMessage(newId, self.Error, self.responseHeader)
-	errmsg.SetTraceId(self.TraceId())
+func (msg ErrorMessage) ReplaceId(newId any) Message {
+	errmsg := rawErrorMessage(newId, msg.Error, msg.responseHeader)
+	errmsg.SetTraceId(msg.TraceId())
 	return errmsg
 }
 
 // Must methods
 
 // MustId
-func (self RequestMessage) MustId() interface{} {
-	return self.Id
+func (msg RequestMessage) MustId() any {
+	return msg.Id
 }
-func (self NotifyMessage) MustId() interface{} {
+func (msg NotifyMessage) MustId() any {
 	panic(NewErrMsgType("MustId"))
 }
-func (self ResultMessage) MustId() interface{} {
-	return self.Id
+func (msg ResultMessage) MustId() any {
+	return msg.Id
 }
-func (self ErrorMessage) MustId() interface{} {
-	return self.Id
+func (msg ErrorMessage) MustId() any {
+	return msg.Id
 }
 
 // MustMethod
-func (self RequestMessage) MustMethod() string {
-	return self.Method
+func (msg RequestMessage) MustMethod() string {
+	return msg.Method
 }
-func (self NotifyMessage) MustMethod() string {
-	return self.Method
+func (msg NotifyMessage) MustMethod() string {
+	return msg.Method
 }
-func (self ResultMessage) MustMethod() string {
+func (msg ResultMessage) MustMethod() string {
 	panic(NewErrMsgType("MustMethod"))
 }
 
-func (self ErrorMessage) MustMethod() string {
+func (msg ErrorMessage) MustMethod() string {
 	panic(NewErrMsgType("MustMethod"))
 }
 
 // MustParams
-func (self RequestMessage) MustParams() []interface{} {
-	return self.Params
+func (msg RequestMessage) MustParams() []any {
+	return msg.Params
 }
-func (self NotifyMessage) MustParams() []interface{} {
-	return self.Params
+func (msg NotifyMessage) MustParams() []any {
+	return msg.Params
 }
-func (self ResultMessage) MustParams() []interface{} {
+func (msg ResultMessage) MustParams() []any {
 	panic(NewErrMsgType("MustParams"))
 }
-func (self ErrorMessage) MustParams() []interface{} {
+func (msg ErrorMessage) MustParams() []any {
 	panic(NewErrMsgType("MustParams"))
 }
 
 // MustResult
-func (self RequestMessage) MustResult() interface{} {
+func (msg RequestMessage) MustResult() any {
 	panic(NewErrMsgType("MustResult"))
 }
-func (self NotifyMessage) MustResult() interface{} {
+func (msg NotifyMessage) MustResult() any {
 	panic(NewErrMsgType("MustResult"))
 }
-func (self ResultMessage) MustResult() interface{} {
-	return self.Result
+func (msg ResultMessage) MustResult() any {
+	return msg.Result
 }
-func (self ErrorMessage) MustResult() interface{} {
+func (msg ErrorMessage) MustResult() any {
 	panic(NewErrMsgType("MustResult"))
 }
 
 // MustError
-func (self RequestMessage) MustError() *RPCError {
+func (msg RequestMessage) MustError() *RPCError {
 	panic(NewErrMsgType("MustError"))
 }
-func (self NotifyMessage) MustError() *RPCError {
+func (msg NotifyMessage) MustError() *RPCError {
 	panic(NewErrMsgType("MustError"))
 }
-func (self ResultMessage) MustError() *RPCError {
+func (msg ResultMessage) MustError() *RPCError {
 	panic(NewErrMsgType("MustError"))
 }
-func (self ErrorMessage) MustError() *RPCError {
-	return self.Error
+func (msg ErrorMessage) MustError() *RPCError {
+	return msg.Error
 }
 
 // Interface
-func (self *RequestMessage) Interface() interface{} {
+func (msg *RequestMessage) Interface() any {
 	tmp := &templateRequest{
 		Jsonrpc: "2.0",
-		TraceId: self.TraceId(),
-		Method:  self.Method,
-		Id:      msgIdT{Value: self.Id, isSet: true},
+		TraceId: msg.TraceId(),
+		Method:  msg.Method,
+		Id:      msgIdT{Value: msg.Id, isSet: true},
 	}
-	if self.paramsAreList || len(self.Params) == 0 {
-		tmp.Params = self.Params
+	if msg.paramsAreList || len(msg.Params) == 0 {
+		tmp.Params = msg.Params
 	} else {
-		tmp.Params = self.Params[0]
+		tmp.Params = msg.Params[0]
 	}
 	return tmp
 }
 
-func (self *NotifyMessage) Interface() interface{} {
+func (msg *NotifyMessage) Interface() any {
 	tmp := &templateNotify{
 		Jsonrpc: "2.0",
-		TraceId: self.TraceId(),
-		Method:  self.Method,
+		TraceId: msg.TraceId(),
+		Method:  msg.Method,
 	}
-	if self.paramsAreList || len(self.Params) == 0 {
-		tmp.Params = self.Params
+	if msg.paramsAreList || len(msg.Params) == 0 {
+		tmp.Params = msg.Params
 	} else {
-		tmp.Params = self.Params[0]
+		tmp.Params = msg.Params[0]
 	}
 	return tmp
 }
 
-func (self *ResultMessage) Interface() interface{} {
+func (msg *ResultMessage) Interface() any {
 	tmp := &templateResult{
 		Jsonrpc: "2.0",
-		TraceId: self.TraceId(),
-		Id:      msgIdT{Value: self.Id, isSet: true},
-		Result:  self.Result,
+		TraceId: msg.TraceId(),
+		Id:      msgIdT{Value: msg.Id, isSet: true},
+		Result:  msg.Result,
 	}
 	return tmp
 }
 
-func (self *ErrorMessage) Interface() interface{} {
+func (msg *ErrorMessage) Interface() any {
 	tmp := &templateError{
 		Jsonrpc: "2.0",
-		TraceId: self.TraceId(),
-		Id:      msgIdT{Value: self.Id, isSet: true},
-		Error:   self.Error,
+		TraceId: msg.TraceId(),
+		Id:      msgIdT{Value: msg.Id, isSet: true},
+		Error:   msg.Error,
 	}
 	return tmp
 }
 
-func NewRequestMessage(id interface{}, method string, params interface{}) *RequestMessage {
+func NewRequestMessage(id any, method string, params any) *RequestMessage {
 	if method == "" {
 		panic(ErrEmptyMethod)
 	}
@@ -317,34 +317,34 @@ func NewRequestMessage(id interface{}, method string, params interface{}) *Reque
 	msg.paramsAreList = true
 
 	if params == nil {
-		msg.Params = []interface{}{}
-	} else if arr, ok := params.([]interface{}); ok {
+		msg.Params = []any{}
+	} else if arr, ok := params.([]any); ok {
 		if arr == nil {
-			arr = []interface{}{}
+			arr = []any{}
 		}
 		msg.Params = arr
 	} else {
-		msg.Params = []interface{}{params}
+		msg.Params = []any{params}
 		msg.paramsAreList = false
 	}
 	return msg
 }
 
-func (self RequestMessage) Clone(newId interface{}) *RequestMessage {
-	newReq := NewRequestMessage(newId, self.Method, self.Params)
-	newReq.SetTraceId(self.traceId)
+func (msg RequestMessage) Clone(newId any) *RequestMessage {
+	newReq := NewRequestMessage(newId, msg.Method, msg.Params)
+	newReq.SetTraceId(msg.traceId)
 	return newReq
 }
 
-func (self RequestMessage) CacheKey(prefix string) string {
-	paramBytes, err := json.Marshal(self.Params)
+func (msg RequestMessage) CacheKey(prefix string) string {
+	paramBytes, err := json.Marshal(msg.Params)
 	if err != nil {
 		panic(err)
 	}
-	return fmt.Sprintf("%s%s%s", prefix, self.Method, string(paramBytes))
+	return fmt.Sprintf("%s%s%s", prefix, msg.Method, string(paramBytes))
 }
 
-func NewNotifyMessage(method string, params interface{}) *NotifyMessage {
+func NewNotifyMessage(method string, params any) *NotifyMessage {
 	if method == "" {
 		panic(ErrEmptyMethod)
 	}
@@ -355,20 +355,20 @@ func NewNotifyMessage(method string, params interface{}) *NotifyMessage {
 	msg.paramsAreList = true
 
 	if params == nil {
-		msg.Params = []interface{}{}
-	} else if arr, ok := params.([]interface{}); ok {
+		msg.Params = []any{}
+	} else if arr, ok := params.([]any); ok {
 		if arr == nil {
-			arr = []interface{}{}
+			arr = []any{}
 		}
 		msg.Params = arr
 	} else {
-		msg.Params = []interface{}{params}
+		msg.Params = []any{params}
 		msg.paramsAreList = false
 	}
 	return msg
 }
 
-func rawResultMessage(id interface{}, result interface{}, responseHeader http.Header) *ResultMessage {
+func rawResultMessage(id any, result any, responseHeader http.Header) *ResultMessage {
 	msg := &ResultMessage{}
 	msg.kind = MKResult
 	msg.Id = id
@@ -378,29 +378,29 @@ func rawResultMessage(id interface{}, result interface{}, responseHeader http.He
 }
 
 // implements ResponseMessage
-func (self ResultMessage) HasResponseHeader() bool {
-	return self.responseHeader != nil
+func (msg ResultMessage) HasResponseHeader() bool {
+	return msg.responseHeader != nil
 }
 
-func (self *ResultMessage) ResponseHeader() http.Header {
-	if self.responseHeader == nil {
-		self.responseHeader = http.Header{}
+func (msg *ResultMessage) ResponseHeader() http.Header {
+	if msg.responseHeader == nil {
+		msg.responseHeader = http.Header{}
 	}
-	return self.responseHeader
+	return msg.responseHeader
 }
 
-func (self ErrorMessage) HasResponseHeader() bool {
-	return self.responseHeader != nil
+func (msg ErrorMessage) HasResponseHeader() bool {
+	return msg.responseHeader != nil
 }
 
-func (self *ErrorMessage) ResponseHeader() http.Header {
-	if self.responseHeader == nil {
-		self.responseHeader = http.Header{}
+func (msg *ErrorMessage) ResponseHeader() http.Header {
+	if msg.responseHeader == nil {
+		msg.responseHeader = http.Header{}
 	}
-	return self.responseHeader
+	return msg.responseHeader
 }
 
-func NewResultMessage(reqmsg Message, result interface{}) *ResultMessage {
+func NewResultMessage(reqmsg Message, result any) *ResultMessage {
 	if reqmsg == nil {
 		return rawResultMessage(nil, result, nil)
 	} else {
@@ -419,13 +419,13 @@ func NewErrorMessage(reqmsg Message, errbody *RPCError) *ErrorMessage {
 	return errmsg
 }
 
-func NewErrorMessageFromId(reqId interface{}, traceId string, errbody *RPCError) *ErrorMessage {
+func NewErrorMessageFromId(reqId any, traceId string, errbody *RPCError) *ErrorMessage {
 	errmsg := rawErrorMessage(reqId, errbody, nil)
 	errmsg.SetTraceId(traceId)
 	return errmsg
 }
 
-func rawErrorMessage(id interface{}, errbody *RPCError, responseHeader http.Header) *ErrorMessage {
+func rawErrorMessage(id any, errbody *RPCError, responseHeader http.Header) *ErrorMessage {
 	msg := &ErrorMessage{}
 	msg.kind = MKError
 	msg.Id = id
@@ -434,12 +434,12 @@ func rawErrorMessage(id interface{}, errbody *RPCError, responseHeader http.Head
 	return msg
 }
 
-func RPCErrorMessage(reqmsg Message, code int, message string, data interface{}) *ErrorMessage {
+func RPCErrorMessage(reqmsg Message, code int, message string, data any) *ErrorMessage {
 	errbody := &RPCError{code, message, data}
 	return NewErrorMessage(reqmsg, errbody)
 }
 
-func RPCErrorMessageFromId(reqId interface{}, traceId string, code int, message string, data interface{}) *ErrorMessage {
+func RPCErrorMessageFromId(reqId any, traceId string, code int, message string, data any) *ErrorMessage {
 	errbody := &RPCError{code, message, data}
 	return NewErrorMessageFromId(reqId, traceId, errbody)
 }

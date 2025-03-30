@@ -12,13 +12,13 @@ func NewNonStringMap(paths ...string) *NonStringMap {
 	return &NonStringMap{paths: paths}
 }
 
-func (self NonStringMap) Error() string {
-	return fmt.Sprintf("not string key %s", strings.Join(self.paths, ""))
+func (err NonStringMap) Error() string {
+	return fmt.Sprintf("not string key %s", strings.Join(err.paths, ""))
 }
 
 // Schema build error
-func (self SchemaBuildError) Error() string {
-	return fmt.Sprintf("SchemaBuildError %s, paths: %s", self.info, strings.Join(self.paths, ""))
+func (err SchemaBuildError) Error() string {
+	return fmt.Sprintf("SchemaBuildError %s, paths: %s", err.info, strings.Join(err.paths, ""))
 }
 
 func NewBuildError(info string, paths []string) *SchemaBuildError {
@@ -30,29 +30,29 @@ func NewSchemaBuilder() *SchemaBuilder {
 	return &SchemaBuilder{}
 }
 
-func (self *SchemaBuilder) BuildBytes(data []byte) (Schema, error) {
+func (builder *SchemaBuilder) BuildBytes(data []byte) (Schema, error) {
 
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
-	var v interface{}
+	var v any
 	err := dec.Decode(&v)
 	if err != nil {
 		return nil, err
 	}
-	return self.Build(v)
+	return builder.Build(v)
 }
 
-func (self *SchemaBuilder) Build(data interface{}) (Schema, error) {
-	return self.buildNode(data)
+func (builder *SchemaBuilder) Build(data any) (Schema, error) {
+	return builder.buildNode(data)
 }
 
-func (self SchemaBuilder) FixYamlMaps(src interface{}, paths ...string) (interface{}, error) {
-	if anyMap, ok := src.(map[interface{}]interface{}); ok {
-		strMap := make(map[string]interface{})
+func (builder SchemaBuilder) FixYamlMaps(src any, paths ...string) (any, error) {
+	if anyMap, ok := src.(map[any]any); ok {
+		strMap := make(map[string]any)
 		for k, v := range anyMap {
 			if sk, ok := k.(string); ok {
 				newPaths := append(paths, fmt.Sprintf(".%s", k))
-				newV, err := self.FixYamlMaps(v, newPaths...)
+				newV, err := builder.FixYamlMaps(v, newPaths...)
 				if err != nil {
 					return nil, err
 				}
@@ -63,11 +63,11 @@ func (self SchemaBuilder) FixYamlMaps(src interface{}, paths ...string) (interfa
 			}
 		}
 		return strMap, nil
-	} else if anyList, ok := src.([]interface{}); ok {
-		list1 := make([]interface{}, 0)
+	} else if anyList, ok := src.([]any); ok {
+		list1 := make([]any, 0)
 		for i, elem := range anyList {
 			newPaths := append(paths, fmt.Sprintf("[%d]", i))
-			newElem, err := self.FixYamlMaps(elem, newPaths...)
+			newElem, err := builder.FixYamlMaps(elem, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -79,36 +79,36 @@ func (self SchemaBuilder) FixYamlMaps(src interface{}, paths ...string) (interfa
 	}
 }
 
-func (self *SchemaBuilder) BuildYamlInterface(data interface{}) (Schema, error) {
-	jsonData, err := self.FixYamlMaps(data)
+func (builder *SchemaBuilder) BuildYamlInterface(data any) (Schema, error) {
+	jsonData, err := builder.FixYamlMaps(data)
 	if err != nil {
 		return nil, err
 	}
-	s, err := self.Build(jsonData)
+	s, err := builder.Build(jsonData)
 	if err != nil {
 		return nil, err
 	}
 	return s, err
 }
 
-func (self *SchemaBuilder) BuildYamlBytes(bytes []byte) (Schema, error) {
-	data := make(map[interface{}]interface{})
+func (builder *SchemaBuilder) BuildYamlBytes(bytes []byte) (Schema, error) {
+	data := make(map[any]any)
 	err := yaml.Unmarshal(bytes, &data)
 	if err != nil {
 		return nil, err
 	}
-	return self.BuildYamlInterface(data)
+	return builder.BuildYamlInterface(data)
 }
 
-func (self *SchemaBuilder) buildNode(data interface{}, paths ...string) (Schema, error) {
+func (builder *SchemaBuilder) buildNode(data any, paths ...string) (Schema, error) {
 	if typeMap, ok := convertTypeMap(data); ok {
-		return self.buildNodeMap(typeMap, paths...)
+		return builder.buildNodeMap(typeMap, paths...)
 	} else {
 		return nil, NewBuildError("data is not an object", paths)
 	}
 }
 
-func (self *SchemaBuilder) buildNodeMap(node map[string](interface{}), paths ...string) (Schema, error) {
+func (builder *SchemaBuilder) buildNodeMap(node map[string]any, paths ...string) (Schema, error) {
 	nodeType, ok := node["type"]
 	if !ok {
 		return nil, NewBuildError("no type presented", paths)
@@ -118,9 +118,9 @@ func (self *SchemaBuilder) buildNodeMap(node map[string](interface{}), paths ...
 
 	switch nodeType {
 	case "number":
-		schema, err = self.buildNumberSchema(node, paths...)
+		schema, err = builder.buildNumberSchema(node, paths...)
 	case "integer":
-		schema, err = self.buildIntegerSchema(node, paths...)
+		schema, err = builder.buildIntegerSchema(node, paths...)
 	case "bool":
 		schema = &BoolSchema{}
 	case "any":
@@ -128,19 +128,19 @@ func (self *SchemaBuilder) buildNodeMap(node map[string](interface{}), paths ...
 	case "null":
 		schema = &NullSchema{}
 	case "string":
-		schema, err = self.buildStringSchema(node, paths...)
+		schema, err = builder.buildStringSchema(node, paths...)
 	case "anyOf":
-		schema, err = self.buildAnyOfSchema(node, paths...)
+		schema, err = builder.buildAnyOfSchema(node, paths...)
 	case "allOf":
-		schema, err = self.buildAllOfSchema(node, paths...)
+		schema, err = builder.buildAllOfSchema(node, paths...)
 	case "not":
-		schema, err = self.buildNotSchema(node, paths...)
+		schema, err = builder.buildNotSchema(node, paths...)
 	case "list":
-		schema, err = self.buildListSchema(node, paths...)
+		schema, err = builder.buildListSchema(node, paths...)
 	case "object":
-		schema, err = self.buildObjectSchema(node, paths...)
+		schema, err = builder.buildObjectSchema(node, paths...)
 	case "method":
-		schema, err = self.buildMethodSchema(node, paths...)
+		schema, err = builder.buildMethodSchema(node, paths...)
 	default:
 		err = NewBuildError("unknown type", paths)
 	}
@@ -149,7 +149,7 @@ func (self *SchemaBuilder) buildNodeMap(node map[string](interface{}), paths ...
 		return nil, err
 	}
 
-	err = self.buildMixin(schema, node, paths...)
+	err = builder.buildMixin(schema, node, paths...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func (self *SchemaBuilder) buildNodeMap(node map[string](interface{}), paths ...
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildMixin(schema Schema, node map[string]interface{}, paths ...string) error {
+func (builder *SchemaBuilder) buildMixin(schema Schema, node map[string]any, paths ...string) error {
 	if name, ok := node["name"]; ok {
 		if strName, ok := name.(string); ok {
 			schema.SetName(strName)
@@ -178,18 +178,18 @@ func (self *SchemaBuilder) buildMixin(schema Schema, node map[string]interface{}
 	return nil
 }
 
-func (self *SchemaBuilder) buildListSchema(node map[string](interface{}), paths ...string) (Schema, error) {
+func (builder *SchemaBuilder) buildListSchema(node map[string]any, paths ...string) (Schema, error) {
 	items, ok := node["items"]
 	if !ok {
 		return nil, NewBuildError("no items", paths)
 	}
 
 	// build tuple
-	if itemsTuple, ok := items.([]interface{}); ok {
+	if itemsTuple, ok := items.([]any); ok {
 		schema := NewTupleSchema()
 		for i, item := range itemsTuple {
 			newPaths := append(paths, fmt.Sprintf("[%d]", i))
-			childSchema, err := self.buildNode(item, newPaths...)
+			childSchema, err := builder.buildNode(item, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -198,7 +198,7 @@ func (self *SchemaBuilder) buildListSchema(node map[string](interface{}), paths 
 		// additional items
 		if additional, ok := node["additionalItems"]; ok {
 			newPaths := append(paths, ".additionalItems")
-			addSchema, err := self.buildNode(additional, newPaths...)
+			addSchema, err := builder.buildNode(additional, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -210,7 +210,7 @@ func (self *SchemaBuilder) buildListSchema(node map[string](interface{}), paths 
 
 	// build list
 
-	itemSchema, err := self.buildNode(items, paths...)
+	itemSchema, err := builder.buildNode(items, paths...)
 	if err != nil {
 		return nil, err
 	}
@@ -227,12 +227,12 @@ func (self *SchemaBuilder) buildListSchema(node map[string](interface{}), paths 
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildAnyOfSchema(node map[string](interface{}), paths ...string) (*AnyOfSchema, error) {
+func (builder *SchemaBuilder) buildAnyOfSchema(node map[string]any, paths ...string) (*AnyOfSchema, error) {
 	schema := NewAnyOfSchema()
 	if choices, ok := convertAttrListOfMap(node, "anyOf", false); ok {
 		for i, choiceNode := range choices {
 			newPaths := append(paths, ".anyOf", fmt.Sprintf("[%d]", i))
-			c, err := self.buildNodeMap(choiceNode, newPaths...)
+			c, err := builder.buildNodeMap(choiceNode, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -244,12 +244,12 @@ func (self *SchemaBuilder) buildAnyOfSchema(node map[string](interface{}), paths
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildAllOfSchema(node map[string](interface{}), paths ...string) (*AllOfSchema, error) {
+func (builder *SchemaBuilder) buildAllOfSchema(node map[string]any, paths ...string) (*AllOfSchema, error) {
 	schema := NewAllOfSchema()
 	if choices, ok := convertAttrListOfMap(node, "allOf", false); ok {
 		for i, choiceNode := range choices {
 			newPaths := append(paths, ".allOf", fmt.Sprintf("[%d]", i))
-			c, err := self.buildNodeMap(choiceNode, newPaths...)
+			c, err := builder.buildNodeMap(choiceNode, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -261,11 +261,11 @@ func (self *SchemaBuilder) buildAllOfSchema(node map[string](interface{}), paths
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildNotSchema(node map[string](interface{}), paths ...string) (*NotSchema, error) {
+func (builder *SchemaBuilder) buildNotSchema(node map[string]any, paths ...string) (*NotSchema, error) {
 	schema := NewNotSchema()
 	if childMap, ok := convertAttrMap(node, "not", false); ok {
 		newPaths := append(paths, ".not")
-		c, err := self.buildNodeMap(childMap, newPaths...)
+		c, err := builder.buildNodeMap(childMap, newPaths...)
 		if err != nil {
 			return nil, err
 		}
@@ -276,12 +276,12 @@ func (self *SchemaBuilder) buildNotSchema(node map[string](interface{}), paths .
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildMethodSchema(node map[string](interface{}), paths ...string) (*MethodSchema, error) {
+func (builder *SchemaBuilder) buildMethodSchema(node map[string]any, paths ...string) (*MethodSchema, error) {
 	schema := NewMethodSchema()
 	if paramsNodes, ok := convertAttrListOfMap(node, "params", false); ok {
 		for i, paramNode := range paramsNodes {
 			newPaths := append(paths, ".params", fmt.Sprintf("[%d]", i))
-			c, err := self.buildNodeMap(paramNode, newPaths...)
+			c, err := builder.buildNodeMap(paramNode, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -294,7 +294,7 @@ func (self *SchemaBuilder) buildMethodSchema(node map[string](interface{}), path
 	// additional items
 	if additional, ok := node["additionalParams"]; ok {
 		newPaths := append(paths, ".additionalParams")
-		addSchema, err := self.buildNode(additional, newPaths...)
+		addSchema, err := builder.buildNode(additional, newPaths...)
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +306,7 @@ func (self *SchemaBuilder) buildMethodSchema(node map[string](interface{}), path
 			resultNode["type"] = "any"
 		}
 		newPaths := append(paths, ".returns")
-		c, err := self.buildNodeMap(resultNode, newPaths...)
+		c, err := builder.buildNodeMap(resultNode, newPaths...)
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +315,7 @@ func (self *SchemaBuilder) buildMethodSchema(node map[string](interface{}), path
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildNumberSchema(node map[string](interface{}), paths ...string) (*NumberSchema, error) {
+func (builder *SchemaBuilder) buildNumberSchema(node map[string]any, paths ...string) (*NumberSchema, error) {
 	schema := NewNumberSchema()
 	if maximum, ok := convertAttrFloat(node, "maximum", false); ok {
 		schema.Maximum = &maximum
@@ -334,7 +334,7 @@ func (self *SchemaBuilder) buildNumberSchema(node map[string](interface{}), path
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildIntegerSchema(node map[string](interface{}), paths ...string) (*IntegerSchema, error) {
+func (builder *SchemaBuilder) buildIntegerSchema(node map[string]any, paths ...string) (*IntegerSchema, error) {
 	schema := NewIntegerSchema()
 	if maximum, ok := convertAttrInt(node, "maximum", false); ok {
 		n := int64(maximum)
@@ -354,7 +354,7 @@ func (self *SchemaBuilder) buildIntegerSchema(node map[string](interface{}), pat
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildStringSchema(node map[string](interface{}), paths ...string) (*StringSchema, error) {
+func (builderself *SchemaBuilder) buildStringSchema(node map[string]any, paths ...string) (*StringSchema, error) {
 	schema := NewStringSchema()
 	if maxLength, ok := convertAttrInt(node, "maxLength", false); ok && maxLength >= 0 {
 		schema.MaxLength = &maxLength
@@ -367,12 +367,12 @@ func (self *SchemaBuilder) buildStringSchema(node map[string](interface{}), path
 	return schema, nil
 }
 
-func (self *SchemaBuilder) buildObjectSchema(node map[string](interface{}), paths ...string) (*ObjectSchema, error) {
+func (builder *SchemaBuilder) buildObjectSchema(node map[string]any, paths ...string) (*ObjectSchema, error) {
 	schema := NewObjectSchema()
 	if propNodes, ok := convertAttrMapOfMap(node, "properties", true); ok {
 		for propName, propNode := range propNodes {
 			newPaths := append(paths, ".properties", fmt.Sprintf(".%s", propName))
-			child, err := self.buildNodeMap(propNode, newPaths...)
+			child, err := builder.buildNodeMap(propNode, newPaths...)
 			if err != nil {
 				return nil, err
 			}
@@ -398,7 +398,7 @@ func (self *SchemaBuilder) buildObjectSchema(node map[string](interface{}), path
 	// additional items
 	if additional, ok := node["additionalProperties"]; ok {
 		newPaths := append(paths, ".additionalProperties")
-		addSchema, err := self.buildNode(additional, newPaths...)
+		addSchema, err := builder.buildNode(additional, newPaths...)
 		if err != nil {
 			return nil, err
 		}

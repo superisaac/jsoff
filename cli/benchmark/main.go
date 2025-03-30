@@ -67,7 +67,7 @@ func toS(ns uint) float64 {
 	return float64(ns) / float64(time.Second)
 }
 
-func RunCallBenchmark(serverUrl string, method string, params []interface{}, header http.Header, concurrency uint, num uint) {
+func RunCallBenchmark(serverUrl string, method string, params []any, header http.Header, concurrency uint, num uint) {
 	chResults := make(chan uint, concurrency*num)
 	results := make([]uint, concurrency*num)
 	var sum uint = 0
@@ -93,7 +93,7 @@ func RunCallBenchmark(serverUrl string, method string, params []interface{}, hea
 	fmt.Printf("avg=%gs, min=%gs, p95=%gs, max=%gs\n", toS(avg), toS(minv), toS(t95), toS(maxv))
 }
 
-func callNTimes(chResults chan uint, serverUrl string, method string, params []interface{}, header http.Header, num uint) error {
+func callNTimes(chResults chan uint, serverUrl string, method string, params []any, header http.Header, num uint) error {
 	ctx := context.Background()
 	c, err := jsoffnet.NewClient(serverUrl)
 	if err != nil {

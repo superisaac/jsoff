@@ -27,7 +27,7 @@ type Client interface {
 	// Call a Request message and unwrap the result message into a
 	// given structure, when an Error message comes it is turned
 	// into a golang error object typed *jsoff.ErrorBody
-	UnwrapCall(ctx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error
+	UnwrapCall(ctx context.Context, reqmsg *jsoff.RequestMessage, output any) error
 
 	// Send a JSONRPC message(usually a notify) to server without
 	// expecting any result.

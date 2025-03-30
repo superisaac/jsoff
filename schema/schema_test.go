@@ -34,17 +34,17 @@ func TestBuildBasicSchema(t *testing.T) {
 	assert.True(sc1.Equal(s))
 
 	s1 = []byte(`{"type": "bad"}`)
-	s, err = builder.BuildBytes(s1)
+	_, err = builder.BuildBytes(s1)
 	assert.NotNil(err)
 	assert.Equal("SchemaBuildError unknown type, paths: ", err.Error())
 
 	s1 = []byte(`"bad2"`)
-	s, err = builder.BuildBytes(s1)
+	_, err = builder.BuildBytes(s1)
 	assert.NotNil(err)
 	assert.Equal("SchemaBuildError data is not an object, paths: ", err.Error())
 
 	s1 = []byte(`{"aa": 4}`)
-	s, err = builder.BuildBytes(s1)
+	_, err = builder.BuildBytes(s1)
 	assert.NotNil(err)
 	assert.Equal("SchemaBuildError no type presented, paths: ", err.Error())
 
@@ -127,7 +127,7 @@ func TestBuildObjectSchema(t *testing.T) {
 	assert.Equal("string", obj.Properties["aaa"].Type())
 	assert.Equal("number", obj.Properties["bbb"].Type())
 
-	props, ok := s.Map()["properties"].(map[string]interface{})
+	props, ok := s.Map()["properties"].(map[string]any)
 	assert.True(ok)
 	assert.Equal(2, len(props))
 
@@ -140,7 +140,7 @@ func TestBuildObjectSchema(t *testing.T) {
 "requires": ["nosuch", "aaa"]
 }`)
 	builder = NewSchemaBuilder()
-	s, err = builder.BuildBytes(s1)
+	_, err = builder.BuildBytes(s1)
 	assert.NotNil(err)
 	assert.Equal("SchemaBuildError cannot find required prop, paths: .requires.nosuch", err.Error())
 

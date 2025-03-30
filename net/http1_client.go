@@ -72,7 +72,7 @@ func (client *Http1Client) SetClientTLSConfig(cfg *tls.Config) {
 	client.clientTLS = cfg
 }
 
-func (self *Http1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
+func (self *Http1Client) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output any) error {
 	resmsg, err := self.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err

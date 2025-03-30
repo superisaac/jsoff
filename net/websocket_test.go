@@ -19,7 +19,7 @@ func TestWSHandlerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewWSHandler(rootCtx, nil)
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -45,7 +45,7 @@ func TestWSHandlerClient(t *testing.T) {
 	assert.Contains(erronmessage.Error(), "message handler already exist!")
 
 	// right request
-	params := [](interface{}){"hello2002"}
+	params := []any{"hello2002"}
 	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
@@ -55,7 +55,7 @@ func TestWSHandlerClient(t *testing.T) {
 	assert.Equal("hello2002", res)
 
 	// method not found
-	params1 := [](interface{}){"hello2003"}
+	params1 := []any{"hello2003"}
 	reqmsg1 := jsoff.NewRequestMessage(666, "echoxxx", params1)
 	resmsg1, err := client.Call(rootCtx, reqmsg1)
 	assert.Nil(err)
@@ -64,7 +64,7 @@ func TestWSHandlerClient(t *testing.T) {
 	assert.Equal(jsoff.ErrMethodNotFound.Code, errbody1.Code)
 
 	// unwrap call
-	params2 := [](interface{}){"hello2004"}
+	params2 := []any{"hello2004"}
 	reqmsg2 := jsoff.NewRequestMessage(777, "echo", params2)
 	var res2 string
 	err2 := client.UnwrapCall(rootCtx, reqmsg2, &res2)
@@ -93,7 +93,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	client := NewWSClient(urlParse("ws://127.0.0.1:28101"))
 
 	// right request
-	params := [](interface{}){"hello2005"}
+	params := []any{"hello2005"}
 	reqmsg := jsoff.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
@@ -103,7 +103,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.Equal("hello2005", res)
 
 	// type mismatch
-	params1 := [](interface{}){true}
+	params1 := []any{true}
 	reqmsg1 := jsoff.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
@@ -113,7 +113,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.Equal(-32602, errbody1.Code) // params error
 	assert.True(strings.Contains(errbody1.Message, "got unconvertible type"))
 	// test params size
-	params2 := [](interface{}){}
+	params2 := []any{}
 	reqmsg2 := jsoff.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
@@ -124,7 +124,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.Equal("no enough params size", errbody2.Message)
 
 	// test add 2 numbers
-	params3 := [](interface{}){6, 3}
+	params3 := []any{6, 3}
 	reqmsg3 := jsoff.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
@@ -133,7 +133,7 @@ func TestTypedWSHandlerClient(t *testing.T) {
 	assert.Equal(json.Number("9"), res3)
 
 	// test add 2 numbers with typing mismatch
-	params4 := [](interface{}){"6", 4}
+	params4 := []any{"6", 4}
 	reqmsg4 := jsoff.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
@@ -153,7 +153,7 @@ func TestWSClose(t *testing.T) {
 	defer cancelClient()
 
 	server := NewWSHandler(serverCtx, nil)
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -170,7 +170,7 @@ func TestWSClose(t *testing.T) {
 		closeCalled[0] = true
 	})
 	// right request
-	params := [](interface{}){"hello2001"}
+	params := []any{"hello2001"}
 	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(clientCtx, reqmsg)

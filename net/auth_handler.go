@@ -13,7 +13,7 @@ import (
 
 type AuthInfo struct {
 	Username string
-	Settings map[string]interface{}
+	Settings map[string]any
 }
 
 type authInfoKeyType int
@@ -29,17 +29,17 @@ func AuthInfoFromContext(ctx context.Context) (*AuthInfo, bool) {
 }
 
 type BasicAuthConfig struct {
-	Username string                 `yaml:"username" json:"username"`
-	Password string                 `yaml:"password" json:"password"`
-	Settings map[string]interface{} `yaml:"settings,omitempty" json:"settings.omitempty"`
+	Username string         `yaml:"username" json:"username"`
+	Password string         `yaml:"password" json:"password"`
+	Settings map[string]any `yaml:"settings,omitempty" json:"settings.omitempty"`
 }
 
 type BearerAuthConfig struct {
 	Token string `yaml:"token" json:"token"`
 
 	// username attached to request when token authorized
-	Username string                 `yaml:"username,omitempty" json:"username,omitempty"`
-	Settings map[string]interface{} `yaml:"settings,omitempty" json:"settings.omitempty"`
+	Username string         `yaml:"username,omitempty" json:"username,omitempty"`
+	Settings map[string]any `yaml:"settings,omitempty" json:"settings.omitempty"`
 }
 
 type JwtAuthConfig struct {
@@ -53,8 +53,8 @@ type AuthConfig struct {
 }
 
 type jwtClaims struct {
-	Username string                 `json:"username"`
-	Settings map[string]interface{} `json:"settings,omitempty"`
+	Username string         `json:"username"`
+	Settings map[string]any `json:"settings,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -137,7 +137,7 @@ func (handler *AuthHandler) jwtAuth(jwtCfg *JwtAuthConfig, r *http.Request) (*Au
 			token, err := jwt.ParseWithClaims(
 				jwtFromHeader,
 				&jwtClaims{},
-				func(token *jwt.Token) (interface{}, error) {
+				func(token *jwt.Token) (any, error) {
 					return []byte(jwtCfg.Secret), nil
 				},
 			)

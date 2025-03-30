@@ -46,7 +46,7 @@ func TestParseParams(t *testing.T) {
 
 	params := msg.MustParams()
 	assert.Equal(1, len(params))
-	mapp, _ := params[0].(map[string]interface{})
+	mapp, _ := params[0].(map[string]any)
 	assert.Equal("hello", mapp["what"])
 	assert.True(msg.IsRequest())
 	reqmsg, _ := msg.(*RequestMessage)
@@ -131,7 +131,7 @@ func TestNotifyMsg(t *testing.T) {
 	assert.Equal(params[1], json.Number("4"))
 	assert.Equal(params[2], "hello")
 
-	arr := [](interface{}){3, "uu"}
+	arr := []any{3, "uu"}
 	msg = NewNotifyMessage("hahaha", arr)
 	assert.Equal("hahaha", msg.MustMethod())
 	params = msg.MustParams()
@@ -166,6 +166,10 @@ func TestDecodeMessage(t *testing.T) {
 		`{"id": {"what": "not a plain id"}, "method": "is_request", "params": ["hello", 3]}`, // test request with non plain id
 
 		`{"result": null, "error": {"code": -27, "message": "X bluh"}, "id": 1}`, // test error message with result null
+
+		`{"id": null, "method": "is_request", "params": ["hello", 3]}`, // test IdNotNull on Request Message
+
+		`{"result": 99.992, "id": null}`, // test result with null id for IdNotNull on Result Message
 	}, "\n")
 
 	dec := json.NewDecoder(strings.NewReader(input))
@@ -182,7 +186,7 @@ func TestDecodeMessage(t *testing.T) {
 	assert.Nil(err)
 	assert.True(msg2.IsNotify())
 	assert.Equal("is_notify", msg2.MustMethod())
-	assert.Equal(map[string](interface{}){"name": "ok"}, msg2.MustParams()[0])
+	assert.Equal(map[string]any{"name": "ok"}, msg2.MustParams()[0])
 
 	msg3, err := DecodeMessage(dec)
 	assert.Nil(err)
@@ -222,11 +226,19 @@ func TestDecodeMessage(t *testing.T) {
 	assert.NotNil(err9)
 	assert.Contains(err9.Error(), "cannot unmarshal object into Go struct field msgUnion.id of type string")
 
-	msg10, err := DecodeMessage(dec)
-	assert.Nil(err)
+	msg10, err10 := DecodeMessage(dec)
+	assert.Nil(err10)
 	assert.True(msg10.IsError())
 	assert.False(msg10.IsResult())
 	assert.Equal(-27, msg10.MustError().Code)
+
+	_, err11 := DecodeMessage(dec, ParseOptions{IdNotNull: true})
+	assert.NotNil(err11)
+	assert.Contains(err11.Error(), "Request.id cannot be null")
+
+	_, err12 := DecodeMessage(dec, ParseOptions{IdNotNull: true})
+	assert.NotNil(err12)
+	assert.Contains(err12.Error(), "Result.id cannot be null")
 
 	// EOF expected
 	_, err = DecodeMessage(dec)
@@ -255,16 +267,16 @@ func TestDecodePipeBytes(t *testing.T) {
 func TestMessages(t *testing.T) {
 	assert := assert.New(t)
 
-	reqmsg := NewRequestMessage(101, "queryMethod", []interface{}{"p1", "p2"})
+	reqmsg := NewRequestMessage(101, "queryMethod", []any{"p1", "p2"})
 	assert.Equal(101, reqmsg.Id)
 	assert.Equal("queryMethod", reqmsg.Method)
 	assert.Equal(2, len(reqmsg.Params))
 
-	msgtype, _ := reqmsg.Log().Data["msgtype"]
+	msgtype := reqmsg.Log().Data["msgtype"]
 	assert.Equal("request", msgtype)
 
 	reqmap, _ := MessageMap(reqmsg)
-	m1, _ := reqmap["method"]
+	m1 := reqmap["method"]
 	assert.Equal("queryMethod", m1)
 
 	reqmsg1 := reqmsg.ReplaceId(102)
@@ -282,41 +294,41 @@ func TestMessages(t *testing.T) {
 	resmsg := NewResultMessage(reqmsg, "p1p2")
 	assert.Equal(101, resmsg.Id)
 	resmap, _ := MessageMap(resmsg)
-	resid, _ := resmap["id"]
+	resid := resmap["id"]
 	assert.Equal(101, resid)
 	resmsg1 := resmsg.ReplaceId(104)
 	assert.True(resmsg1.IsResult())
 	assert.Equal(104, resmsg1.MustId())
 
-	msgtype, _ = resmsg.Log().Data["msgtype"]
+	msgtype = resmsg.Log().Data["msgtype"]
 	assert.Equal("result", msgtype)
 
 	errmsg := NewErrorMessage(reqmsg, ParamsError("p error"))
 	assert.Equal(101, errmsg.Id)
 	errmap, _ := MessageMap(errmsg)
-	errid, _ := errmap["id"]
+	errid := errmap["id"]
 	assert.Equal(101, errid)
 	errmsg1 := errmsg.ReplaceId(103)
 	assert.True(errmsg1.IsError())
 	assert.Equal(103, errmsg1.MustId())
 
-	msgtype, _ = errmsg.Log().Data["msgtype"]
+	msgtype = errmsg.Log().Data["msgtype"]
 	assert.Equal("error", msgtype)
 
 	ntfmsg := NewNotifyMessage("queryReceived", nil)
 	assert.Equal("queryReceived", ntfmsg.Method)
 
-	msgtype, _ = ntfmsg.Log().Data["msgtype"]
+	msgtype = ntfmsg.Log().Data["msgtype"]
 	assert.Equal("notify", msgtype)
 
 	ntfmap, _ := MessageMap(ntfmsg)
-	m2, _ := ntfmap["method"]
+	m2 := ntfmap["method"]
 	assert.Equal("queryReceived", m2)
 
-	assert.False(NewRequestMessage(800, "aaa", map[string]interface{}{}).paramsAreList)
+	assert.False(NewRequestMessage(800, "aaa", map[string]any{}).paramsAreList)
 	assert.True(NewRequestMessage(800, "aaa", nil).paramsAreList)
 
-	assert.False(NewNotifyMessage("aaa", map[string]interface{}{"aa": "bb"}).paramsAreList)
+	assert.False(NewNotifyMessage("aaa", map[string]any{"aa": "bb"}).paramsAreList)
 	assert.True(NewNotifyMessage("aaa", nil).paramsAreList)
 
 }

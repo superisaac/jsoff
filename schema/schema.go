@@ -22,8 +22,8 @@ func (m SchemaMixin) GetDescription() string {
 	return m.description
 }
 
-func (m SchemaMixin) rebuildType(nType string) map[string]interface{} {
-	tp := map[string]interface{}{
+func (m SchemaMixin) rebuildType(nType string) map[string]any {
+	tp := map[string]any{
 		"type": nType,
 	}
 	if m.name != "" {
@@ -49,11 +49,11 @@ func (s AnySchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s AnySchema) Map() map[string]interface{} {
+func (s AnySchema) Map() map[string]any {
 	return s.rebuildType(s.Type())
 }
 
-func (s *AnySchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *AnySchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	return nil
 }
 
@@ -70,11 +70,11 @@ func (s NullSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s NullSchema) Map() map[string]interface{} {
+func (s NullSchema) Map() map[string]any {
 	return s.rebuildType(s.Type())
 }
 
-func (s *NullSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *NullSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	if data != nil {
 		return validator.NewErrorPos("data is not null")
 	}
@@ -93,11 +93,11 @@ func (s BoolSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s BoolSchema) Map() map[string]interface{} {
+func (s BoolSchema) Map() map[string]any {
 	return s.rebuildType(s.Type())
 }
 
-func (s *BoolSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *BoolSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	if _, ok := data.(bool); ok {
 		return nil
 	}
@@ -128,7 +128,7 @@ func (s NumberSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s NumberSchema) Map() map[string]interface{} {
+func (s NumberSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
 	if s.Maximum != nil {
 		tp["maximum"] = *s.Maximum
@@ -146,7 +146,7 @@ func (s NumberSchema) Map() map[string]interface{} {
 	return tp
 }
 
-func (s *NumberSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *NumberSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	if n, ok := data.(json.Number); ok {
 		f, _ := n.Float64()
 		return s.checkRange(validator, f)
@@ -199,7 +199,7 @@ func NewIntegerSchema() *IntegerSchema {
 func (s IntegerSchema) Type() string {
 	return "integer"
 }
-func (s IntegerSchema) Map() map[string]interface{} {
+func (s IntegerSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
 	if s.Maximum != nil {
 		tp["maximum"] = *s.Maximum
@@ -229,7 +229,7 @@ func (s IntegerSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s *IntegerSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *IntegerSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	if n, ok := data.(json.Number); ok {
 		if in, err := n.Int64(); err == nil {
 			return s.checkRange(validator, in)
@@ -282,7 +282,7 @@ func NewStringSchema() *StringSchema {
 func (s StringSchema) Type() string {
 	return "string"
 }
-func (s StringSchema) Map() map[string]interface{} {
+func (s StringSchema) Map() map[string]any {
 	return s.rebuildType(s.Type())
 }
 
@@ -296,7 +296,7 @@ func (s StringSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s *StringSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *StringSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	if str, ok := data.(string); ok {
 		if s.MaxLength != nil && len(str) > *s.MaxLength {
 			return validator.NewErrorPos("len(str) > maxLength")
@@ -315,9 +315,9 @@ func NewAnyOfSchema() *AnyOfSchema {
 	return &AnyOfSchema{Choices: make([]Schema, 0)}
 }
 
-func (s AnyOfSchema) Map() map[string]interface{} {
+func (s AnyOfSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
-	arr := make([](map[string]interface{}), 0)
+	arr := make([](map[string]any), 0)
 	for _, choice := range s.Choices {
 		arr = append(arr, choice.Map())
 	}
@@ -338,7 +338,7 @@ func (s AnyOfSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s *AnyOfSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *AnyOfSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	for _, schema := range s.Choices {
 		if errPos := validator.Scan(schema, "", data); errPos == nil {
 			return nil
@@ -352,9 +352,9 @@ func NewAllOfSchema() *AllOfSchema {
 	return &AllOfSchema{Choices: make([]Schema, 0)}
 }
 
-func (s AllOfSchema) Map() map[string]interface{} {
+func (s AllOfSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
-	arr := make([](map[string]interface{}), 0)
+	arr := make([](map[string]any), 0)
 	for _, choice := range s.Choices {
 		arr = append(arr, choice.Map())
 	}
@@ -374,7 +374,7 @@ func (s AllOfSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s *AllOfSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *AllOfSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 	for _, schema := range s.Choices {
 		if errPos := validator.Scan(schema, "", data); errPos != nil {
 			return errPos
@@ -388,7 +388,7 @@ func NewNotSchema() *NotSchema {
 	return &NotSchema{}
 }
 
-func (s NotSchema) Map() map[string]interface{} {
+func (s NotSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
 	tp["not"] = s.Child.Map()
 	return tp
@@ -407,7 +407,7 @@ func (s NotSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s *NotSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
+func (s *NotSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
 
 	errPos := s.Child.Scan(validator, data)
 	if errPos == nil {
@@ -437,14 +437,14 @@ func (s ListSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s ListSchema) Map() map[string]interface{} {
+func (s ListSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
 	tp["items"] = s.Item.Map()
 	return tp
 }
 
-func (s *ListSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
-	items, ok := data.([]interface{})
+func (s *ListSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
+	items, ok := data.([]any)
 	if !ok {
 		return validator.NewErrorPos("data is not a list")
 	}
@@ -484,9 +484,9 @@ func (s TupleSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s TupleSchema) Map() map[string]interface{} {
+func (s TupleSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
-	arr := make([](map[string]interface{}), 0)
+	arr := make([](map[string]any), 0)
 	for _, child := range s.Children {
 		arr = append(arr, child.Map())
 	}
@@ -494,8 +494,8 @@ func (s TupleSchema) Map() map[string]interface{} {
 	return tp
 }
 
-func (s *TupleSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
-	items, ok := data.([]interface{})
+func (s *TupleSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
+	items, ok := data.([]any)
 	if !ok {
 		return validator.NewErrorPos("data is not a list")
 	}
@@ -546,9 +546,9 @@ func (s MethodSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s MethodSchema) Map() map[string]interface{} {
+func (s MethodSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
-	arr := make([](map[string]interface{}), 0)
+	arr := make([](map[string]any), 0)
 	for _, p := range s.Params {
 		arr = append(arr, p.Map())
 	}
@@ -562,8 +562,8 @@ func (s MethodSchema) Map() map[string]interface{} {
 	return tp
 }
 
-func (s *MethodSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
-	dataMap, ok := data.(map[string]interface{})
+func (s *MethodSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
+	dataMap, ok := data.(map[string]any)
 	if !ok {
 		return validator.NewErrorPos("data is not object")
 	}
@@ -584,7 +584,7 @@ func (s *MethodSchema) Scan(validator *SchemaValidator, data interface{}) *Error
 	return validator.NewErrorPos("data is not a JSONRPC message")
 }
 
-func (s *MethodSchema) ScanParams(validator *SchemaValidator, params []interface{}) *ErrorPos {
+func (s *MethodSchema) ScanParams(validator *SchemaValidator, params []any) *ErrorPos {
 	validator.pushPath(".params")
 	defer validator.popPath(".params")
 
@@ -612,7 +612,7 @@ func (s *MethodSchema) ScanParams(validator *SchemaValidator, params []interface
 	return nil
 }
 
-func (s *MethodSchema) ScanResult(validator *SchemaValidator, result interface{}) *ErrorPos {
+func (s *MethodSchema) ScanResult(validator *SchemaValidator, result any) *ErrorPos {
 	if s.Returns != nil {
 		return validator.Scan(s.Returns, ".result", result)
 	}
@@ -642,9 +642,9 @@ func (s ObjectSchema) Equal(other Schema) bool {
 	return false
 }
 
-func (s ObjectSchema) Map() map[string]interface{} {
+func (s ObjectSchema) Map() map[string]any {
 	tp := s.rebuildType(s.Type())
-	props := make(map[string]interface{})
+	props := make(map[string]any)
 	for name, p := range s.Properties {
 		props[name] = p.Map()
 	}
@@ -662,8 +662,8 @@ func (s ObjectSchema) Map() map[string]interface{} {
 	return tp
 }
 
-func (s *ObjectSchema) Scan(validator *SchemaValidator, data interface{}) *ErrorPos {
-	obj, ok := data.(map[string]interface{})
+func (s *ObjectSchema) Scan(validator *SchemaValidator, data any) *ErrorPos {
+	obj, ok := data.(map[string]any)
 	if !ok {
 		return validator.NewErrorPos("data is not an object")
 	}

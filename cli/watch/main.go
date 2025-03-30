@@ -43,7 +43,7 @@ func main() {
 
 	// parse method and params
 	var method string
-	var params []interface{}
+	var params []any
 	if cliFlags.NArg() >= 1 {
 		args := cliFlags.Args()
 		method = args[0]
@@ -95,7 +95,7 @@ func main() {
 type jsonrpcWatcher struct {
 	sc           jsoffnet.Streamable
 	method       string
-	params       []interface{}
+	params       []any
 	retrylimit   int
 	connectretry int
 }

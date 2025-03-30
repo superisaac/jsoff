@@ -16,7 +16,7 @@ func TestHttp2HandlerClient(t *testing.T) {
 
 	server := NewHttp2Handler(rootCtx, nil)
 
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -24,7 +24,7 @@ func TestHttp2HandlerClient(t *testing.T) {
 		}
 	})
 
-	server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
+	server.Actor.OnMissing(func(req *RPCRequest) (any, error) {
 		return nil, nil
 	})
 
@@ -34,7 +34,7 @@ func TestHttp2HandlerClient(t *testing.T) {
 	client := NewHttp2Client(urlParse("h2://127.0.0.1:28700"))
 	client.SetClientTLSConfig(clientTLS())
 	// right request
-	params := [](interface{}){"hello1003"}
+	params := []any{"hello1003"}
 	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
@@ -51,7 +51,7 @@ func TestHttp2CServerClient(t *testing.T) {
 
 	server := NewHttp2Handler(rootCtx, nil)
 
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -59,7 +59,7 @@ func TestHttp2CServerClient(t *testing.T) {
 		}
 	})
 
-	server.Actor.OnMissing(func(req *RPCRequest) (interface{}, error) {
+	server.Actor.OnMissing(func(req *RPCRequest) (any, error) {
 		return nil, nil
 	})
 
@@ -70,7 +70,7 @@ func TestHttp2CServerClient(t *testing.T) {
 	assert.True(client.UseHttp2C)
 	//client.SetClientTLSConfig(clientTLS())
 	// right request
-	params := [](interface{}){"hello1000"}
+	params := []any{"hello1000"}
 	reqmsg := jsoff.NewRequestMessage(2, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
@@ -102,7 +102,7 @@ func TestTypedHttp2HandlerClient(t *testing.T) {
 	client.SetClientTLSConfig(clientTLS())
 
 	// right request
-	params := [](interface{}){"hello1001"}
+	params := []any{"hello1001"}
 	reqmsg := jsoff.NewRequestMessage(1, "echoTyped", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)
@@ -112,7 +112,7 @@ func TestTypedHttp2HandlerClient(t *testing.T) {
 	assert.Equal("hello1001", res)
 
 	// type mismatch
-	params1 := [](interface{}){true}
+	params1 := []any{true}
 	reqmsg1 := jsoff.NewRequestMessage(1, "echoTyped", params1)
 
 	resmsg1, err1 := client.Call(rootCtx, reqmsg1)
@@ -123,7 +123,7 @@ func TestTypedHttp2HandlerClient(t *testing.T) {
 	assert.Contains(errbody1.Message, "got unconvertible type")
 
 	// test params size
-	params2 := [](interface{}){}
+	params2 := []any{}
 	reqmsg2 := jsoff.NewRequestMessage(2, "echoTyped", params2)
 
 	resmsg2, err2 := client.Call(rootCtx, reqmsg2)
@@ -134,7 +134,7 @@ func TestTypedHttp2HandlerClient(t *testing.T) {
 	assert.Equal("no enough params size", errbody2.Message)
 
 	// test add 2 numbers
-	params3 := [](interface{}){6, 3}
+	params3 := []any{6, 3}
 	reqmsg3 := jsoff.NewRequestMessage(3, "add", params3)
 	resmsg3, err3 := client.Call(rootCtx, reqmsg3)
 	assert.Nil(err3)
@@ -143,7 +143,7 @@ func TestTypedHttp2HandlerClient(t *testing.T) {
 	assert.Equal(json.Number("9"), res3)
 
 	// test add 2 numbers with typing mismatch
-	params4 := [](interface{}){"6", 4}
+	params4 := []any{"6", 4}
 	reqmsg4 := jsoff.NewRequestMessage(4, "add", params4)
 	resmsg4, err4 := client.Call(rootCtx, reqmsg4)
 	assert.Nil(err4)
@@ -163,7 +163,7 @@ func TestHttp2Close(t *testing.T) {
 	defer cancelClient()
 
 	server := NewHttp2Handler(serverCtx, nil)
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -186,7 +186,7 @@ func TestHttp2Close(t *testing.T) {
 		closeCalled[0] = true
 	})
 	// right request
-	params := [](interface{}){"hello1002"}
+	params := []any{"hello1002"}
 	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(clientCtx, reqmsg)

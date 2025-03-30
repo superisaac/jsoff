@@ -32,7 +32,7 @@ func TestTCPServerClient(t *testing.T) {
 	defer cancel()
 
 	server := NewTCPServer(context.Background(), nil)
-	server.Actor.On("echo", func(params []interface{}) (interface{}, error) {
+	server.Actor.On("echo", func(params []any) (any, error) {
 		if len(params) > 0 {
 			return params[0], nil
 		} else {
@@ -46,7 +46,7 @@ func TestTCPServerClient(t *testing.T) {
 
 	client := NewTCPClient(urlParse("tcp://127.0.0.1:21800"))
 	// right request
-	params := [](interface{}){"hello102"}
+	params := []any{"hello102"}
 	reqmsg := jsoff.NewRequestMessage(1, "echo", params)
 
 	resmsg, err := client.Call(rootCtx, reqmsg)

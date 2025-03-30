@@ -29,8 +29,8 @@ type ErrorPos struct {
 type Schema interface {
 	// returns the generated
 	Type() string
-	Map() map[string]interface{}
-	Scan(validator *SchemaValidator, data interface{}) *ErrorPos
+	Map() map[string]any
+	Scan(validator *SchemaValidator, data any) *ErrorPos
 	SetName(name string)
 	GetName() string
 	SetDescription(desc string)

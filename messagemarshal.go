@@ -6,29 +6,29 @@ import (
 
 // hold a string|integer|null id
 type msgIdT struct {
-	Value interface{} // value can be string, integer and null
+	Value any // value can be string, integer and null
 	isSet bool
 }
 
-func (self msgIdT) MarshalJSON() ([]byte, error) {
-	if self.Value == nil && self.isSet {
+func (mt msgIdT) MarshalJSON() ([]byte, error) {
+	if mt.Value == nil && mt.isSet {
 		return []byte("null"), nil
 	}
-	return json.Marshal(self.Value)
+	return json.Marshal(mt.Value)
 }
 
-func (self *msgIdT) UnmarshalJSON(data []byte) error {
+func (mt *msgIdT) UnmarshalJSON(data []byte) error {
 	// try null value
 	if string(data) == "null" {
-		self.Value = nil
-		self.isSet = true
+		mt.Value = nil
+		mt.isSet = true
 		return nil
 	}
 	// try int value
 	var intv int
 	if err := json.Unmarshal(data, &intv); err == nil {
-		self.Value = intv
-		self.isSet = true
+		mt.Value = intv
+		mt.isSet = true
 		return nil
 	}
 
@@ -38,32 +38,32 @@ func (self *msgIdT) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	self.Value = strv
-	self.isSet = true
+	mt.Value = strv
+	mt.isSet = true
 	return nil
 }
 
 // marshaling templates
 type templateRequest struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Id      msgIdT      `json:"id"`
-	Params  interface{} `json:"params"`
-	TraceId string      `json:"traceid,omitempty"`
+	Jsonrpc string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	Id      msgIdT `json:"id"`
+	Params  any    `json:"params"`
+	TraceId string `json:"traceid,omitempty"`
 }
 
 type templateNotify struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params"`
-	TraceId string      `json:"traceid,omitempty"`
+	Jsonrpc string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	Params  any    `json:"params"`
+	TraceId string `json:"traceid,omitempty"`
 }
 
 type templateResult struct {
-	Jsonrpc string      `json:"jsonrpc"`
-	Id      msgIdT      `json:"id"`
-	Result  interface{} `json:"result"`
-	TraceId string      `json:"traceid,omitempty"`
+	Jsonrpc string `json:"jsonrpc"`
+	Id      msgIdT `json:"id"`
+	Result  any    `json:"result"`
+	TraceId string `json:"traceid,omitempty"`
 }
 
 type templateError struct {

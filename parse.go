@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 )
 
-func ParseBytes(data []byte) (Message, error) {
+type ParseOptions struct {
+	IdNotNull bool // Request.id cannot be null
+}
+
+func ParseBytes(data []byte, options ...ParseOptions) (Message, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
-	return DecodeMessage(decoder)
+	return DecodeMessage(decoder, options...)
 }
 
 type msgUnion struct {
@@ -23,35 +27,41 @@ type decodeErrorT struct {
 	errmsg string
 }
 
-func (self decodeErrorT) Error() string {
-	return "error decode: " + self.errmsg
+func (err decodeErrorT) Error() string {
+	return "error decode: " + err.errmsg
 }
 
 func errdecode(errmsg string) *decodeErrorT {
 	return &decodeErrorT{errmsg: errmsg}
 }
 
-func decodeParams(un *msgUnion) (p []interface{}, islist bool, e error) {
+func decodeParams(un *msgUnion) (p []any, islist bool, e error) {
 	if un.Params == nil {
 		return nil, false, errdecode("no params field")
 	}
-	arr := []interface{}{}
+	arr := []any{}
 	dec := json.NewDecoder(bytes.NewReader(*un.Params))
 	dec.UseNumber()
 	if err := dec.Decode(&arr); err != nil {
-		var intfparams interface{}
+		var intfparams any
 		idec := json.NewDecoder(bytes.NewReader(*un.Params))
 		idec.UseNumber()
 		if err := idec.Decode(&intfparams); err != nil {
 			return nil, false, err
 
 		}
-		return []interface{}{intfparams}, false, nil
+		return []any{intfparams}, false, nil
 	}
 	return arr, true, nil
 }
 
-func DecodeMessage(decoder *json.Decoder) (Message, error) {
+func DecodeMessage(decoder *json.Decoder, options ...ParseOptions) (Message, error) {
+	opts := ParseOptions{}
+
+	if len(options) > 0 {
+		opts = options[0]
+	}
+
 	decoder.UseNumber()
 	var un msgUnion
 	if err := decoder.Decode(&un); err != nil {
@@ -84,15 +94,18 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 		}
 
 		// parse result
-		var res interface{}
+		var res any
 		resdec := json.NewDecoder(bytes.NewReader(*un.Result))
 		resdec.UseNumber()
 		if err := resdec.Decode(&res); err != nil {
 			return nil, err
 		}
 
-		var msgId interface{} = nil
+		var msgId any = nil
 		if un.IdSt.isSet {
+			if un.IdSt.Value == nil && opts.IdNotNull {
+				return nil, errdecode("Result.id cannot be null")
+			}
 			msgId = un.IdSt.Value
 		}
 
@@ -106,6 +119,9 @@ func DecodeMessage(decoder *json.Decoder) (Message, error) {
 		}
 
 		if un.IdSt.isSet {
+			if un.IdSt.Value == nil && opts.IdNotNull {
+				return nil, errdecode("Request.id cannot be null")
+			}
 			reqmsg := NewRequestMessage(un.IdSt.Value, un.Method, params)
 			reqmsg.paramsAreList = islist
 			reqmsg.SetTraceId(un.TraceId)

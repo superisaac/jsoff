@@ -290,7 +290,7 @@ func (client *StreamingClient) handleResult(msg jsoff.Message) {
 	}
 }
 
-func (client *StreamingClient) expire(k interface{}, after time.Duration) {
+func (client *StreamingClient) expire(k any, after time.Duration) {
 	time.Sleep(after)
 	v, loaded := client.pendingRequests.LoadAndDelete(k)
 	if loaded {
@@ -301,7 +301,7 @@ func (client *StreamingClient) expire(k interface{}, after time.Duration) {
 	}
 }
 
-func (client *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output interface{}) error {
+func (client *StreamingClient) UnwrapCall(rootCtx context.Context, reqmsg *jsoff.RequestMessage, output any) error {
 	resmsg, err := client.Call(rootCtx, reqmsg)
 	if err != nil {
 		return err
