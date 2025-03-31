@@ -5,11 +5,7 @@ import (
 	"encoding/json"
 )
 
-type ParseOptions struct {
-	IdNotNull bool // Request.id cannot be null
-}
-
-func ParseBytes(data []byte, options ...ParseOptions) (Message, error) {
+func ParseBytes(data []byte, options ...MessageOptions) (Message, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	return DecodeMessage(decoder, options...)
 }
@@ -55,8 +51,8 @@ func decodeParams(un *msgUnion) (p []any, islist bool, e error) {
 	return arr, true, nil
 }
 
-func DecodeMessage(decoder *json.Decoder, options ...ParseOptions) (Message, error) {
-	opts := ParseOptions{}
+func DecodeMessage(decoder *json.Decoder, options ...MessageOptions) (Message, error) {
+	opts := MessageOptions{}
 
 	if len(options) > 0 {
 		opts = options[0]

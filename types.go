@@ -23,6 +23,10 @@ type RPCError struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+type MessageOptions struct {
+	IdNotNull bool // Request.id cannot be null
+}
+
 // The abstract interface of JSONRPC message. refer to
 // https://www.jsonrpc.org/specification
 //

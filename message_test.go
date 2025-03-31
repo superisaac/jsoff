@@ -232,11 +232,11 @@ func TestDecodeMessage(t *testing.T) {
 	assert.False(msg10.IsResult())
 	assert.Equal(-27, msg10.MustError().Code)
 
-	_, err11 := DecodeMessage(dec, ParseOptions{IdNotNull: true})
+	_, err11 := DecodeMessage(dec, MessageOptions{IdNotNull: true})
 	assert.NotNil(err11)
 	assert.Contains(err11.Error(), "Request.id cannot be null")
 
-	_, err12 := DecodeMessage(dec, ParseOptions{IdNotNull: true})
+	_, err12 := DecodeMessage(dec, MessageOptions{IdNotNull: true})
 	assert.NotNil(err12)
 	assert.Contains(err12.Error(), "Result.id cannot be null")
 
@@ -330,5 +330,21 @@ func TestMessages(t *testing.T) {
 
 	assert.False(NewNotifyMessage("aaa", map[string]any{"aa": "bb"}).paramsAreList)
 	assert.True(NewNotifyMessage("aaa", nil).paramsAreList)
+
+}
+
+func TestMessageFactory(t *testing.T) {
+	assert := assert.New(t)
+
+	factory := NewMessageFactory(MessageOptions{IdNotNull: true})
+	assert.Panics(func() {
+		factory.NewRequest(nil, "nosuchfunc", nil)
+	})
+
+	msg0 := factory.NewRequest(800, "bbb", nil)
+	assert.Equal(msg0.Method, "bbb")
+
+	errmsg0 := factory.NewError(msg0, ParamsError("no params"))
+	assert.Equal(errmsg0.Id, 800)
 
 }
