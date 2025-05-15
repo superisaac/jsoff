@@ -271,6 +271,7 @@ func TestMessages(t *testing.T) {
 	assert.Equal(101, reqmsg.Id)
 	assert.Equal("queryMethod", reqmsg.Method)
 	assert.Equal(2, len(reqmsg.Params))
+	assert.Equal(`n01/queryMethod["p1","p2"]`, reqmsg.CacheKey("n01/"))
 
 	msgtype := reqmsg.Log().Data["msgtype"]
 	assert.Equal("request", msgtype)
@@ -343,6 +344,7 @@ func TestMessageFactory(t *testing.T) {
 
 	msg0 := factory.NewRequest(800, "bbb", nil)
 	assert.Equal(msg0.Method, "bbb")
+	assert.Equal(`n02/bbb[]`, msg0.CacheKey("n02/"))
 
 	errmsg0 := factory.NewError(msg0, ParamsError("no params"))
 	assert.Equal(errmsg0.Id, 800)
